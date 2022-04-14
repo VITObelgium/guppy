@@ -67,14 +67,16 @@ def get_stats_for_bbox(db: Session, layer_name: str, bbox_left: float, bbox_bott
 
 
 def get_point_value_from_raster(db: Session, layer_name: str, x: float, y: float):
+    t = time.time()
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
     if layer_model:
         path = layer_model.file_path
-        if os.path.exists(path):
+        if os.path.exists(path) and x and y:
             with rasterio.open(path) as src:
                 nodata = src.nodata
                 transformer = Transformer.from_crs("epsg:4326", "epsg:3857")
                 x_, y_ = transformer.transform(x, y)
                 for v in src.sample([(x_, y_)]):
+                    print('get_stats_for_bbox', time.time() - t)
                     return s.PointResponse(type='point value', layer_name=layer_name, value=None if math.isclose(float(v[0]), nodata) else float(v[0]))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
