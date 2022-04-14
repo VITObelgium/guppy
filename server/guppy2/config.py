@@ -69,47 +69,47 @@ def parse_config_file(config_file: str) -> _Config:
 
 config: _Config = None
 # The docker way to configure containers is by using environment variables
-guppy2_env_vars = {k: v for k, v in os.environ.items() if k.startswith('GUPPY2_')}
+guppy2_env_vars = {k: v for k, v in os.environ.items() if k.startswith('GUPPY_')}
 if guppy2_env_vars:
-    if 'GUPPY2_CONFIG_FILE' in guppy2_env_vars:
-        config = parse_config_file(guppy2_env_vars['GUPPY2_CONFIG_FILE'])
+    if 'GUPPY_CONFIG_FILE' in guppy2_env_vars:
+        config = parse_config_file(guppy2_env_vars['GUPPY_CONFIG_FILE'])
     else:
-        if 'GUPPY2_DATABASE_PASSWD_FILE' in guppy2_env_vars:
+        if 'GUPPY_DATABASE_PASSWD_FILE' in guppy2_env_vars:
             try:
-                with open(guppy2_env_vars['GUPPY2_DATABASE_PASSWD_FILE']) as f:
-                    guppy2_env_vars['GUPPY2_DATABASE_PASSWD'] = f.readline().strip()
+                with open(guppy2_env_vars['GUPPY_DATABASE_PASSWD_FILE']) as f:
+                    guppy2_env_vars['GUPPY_DATABASE_PASSWD'] = f.readline().strip()
             except IOError:
-                raise SystemExit("Password file '%s' not found!" % guppy2_env_vars['GUPPY2_DATABASE_PASSWD_FILE'])
-        if 'GUPPY2_AUTH_PASSWD_FILE' in guppy2_env_vars:
+                raise SystemExit("Password file '%s' not found!" % guppy2_env_vars['GUPPY_DATABASE_PASSWD_FILE'])
+        if 'GUPPY_AUTH_PASSWD_FILE' in guppy2_env_vars:
             try:
-                with open(guppy2_env_vars['GUPPY2_AUTH_PASSWD_FILE']) as f:
-                    guppy2_env_vars['GUPPY2_AUTH_PASSWD'] = f.readline().strip()
+                with open(guppy2_env_vars['GUPPY_AUTH_PASSWD_FILE']) as f:
+                    guppy2_env_vars['GUPPY_AUTH_PASSWD'] = f.readline().strip()
             except IOError:
-                raise SystemExit("Password file '%s' not found!" % guppy2_env_vars['GUPPY2_AUTH_PASSWD_FILE'])
-        if 'GUPPY2_AUTH_PUBLIC_KEY_FILE' in guppy2_env_vars:
+                raise SystemExit("Password file '%s' not found!" % guppy2_env_vars['GUPPY_AUTH_PASSWD_FILE'])
+        if 'GUPPY_AUTH_PUBLIC_KEY_FILE' in guppy2_env_vars:
             try:
-                with open(guppy2_env_vars['GUPPY2_AUTH_PUBLIC_KEY_FILE']) as f:
-                    guppy2_env_vars['GUPPY2_AUTH_PUBLIC_KEY'] = f.readline().strip()
+                with open(guppy2_env_vars['GUPPY_AUTH_PUBLIC_KEY_FILE']) as f:
+                    guppy2_env_vars['GUPPY_AUTH_PUBLIC_KEY'] = f.readline().strip()
             except IOError:
-                raise SystemExit("Password file '%s' not found!" % guppy2_env_vars['GUPPY2_AUTH_PUBLIC_KEY_FILE'])
-        if 'GUPPY2_DEPLOY_PATH' not in guppy2_env_vars:
-            guppy2_env_vars['GUPPY2_DEPLOY_PATH'] = default_deploy_path
-        guppy2_env_vars['GUPPY2_DEPLOY_PATH'] = sanitize_deploy_path(guppy2_env_vars['GUPPY2_DEPLOY_PATH'])
+                raise SystemExit("Password file '%s' not found!" % guppy2_env_vars['GUPPY_AUTH_PUBLIC_KEY_FILE'])
+        if 'GUPPY_DEPLOY_PATH' not in guppy2_env_vars:
+            guppy2_env_vars['GUPPY_DEPLOY_PATH'] = default_deploy_path
+        guppy2_env_vars['GUPPY_DEPLOY_PATH'] = sanitize_deploy_path(guppy2_env_vars['GUPPY_DEPLOY_PATH'])
         try:
             config = _Config(
                 deploy=_Deploy(
-                    path=guppy2_env_vars['GUPPY2_DEPLOY_PATH'],
+                    path=guppy2_env_vars['GUPPY_DEPLOY_PATH'],
                 ),
                 database=_Database(
-                    host=guppy2_env_vars['GUPPY2_DATABASE_HOST'],
-                    user=guppy2_env_vars['GUPPY2_DATABASE_USER'],
-                    passwd=guppy2_env_vars['GUPPY2_DATABASE_PASSWD'],
-                    db=guppy2_env_vars['GUPPY2_DATABASE_DB'],
+                    host=guppy2_env_vars['GUPPY_DATABASE_HOST'],
+                    user=guppy2_env_vars['GUPPY_DATABASE_USER'],
+                    passwd=guppy2_env_vars['GUPPY_DATABASE_PASSWD'],
+                    db=guppy2_env_vars['GUPPY_DATABASE_DB'],
                 ),
                 auth=_Auth(
-                    public_key=guppy2_env_vars['GUPPY2_AUTH_PUBLIC_KEY'],
-                    guppy2_user=guppy2_env_vars['GUPPY2_AUTH_USER'],
-                    guppy2_password=guppy2_env_vars['GUPPY2_AUTH_PASSWD'],
+                    public_key=guppy2_env_vars['GUPPY_AUTH_PUBLIC_KEY'],
+                    guppy2_user=guppy2_env_vars['GUPPY_AUTH_USER'],
+                    guppy2_password=guppy2_env_vars['GUPPY_AUTH_PASSWD'],
                 )
             )
         except KeyError as key_error:
