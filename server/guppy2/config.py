@@ -106,11 +106,11 @@ if guppy2_env_vars:
                     passwd=guppy2_env_vars['GUPPY_DATABASE_PASSWD'],
                     db=guppy2_env_vars['GUPPY_DATABASE_DB'],
                 ),
-                auth=_Auth(
-                    public_key=guppy2_env_vars['GUPPY_AUTH_PUBLIC_KEY'],
-                    guppy2_user=guppy2_env_vars['GUPPY_AUTH_USER'],
-                    guppy2_password=guppy2_env_vars['GUPPY_AUTH_PASSWD'],
-                )
+                # auth=_Auth(
+                #     public_key=guppy2_env_vars['GUPPY_AUTH_PUBLIC_KEY'],
+                #     guppy2_user=guppy2_env_vars['GUPPY_AUTH_USER'],
+                #     guppy2_password=guppy2_env_vars['GUPPY_AUTH_PASSWD'],
+                # )
             )
         except KeyError as key_error:
             raise SystemExit("Environment variable '%s' not found!" % key_error)
