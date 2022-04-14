@@ -1,4 +1,5 @@
 # coding: utf-8
+from typing import Optional
 
 from pydantic import BaseModel
 
@@ -26,7 +27,7 @@ class LayerMetadataSchema(CamelModel):
 class PointResponse(CamelModel):
     type: str
     layer_name: str
-    value: float
+    value: Optional[float] = None
 
 
 class StatsResponse(CamelModel):
