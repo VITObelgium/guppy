@@ -1,0 +1,11 @@
+.idea
+*.tif
+/.project
+/.vscode
+*.code-workspace
+**/__pycache__/
+*.pyc
+server/guppy/config.yml
+*/config.yml.*
+*config*.yml
+*config*.yaml

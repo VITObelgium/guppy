@@ -1,0 +1,20 @@
+name: guppy2
+channels:
+  - conda-forge
+  - anaconda
+  - defaults
+dependencies:
+  - fastAPI
+  - gunicorn
+  - uvicorn
+  - psycopg2
+  - python=3.9
+  - sqlalchemy
+  - pyyaml
+  - json5
+  - python-jose
+  - requests
+  - rasterio
+  - shapely
+  - pyproj
+prefix: /opt/mapbase3/server/conda-env
