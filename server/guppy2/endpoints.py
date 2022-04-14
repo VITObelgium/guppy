@@ -88,15 +88,12 @@ def get_data_for_wkt(db: Session, layer_name: str, geometry: s.GeometryBody):
                 geom = transform(Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True).transform, geom)
                 if geom.is_valid:
                     with rasterio.open(path) as src:
-                        print('poop', geom.area, (src.res[0] * src.res[1]), geom.area / (src.res[0] * src.res[1]))
                         if geom.area / (src.res[0] * src.res[1]) > 100000:
                             return Response(content=f'geometry area too large ({geom.area}m². allowed <={100000 * (src.res[0] * src.res[1])}m²)',
                                             status_code=status.HTTP_406_NOT_ACCEPTABLE)
                         rst, _ = _extract_area_from_dataset(src, geom, crop=True)
                         if rst.size != 0:
-                            response = s.DataResponse(type='raw data',
-                                                      data=rst.tolist()
-                                                      )
+                            response = s.DataResponse(type='raw data', data=rst.tolist())
                             print('get_data_for_wkt 200', time.time() - t)
                             return response
         print('get_data_for_wkt 204', time.time() - t)
