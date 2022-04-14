@@ -26,14 +26,14 @@ def get_db():
         db.close()
 
 
-@api.get("layers/{layer_name}/bbox_stats", response_model=s.StatsResponse, tags=["stats"])
+@api.get("/layers/{layer_name}/bbox_stats", response_model=s.StatsResponse, tags=["stats"])
 async def get_stats_for_bbox(layer_name: str, bbox_left: float, bbox_bottom: float, bbox_right: float, bbox_top: float,
                              db: Session = Depends(get_db)):
     return endpoints.get_stats_for_bbox(db=db, layer_name=layer_name,
                                         bbox_left=bbox_left, bbox_bottom=bbox_bottom, bbox_right=bbox_right, bbox_top=bbox_top)
 
 
-@api.get("layers/{layer_name}/point", response_model=s.PointResponse, tags=["data"])
+@api.get("/layers/{layer_name}/point", response_model=s.PointResponse, tags=["data"])
 async def get_point_value_from_raster(layer_name: str, x: float, y: float, db: Session = Depends(get_db)):
     return endpoints.get_point_value_from_raster(db=db, layer_name=layer_name, x=x, y=y)
 
