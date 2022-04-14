@@ -34,8 +34,13 @@ async def get_stats_for_bbox(layer_name: str, bbox_left: float, bbox_bottom: flo
 
 
 @api.post("/layers/{layer_name}/data", response_model=s.DataResponse, tags=["data"])
-async def get_data_for_wkt(layer_name: str, geometry: s.GeometryBody, db: Session = Depends(get_db)):
-    return endpoints.get_data_for_wkt(db=db, layer_name=layer_name, geometry=geometry)
+async def get_data_for_wkt(layer_name: str, body: s.GeometryBody, db: Session = Depends(get_db)):
+    return endpoints.get_data_for_wkt(db=db, layer_name=layer_name, body=body)
+
+
+@api.post("/layers/{layer_name}/line_data", response_model=s.LineDataResponse, tags=["data"])
+async def get_line_data_for_wkt(layer_name: str, body: s.LineGeometryBody, db: Session = Depends(get_db)):
+    return endpoints.get_line_data_for_wkt(db=db, layer_name=layer_name, body=body)
 
 
 @api.get("/layers/{layer_name}/point", response_model=s.PointResponse, tags=["data"])

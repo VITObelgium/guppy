@@ -77,13 +77,13 @@ def _extract_area_from_dataset(raster_ds, geom, crop=True, all_touched=False):
     return crop_arr, crop_transform
 
 
-def get_data_for_wkt(db: Session, layer_name: str, geometry: s.GeometryBody):
+def get_data_for_wkt(db: Session, layer_name: str, body: s.GeometryBody):
     t = time.time()
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
     if layer_model:
         path = layer_model.file_path
-        if os.path.exists(path) and geometry:
-            geom = wkt.loads(geometry.geometry)
+        if os.path.exists(path) and body:
+            geom = wkt.loads(body.geometry)
             if geom.is_valid:
                 geom = transform(Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True).transform, geom)
                 if geom.is_valid:
@@ -102,6 +102,33 @@ def get_data_for_wkt(db: Session, layer_name: str, geometry: s.GeometryBody):
     return Response(status_code=status.HTTP_404_NOT_FOUND)
 
 
+def get_line_data_for_wkt(db: Session, layer_name: str, body: s.LineGeometryBody):
+    t = time.time()
+    layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
+    if layer_model:
+        path = layer_model.file_path
+        if os.path.exists(path) and body:
+            line = wkt.loads(body.geometry)
+            if line.is_valid:
+                line = transform(Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True).transform, line)
+                if line.is_valid:
+                    distances = np.linspace(0, line.length, body.number_of_points)
+                    points = [line.interpolate(distance) for distance in distances]
+                    coords = [(point.x, point.y) for point in points]
+                    if line.is_valid:
+                        result = []
+                        with rasterio.open(path) as src:
+                            for v in src.sample(coords, indexes=1):
+                                result.append(v[0])
+                        response = s.LineDataResponse(type='line data', data=result)
+                        print('get_data_for_wkt 200', time.time() - t)
+                        return response
+        print('get_data_for_wkt 204', time.time() - t)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    print('get_data_for_wkt 404', time.time() - t)
+    return Response(status_code=status.HTTP_404_NOT_FOUND)
+
+
 def get_point_value_from_raster(db: Session, layer_name: str, x: float, y: float):
     t = time.time()
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
@@ -112,7 +139,7 @@ def get_point_value_from_raster(db: Session, layer_name: str, x: float, y: float
                 nodata = src.nodata
                 transformer = Transformer.from_crs("epsg:4326", "epsg:3857")
                 x_, y_ = transformer.transform(x, y)
-                for v in src.sample([(x_, y_)]):
+                for v in src.sample([(x_, y_)], indexes=1):
                     print('get_point_value_from_raster 200', time.time() - t)
                     return s.PointResponse(type='point value', layer_name=layer_name, value=None if math.isclose(float(v[0]), nodata) else float(v[0]))
     print('get_point_value_from_raster 204', time.time() - t)

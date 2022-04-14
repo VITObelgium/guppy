@@ -1,5 +1,6 @@
 # coding: utf-8
-from typing import Optional, Any
+from typing import Optional
+
 from pydantic import BaseModel
 
 
@@ -47,5 +48,15 @@ class DataResponse(CamelModel):
     data: list[list[float]]
 
 
+class LineDataResponse(CamelModel):
+    type: str
+    data: list[float]
+
+
 class GeometryBody(CamelModel):
     geometry: str
+
+
+class LineGeometryBody(CamelModel):
+    geometry: str
+    number_of_points: int
