@@ -33,6 +33,11 @@ async def get_stats_for_bbox(layer_name: str, bbox_left: float, bbox_bottom: flo
                                         bbox_left=bbox_left, bbox_bottom=bbox_bottom, bbox_right=bbox_right, bbox_top=bbox_top)
 
 
+@api.post("/layers/{layer_name}/data", response_model=s.DataResponse, tags=["data"])
+async def get_data_for_wkt(layer_name: str, geometry: s.GeometryBody, db: Session = Depends(get_db)):
+    return endpoints.get_data_for_wkt(db=db, layer_name=layer_name, geometry=geometry)
+
+
 @api.get("/layers/{layer_name}/point", response_model=s.PointResponse, tags=["data"])
 async def get_point_value_from_raster(layer_name: str, x: float, y: float, db: Session = Depends(get_db)):
     return endpoints.get_point_value_from_raster(db=db, layer_name=layer_name, x=x, y=y)

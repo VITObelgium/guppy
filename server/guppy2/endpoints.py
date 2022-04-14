@@ -9,8 +9,11 @@ import rasterio
 from fastapi import status
 from fastapi.responses import Response
 from pyproj import Transformer
+from rasterio.mask import mask
 from rasterio.windows import from_bounds
+from shapely import wkt
 from shapely.geometry import box
+from shapely.ops import transform
 from sqlalchemy.orm import Session
 
 from guppy2.db import models as m
@@ -65,6 +68,40 @@ def get_stats_for_bbox(db: Session, layer_name: str, bbox_left: float, bbox_bott
         print('get_stats_for_bbox 204', time.time() - t)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     print('get_stats_for_bbox 404', time.time() - t)
+    return Response(status_code=status.HTTP_404_NOT_FOUND)
+
+
+def _extract_area_from_dataset(raster_ds, geom, crop=True, all_touched=False):
+    crop_arr, crop_transform = mask(raster_ds, geom, crop=crop, all_touched=all_touched)
+    crop_arr = crop_arr[0]
+    return crop_arr, crop_transform
+
+
+def get_data_for_wkt(db: Session, layer_name: str, geometry: s.GeometryBody):
+    t = time.time()
+    layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
+    if layer_model:
+        path = layer_model.file_path
+        if os.path.exists(path) and geometry:
+            geom = wkt.loads(geometry.geometry)
+            if geom.is_valid:
+                geom = transform(Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True).transform, geom)
+                if geom.is_valid:
+                    with rasterio.open(path) as src:
+                        print('poop', geom.area, (src.res[0] * src.res[1]), geom.area / (src.res[0] * src.res[1]))
+                        if geom.area / (src.res[0] * src.res[1]) > 1000000:
+                            return Response(content=f'geometry area too large ({geom.area}m². allowed <={1000000 * (src.res[0] * src.res[1])}m²)',
+                                            status_code=status.HTTP_406_NOT_ACCEPTABLE)
+                        rst, _ = _extract_area_from_dataset(src, geom, crop=True)
+                        if rst.size != 0:
+                            response = s.DataResponse(type='raw data',
+                                                      data=rst.tolist()
+                                                      )
+                            print('get_data_for_wkt 200', time.time() - t)
+                            return response
+        print('get_data_for_wkt 204', time.time() - t)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    print('get_data_for_wkt 404', time.time() - t)
     return Response(status_code=status.HTTP_404_NOT_FOUND)
 
 
