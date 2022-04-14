@@ -17,18 +17,18 @@ class _Deploy:
     path: str
 
 
-@dataclass(frozen=True)
-class _Auth:
-    public_key: str
-    guppy2_user: str
-    guppy2_password: str
+# @dataclass(frozen=True)
+# class _Auth:
+#     public_key: str
+#     guppy2_user: str
+#     guppy2_password: str
 
 
 @dataclass(frozen=True)
 class _Config:
     deploy: _Deploy
     database: _Database
-    auth: _Auth
+    # auth: _Auth
 
 
 default_deploy_path: str = '/api'
@@ -63,7 +63,7 @@ def parse_config_file(config_file: str) -> _Config:
             passwd=yml_data['database']['passwd'],
             db=yml_data['database']['db'],
         ),
-        auth=_Auth(public_key=yml_data['auth']['public_key'], guppy2_user=yml_data['auth']['guppy2_user'], guppy2_password=yml_data['auth']['guppy2_password'])
+        # auth=_Auth(public_key=yml_data['auth']['public_key'], guppy2_user=yml_data['auth']['guppy2_user'], guppy2_password=yml_data['auth']['guppy2_password'])
     )
 
 
