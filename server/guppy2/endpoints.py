@@ -61,7 +61,7 @@ def get_stats_for_bbox(db: Session, layer_name: str, bbox_left: float, bbox_bott
                                                    q98=float(q98),
                                                    )
                         print('get_stats_for_bbox 200', time.time() - t)
-                        return response, 200
+                        return response
         print('get_stats_for_bbox 204', time.time() - t)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     print('get_stats_for_bbox 404', time.time() - t)
@@ -79,7 +79,7 @@ def get_point_value_from_raster(db: Session, layer_name: str, x: float, y: float
                 transformer = Transformer.from_crs("epsg:4326", "epsg:3857")
                 x_, y_ = transformer.transform(x, y)
                 for v in src.sample([(x_, y_)]):
-                    print('get_stats_for_bbox 200', time.time() - t)
+                    print('get_point_value_from_raster 200', time.time() - t)
                     return s.PointResponse(type='point value', layer_name=layer_name, value=None if math.isclose(float(v[0]), nodata) else float(v[0]))
-    print('get_stats_for_bbox 204', time.time() - t)
+    print('get_point_value_from_raster 204', time.time() - t)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
