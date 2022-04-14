@@ -17,18 +17,10 @@ class _Deploy:
     path: str
 
 
-# @dataclass(frozen=True)
-# class _Auth:
-#     public_key: str
-#     guppy2_user: str
-#     guppy2_password: str
-
-
 @dataclass(frozen=True)
 class _Config:
     deploy: _Deploy
     database: _Database
-    # auth: _Auth
 
 
 default_deploy_path: str = '/api'
@@ -62,8 +54,7 @@ def parse_config_file(config_file: str) -> _Config:
             user=yml_data['database']['user'],
             passwd=yml_data['database']['passwd'],
             db=yml_data['database']['db'],
-        ),
-        # auth=_Auth(public_key=yml_data['auth']['public_key'], guppy2_user=yml_data['auth']['guppy2_user'], guppy2_password=yml_data['auth']['guppy2_password'])
+        )
     )
 
 
@@ -106,11 +97,6 @@ if guppy2_env_vars:
                     passwd=guppy2_env_vars['GUPPY_DATABASE_PASSWD'],
                     db=guppy2_env_vars['GUPPY_DATABASE_DB'],
                 ),
-                # auth=_Auth(
-                #     public_key=guppy2_env_vars['GUPPY_AUTH_PUBLIC_KEY'],
-                #     guppy2_user=guppy2_env_vars['GUPPY_AUTH_USER'],
-                #     guppy2_password=guppy2_env_vars['GUPPY_AUTH_PASSWD'],
-                # )
             )
         except KeyError as key_error:
             raise SystemExit("Environment variable '%s' not found!" % key_error)

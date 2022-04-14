@@ -22,7 +22,7 @@ def healthcheck(db: Session):
     return 'OK'
 
 
-def get_stats_for_bbox(db: Session, layer_name: str, bbox_left: float, bbox_bottom: float, bbox_right: float, bbox_top: float, token_data: [str] = None):
+def get_stats_for_bbox(db: Session, layer_name: str, bbox_left: float, bbox_bottom: float, bbox_right: float, bbox_top: float):
     t = time.time()
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
     if layer_model:
@@ -66,7 +66,7 @@ def get_stats_for_bbox(db: Session, layer_name: str, bbox_left: float, bbox_bott
     return "result not found", 404
 
 
-def get_point_value_from_raster(db: Session, layer_name: str, x: float, y: float, token_data: [str] = None):
+def get_point_value_from_raster(db: Session, layer_name: str, x: float, y: float):
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
     if layer_model:
         path = layer_model.file_path
