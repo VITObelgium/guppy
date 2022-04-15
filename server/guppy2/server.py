@@ -27,7 +27,7 @@ def get_db():
 
 
 @api.get("/layers/{layer_name}/bbox_stats", response_model=s.StatsResponse, tags=["stats"])
-async def get_stats_for_bbox(layer_name: str, bbox_left: float, bbox_bottom: float, bbox_right: float, bbox_top: float, native: bool,
+async def get_stats_for_bbox(layer_name: str, bbox_left: float, bbox_bottom: float, bbox_right: float, bbox_top: float, native: bool = False,
                              db: Session = Depends(get_db)):
     return endpoints.get_stats_for_bbox(db=db, layer_name=layer_name,
                                         bbox_left=bbox_left, bbox_bottom=bbox_bottom, bbox_right=bbox_right, bbox_top=bbox_top, native=native)
@@ -44,7 +44,7 @@ async def get_line_data_for_wkt(layer_name: str, body: s.LineGeometryBody, db: S
 
 
 @api.post("/layers/{layer_name}/stats", response_model=s.StatsResponse, tags=["data"])
-async def get_stats_for_wkt(layer_name: str, body: s.GeometryBody, native: bool, db: Session = Depends(get_db)):
+async def get_stats_for_wkt(layer_name: str, body: s.GeometryBody, native: bool = False, db: Session = Depends(get_db)):
     return endpoints.get_stats_for_wkt(db=db, layer_name=layer_name, body=body, native=native)
 
 
