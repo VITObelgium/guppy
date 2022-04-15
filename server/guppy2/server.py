@@ -48,6 +48,11 @@ async def get_point_value_from_raster(layer_name: str, x: float, y: float, db: S
     return endpoints.get_point_value_from_raster(db=db, layer_name=layer_name, x=x, y=y)
 
 
+@api.get("/layers", response_model=s.LayerMetadataSchema, tags=["mapping"])
+async def get_layer_mapping(db: Session = Depends(get_db)):
+    return endpoints.get_layer_mapping(db=db)
+
+
 @api.get("/healthcheck")
 async def healthcheck(db: Session = Depends(get_db)):
     return endpoints.healthcheck(db=db)

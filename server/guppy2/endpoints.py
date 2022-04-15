@@ -144,3 +144,13 @@ def get_point_value_from_raster(db: Session, layer_name: str, x: float, y: float
                     return s.PointResponse(type='point value', layer_name=layer_name, value=None if math.isclose(float(v[0]), nodata) else float(v[0]))
     print('get_point_value_from_raster 204', time.time() - t)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+def get_layer_mapping(db):
+    t = time.time()
+    layer_model = db.query(m.LayerMetadata).all()
+    if layer_model:
+        print('get_layer_mapping 200', time.time() - t)
+        return layer_model
+    print('get_layer_mapping 204', time.time() - t)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
