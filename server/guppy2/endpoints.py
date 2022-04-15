@@ -43,7 +43,7 @@ def get_stats_for_bbox(db: Session, layer_name: str, bbox_left: float, bbox_bott
                     window = from_bounds(intersection.bounds[0], intersection.bounds[1], intersection.bounds[2], intersection.bounds[3], src.transform).round_offsets()
                     rst = src.read(1, window=window, )
                     if rst.size != 0:
-                        response = create_stats_response(rst, src.nodata, 'bbox stats')
+                        response = create_stats_response(rst, src.nodata, f'bbox stats. Overview level: {overview_factor}, {overview_bin} scale')
                         print('get_stats_for_bbox 200', time.time() - t)
                         return response
         print('get_stats_for_bbox 204', time.time() - t)

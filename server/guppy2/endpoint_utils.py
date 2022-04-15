@@ -16,6 +16,7 @@ def get_overview_factor(bounds, native, path):
 
 
 def create_stats_response(rst: np.array, nodata: float, type: str):
+    rst = rst.astype(float)
     rst[rst == nodata] = np.nan
     q2, q5, q95, q98 = np.nanquantile(rst, [0.02, 0.05, 0.95, 0.98])
     response = s.StatsResponse(type=type,
