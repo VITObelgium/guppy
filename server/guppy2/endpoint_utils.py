@@ -1,0 +1,52 @@
+import numpy as np
+import rasterio
+from rasterio.mask import mask
+
+from guppy2.db import schemas as s
+
+
+def get_overview_factor(bounds, native, path):
+    if not native:
+        with rasterio.open(path) as src:
+            res_x, res_y = src.res
+            overview_factor, overview_bin = get_overview(res_x, res_y, src.overviews(1), bounds)
+    else:
+        overview_factor, overview_bin = None, None
+    return overview_factor, overview_bin
+
+
+def create_stats_response(rst: np.array, nodata: float, type: str):
+    rst[rst == nodata] = np.nan
+    q2, q5, q95, q98 = np.nanquantile(rst, [0.02, 0.05, 0.95, 0.98])
+    response = s.StatsResponse(type=type,
+                               min=float(np.nanmin(rst)),
+                               max=float(np.nanmax(rst)),
+                               sum=float(np.nansum(rst)),
+                               mean=float(np.nanmean(rst)),
+                               count=int(np.sum(np.isfinite(rst))),
+                               q02=float(q2),
+                               q05=float(q5),
+                               q95=float(q95),
+                               q98=float(q98),
+                               )
+    return response
+
+
+def _extract_area_from_dataset(raster_ds, geom, crop=True, all_touched=False):
+    crop_arr, crop_transform = mask(raster_ds, geom, crop=crop, all_touched=all_touched)
+    crop_arr = crop_arr[0]
+    return crop_arr, crop_transform
+
+
+def get_overview(res_x: float, res_y: float, overviews: [int], bounds: (float,)):
+    bbox_bottom, bbox_left, bbox_top, bbox_right = bounds
+    pixels = (bbox_right - bbox_left) / res_x * (bbox_top - bbox_bottom) / res_y
+    factor = int(pixels / 4000000)
+    overview_level = 0
+    for i, value in enumerate(overviews):
+        if value > factor:
+            overview_level = i - 1
+            break
+    if overview_level < 0:
+        return None
+    return overview_level, overviews[overview_level]

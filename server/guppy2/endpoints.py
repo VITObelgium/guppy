@@ -9,7 +9,6 @@ import rasterio
 from fastapi import status
 from fastapi.responses import Response
 from pyproj import Transformer
-from rasterio.mask import mask
 from rasterio.windows import from_bounds
 from shapely import wkt
 from shapely.geometry import box
@@ -18,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from guppy2.db import models as m
 from guppy2.db import schemas as s
+from guppy2.endpoint_utils import get_overview_factor, create_stats_response, _extract_area_from_dataset
 
 
 def healthcheck(db: Session):
@@ -25,56 +25,31 @@ def healthcheck(db: Session):
     return 'OK'
 
 
-def get_stats_for_bbox(db: Session, layer_name: str, bbox_left: float, bbox_bottom: float, bbox_right: float, bbox_top: float):
+def get_stats_for_bbox(db: Session, layer_name: str, bbox_left: float, bbox_bottom: float, bbox_right: float, bbox_top: float, native: bool):
     t = time.time()
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
     if layer_model:
         path = layer_model.file_path
         if os.path.exists(path) and bbox_left and bbox_bottom and bbox_right and bbox_top:
-            with rasterio.open(path) as src:
-                transformer = Transformer.from_crs("epsg:4326", "epsg:3857")
-                bbox_bottom, bbox_left = transformer.transform(bbox_bottom, bbox_left)
-                bbox_top, bbox_right = transformer.transform(bbox_top, bbox_right)
-                res = max(src.res)
-                pixels = (bbox_right - bbox_left) / res * (bbox_top - bbox_bottom) / res
-                factor = int(pixels / 2000000)
-                if factor < 1:
-                    factor = 1
+            transformer = Transformer.from_crs("epsg:4326", "epsg:3857")
+            bbox_bottom, bbox_left = transformer.transform(bbox_bottom, bbox_left)
+            bbox_top, bbox_right = transformer.transform(bbox_top, bbox_right)
+            overview_factor, overview_bin = get_overview_factor((bbox_bottom, bbox_left, bbox_top, bbox_right), native, path)
+            with rasterio.open(path, overview_level=overview_factor) as src:
                 bb_input = box(bbox_bottom, bbox_left, bbox_top, bbox_right)
                 bb_raster = box(src.bounds[0], src.bounds[1], src.bounds[2], src.bounds[3])
                 intersection = bb_input.intersection(bb_raster)
                 if not intersection.is_empty:
                     window = from_bounds(intersection.bounds[0], intersection.bounds[1], intersection.bounds[2], intersection.bounds[3], src.transform).round_offsets()
-                    rst = src.read(1,
-                                   window=window,
-                                   out_shape=(1, int(src.height / factor), int(src.width / factor))
-                                   )
+                    rst = src.read(1, window=window, )
                     if rst.size != 0:
-                        rst[rst == src.nodata] = np.nan
-                        q2, q5, q95, q98 = np.nanquantile(rst, [0.02, 0.05, 0.95, 0.98])
-                        response = s.StatsResponse(type='stats bbox',
-                                                   min=float(np.nanmin(rst)),
-                                                   max=float(np.nanmax(rst)),
-                                                   sum=float(np.nansum(rst)),
-                                                   mean=float(np.nanmean(rst)),
-                                                   count=int(np.sum(np.isfinite(rst))),
-                                                   q02=float(q2),
-                                                   q05=float(q5),
-                                                   q95=float(q95),
-                                                   q98=float(q98),
-                                                   )
+                        response = create_stats_response(rst, src.nodata, 'bbox stats')
                         print('get_stats_for_bbox 200', time.time() - t)
                         return response
         print('get_stats_for_bbox 204', time.time() - t)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     print('get_stats_for_bbox 404', time.time() - t)
     return Response(status_code=status.HTTP_404_NOT_FOUND)
-
-
-def _extract_area_from_dataset(raster_ds, geom, crop=True, all_touched=False):
-    crop_arr, crop_transform = mask(raster_ds, geom, crop=crop, all_touched=all_touched)
-    crop_arr = crop_arr[0]
-    return crop_arr, crop_transform
 
 
 def get_data_for_wkt(db: Session, layer_name: str, body: s.GeometryBody):
@@ -99,6 +74,29 @@ def get_data_for_wkt(db: Session, layer_name: str, body: s.GeometryBody):
         print('get_data_for_wkt 204', time.time() - t)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     print('get_data_for_wkt 404', time.time() - t)
+    return Response(status_code=status.HTTP_404_NOT_FOUND)
+
+
+def get_stats_for_wkt(db: Session, layer_name: str, body: s.GeometryBody, native: bool):
+    t = time.time()
+    layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
+    if layer_model:
+        path = layer_model.file_path
+        if os.path.exists(path) and body:
+            geom = wkt.loads(body.geometry)
+            if geom.is_valid:
+                geom = transform(Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True).transform, geom)
+                if geom.is_valid:
+                    overview_factor, overview_bin = get_overview_factor(geom.bounds, native, path)
+                    with rasterio.open(path, overview_level=overview_factor) as src:
+                        rst, _ = _extract_area_from_dataset(src, geom, crop=True)
+                        if rst.size != 0:
+                            response = create_stats_response(rst, src.nodata, type=f'stats wkt. Overview level: {overview_factor}, {overview_bin} scale')
+                            print('get_stats_for_wkt 200', time.time() - t)
+                            return response
+        print('get_stats_for_wkt 204', time.time() - t)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    print('get_stats_for_wkt 404', time.time() - t)
     return Response(status_code=status.HTTP_404_NOT_FOUND)
 
 
