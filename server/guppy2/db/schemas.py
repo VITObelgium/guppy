@@ -36,7 +36,9 @@ class StatsResponse(CamelModel):
     max: float
     sum: float
     mean: float
-    count: int
+    count_total: Optional[int]
+    count_no_data: Optional[int]
+    count_data: int
     q02: float
     q05: float
     q95: float

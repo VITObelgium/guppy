@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from guppy2.db import models as m
 from guppy2.db import schemas as s
-from guppy2.endpoint_utils import get_overview_factor, create_stats_response, _extract_area_from_dataset
+from guppy2.endpoint_utils import get_overview_factor, create_stats_response, _extract_area_from_dataset, _extract_shape_mask_from_dataset
 
 
 def healthcheck(db: Session):
@@ -43,7 +43,7 @@ def get_stats_for_bbox(db: Session, layer_name: str, bbox_left: float, bbox_bott
                     window = from_bounds(intersection.bounds[0], intersection.bounds[1], intersection.bounds[2], intersection.bounds[3], src.transform).round_offsets()
                     rst = src.read(1, window=window, )
                     if rst.size != 0:
-                        response = create_stats_response(rst, src.nodata, f'bbox stats. Overview level: {overview_factor}, {overview_bin} scale')
+                        response = create_stats_response(rst, np.zeros_like(rst).astype(bool), src.nodata, f'bbox stats. Overview level: {overview_factor}, {overview_bin} scale')
                         print('get_stats_for_bbox 200', time.time() - t)
                         return response
         print('get_stats_for_bbox 204', time.time() - t)
@@ -89,9 +89,11 @@ def get_stats_for_wkt(db: Session, layer_name: str, body: s.GeometryBody, native
                 if geom.is_valid:
                     overview_factor, overview_bin = get_overview_factor(geom.bounds, native, path)
                     with rasterio.open(path, overview_level=overview_factor) as src:
-                        rst, _ = _extract_area_from_dataset(src, geom, crop=True)
+                        rst, rast_transform = _extract_area_from_dataset(src, geom, crop=True)
+                        shape_mask = _extract_shape_mask_from_dataset(src, geom, crop=True)
                         if rst.size != 0:
-                            response = create_stats_response(rst, src.nodata, type=f'stats wkt. Overview level: {overview_factor}, {overview_bin} scale')
+                            response = create_stats_response(rst, shape_mask, src.nodata,
+                                                             type=f'stats wkt. Overview level: {overview_factor}, {overview_bin} scale')
                             print('get_stats_for_wkt 200', time.time() - t)
                             return response
         print('get_stats_for_wkt 204', time.time() - t)
