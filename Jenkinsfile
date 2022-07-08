@@ -14,22 +14,22 @@ pipeline {
     deploy_prod_branch = "prod"
   }
   stages {
-    stage('Build conda-env docker image') {
+    stage("Build conda-env docker image") {
       // build and name the conda-env stage of the Dockerfile to prevent dangling images
       steps {
         script {
-          docker.build(repository + "_conda-env" + ":$version", "--target conda-env server")
+          docker.build(repository + "_conda-env" + ":latest-${env.BRANCH_NAME}", "--target conda-env server")
         }
       }
     }
-    stage('Build docker image') {
+    stage("Build docker image") {
       steps {
         script {
-          dockerImage = docker.build(repository + ":$version", "server")
+          dockerImage = docker.build(repository + ":latest-${env.BRANCH_NAME}", "server")
         }
       }
     }
-    stage('Run unittests') {
+    stage("Run unittests") {
       steps {
         script {
           dockerImage.inside() {
@@ -38,45 +38,45 @@ pipeline {
         }
       }
     }
-    stage('Push docker image to registry') {
+    stage("Push docker image to registry") {
       steps {
         script {
           docker.withRegistry("https://" + registry, registryCredential ) {
             dockerImage.push("$version")
+            if (env.BRANCH_NAME =~ /^(main|master)$/ ) {
+              dockerImage.push("latest")
+              dockerImage.push("$datetime")
+            }
             if (env.TAG_NAME) {
               dockerImage.push("${env.TAG_NAME}")
             } else {
               dockerImage.push("latest-${env.BRANCH_NAME}")
             }
-            if (env.BRANCH_NAME == 'master') {
-              dockerImage.push("$datetime")
-              dockerImage.push("latest")
-            }
           }
           // Cleanup
           sh(script: "docker image rm $registry/$repository:$version")
+          if (env.BRANCH_NAME =~ /^(main|master)$/ ) {
+            sh(script: "docker image rm $registry/$repository:latest")
+            sh(script: "docker image rm $registry/$repository:$datetime")
+          }
           if (env.TAG_NAME) {
             sh(script: "docker image rm $registry/$repository:${env.TAG_NAME}")
           } else {
             sh(script: "docker image rm $registry/$repository:latest-${env.BRANCH_NAME}")
-          }
-          if (env.BRANCH_NAME == 'master') {
-            sh(script: "docker image rm $registry/$repository:$datetime")
-            sh(script: "docker image rm $registry/$repository:latest")
           }
         }
       }
     }
     stage("Update services") {
       when {
-        expression { BRANCH_NAME =~ /^(develop|master)$/ }
+        expression { BRANCH_NAME =~ /^(develop|main|master)$/ }
       }
       steps {
         script {
           if (env.BRANCH_NAME == 'develop') {
             env.deploy_branch = deploy_test_branch
           }
-          if (env.BRANCH_NAME == 'master') {
+          if (env.BRANCH_NAME =~ /^(main|master)$/ ) {
             env.deploy_branch = deploy_prod_branch
           }
           try {
