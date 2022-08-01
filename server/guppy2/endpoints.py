@@ -157,7 +157,7 @@ def get_line_data_list_for_wkt(db: Session, body: s.LineGeometryListBody):
 def sample_coordinates(coords, layer_model):
     result = []
     path = layer_model.file_path[1:]
-    print(path, coords)
+    print(path, os.path.exists(path))
     if os.path.exists(path):
         print('.')
         with rasterio.open(path) as src:
