@@ -159,8 +159,10 @@ def sample_coordinates(coords, layer_model):
     path = layer_model.file_path[1:]
     print(path, coords)
     if os.path.exists(path):
+        print('.')
         with rasterio.open(path) as src:
             for v in src.sample(coords, indexes=1):
+                print(v)
                 result.append(v[0])
     return s.LineData(layer_name=layer_model.layer_name, data=result)
 
