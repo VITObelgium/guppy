@@ -44,7 +44,7 @@ async def get_line_data_for_wkt(layer_name: str, body: s.LineGeometryBody, db: S
 
 
 @api.post("/layers/line_data", response_model=list[s.LineData], tags=["data"])
-async def get_line_data_list_for_wkt(body: s.LineGeometryListBody, db: Session = Depends(get_db)):
+def get_line_data_list_for_wkt(body: s.LineGeometryListBody, db: Session = Depends(get_db)):
     return endpoints.get_line_data_list_for_wkt(db=db,body=body)
 
 

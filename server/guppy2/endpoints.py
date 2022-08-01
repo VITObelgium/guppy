@@ -147,9 +147,9 @@ def get_line_data_list_for_wkt(db: Session, body: s.LineGeometryListBody):
             if result:
                 print('get_line_data_list_for_wkt 200', time.time() - t)
                 return result
-        print('get_data_for_wkt 204', time.time() - t)
+        print('get_line_data_list_for_wkt 204', time.time() - t)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
-    print('get_data_for_wkt 404', time.time() - t)
+    print('get_line_data_list_for_wkt 404', time.time() - t)
     return Response(status_code=status.HTTP_404_NOT_FOUND)
 
 
