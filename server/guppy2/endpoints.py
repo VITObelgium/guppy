@@ -144,6 +144,7 @@ def get_line_data_list_for_wkt(db: Session, body: s.LineGeometryListBody):
                 coords = [(point.x, point.y) for point in points]
         if coords:
             result = Parallel(n_jobs=-1, prefer='threads')(delayed(sample_coordinates)(coords, layer_model) for layer_model in layer_models)
+            print(result)
             if result:
                 print('get_line_data_list_for_wkt 200', time.time() - t)
                 return result
@@ -156,6 +157,7 @@ def get_line_data_list_for_wkt(db: Session, body: s.LineGeometryListBody):
 def sample_coordinates(coords, layer_model):
     result = []
     path = layer_model.file_path[1:]
+    print(path, coords)
     if os.path.exists(path):
         with rasterio.open(path) as src:
             for v in src.sample(coords, indexes=1):
