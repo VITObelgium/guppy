@@ -17,4 +17,5 @@ dependencies:
   - rasterio
   - shapely
   - pyproj
+  - joblib
 prefix: /opt/mapbase3/server/conda-env

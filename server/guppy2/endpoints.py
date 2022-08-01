@@ -8,6 +8,7 @@ import numpy as np
 import rasterio
 from fastapi import status
 from fastapi.responses import Response
+from joblib import Parallel, delayed
 from pyproj import Transformer
 from rasterio.windows import from_bounds
 from shapely import wkt
@@ -29,7 +30,7 @@ def get_stats_for_bbox(db: Session, layer_name: str, bbox_left: float, bbox_bott
     t = time.time()
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
     if layer_model:
-        path = layer_model.file_path
+        path = layer_model.file_path[1:]
         if os.path.exists(path) and bbox_left and bbox_bottom and bbox_right and bbox_top:
             transformer = Transformer.from_crs("epsg:4326", "epsg:3857")
             bbox_bottom, bbox_left = transformer.transform(bbox_bottom, bbox_left)
@@ -127,6 +128,39 @@ def get_line_data_for_wkt(db: Session, layer_name: str, body: s.LineGeometryBody
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     print('get_data_for_wkt 404', time.time() - t)
     return Response(status_code=status.HTTP_404_NOT_FOUND)
+
+
+def get_line_data_list_for_wkt(db: Session, body: s.LineGeometryListBody):
+    t = time.time()
+    layer_models = db.query(m.LayerMetadata).filter(m.LayerMetadata.layer_name.in_(body.layer_names)).all()
+    coords = None
+    if layer_models:
+        line = wkt.loads(body.geometry)
+        if line.is_valid:
+            line = transform(Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True).transform, line)
+            if line.is_valid:
+                distances = np.linspace(0, line.length, body.number_of_points)
+                points = [line.interpolate(distance) for distance in distances]
+                coords = [(point.x, point.y) for point in points]
+        if coords:
+            result = Parallel(n_jobs=-1, prefer='threads')(delayed(sample_coordinates)(coords, layer_model) for layer_model in layer_models)
+            if result:
+                print('get_line_data_list_for_wkt 200', time.time() - t)
+                return result
+        print('get_data_for_wkt 204', time.time() - t)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    print('get_data_for_wkt 404', time.time() - t)
+    return Response(status_code=status.HTTP_404_NOT_FOUND)
+
+
+def sample_coordinates(coords, layer_model):
+    result = []
+    path = layer_model.file_path[1:]
+    if os.path.exists(path):
+        with rasterio.open(path) as src:
+            for v in src.sample(coords, indexes=1):
+                result.append(v[0])
+    return s.LineData(layer_name=layer_model.layer_name, data=result)
 
 
 def get_point_value_from_raster(db: Session, layer_name: str, x: float, y: float):

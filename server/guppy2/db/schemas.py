@@ -55,6 +55,11 @@ class LineDataResponse(CamelModel):
     data: list[float]
 
 
+class LineData(CamelModel):
+    layer_name: str
+    data: list[float]
+
+
 class GeometryBody(CamelModel):
     geometry: str
 
@@ -62,3 +67,9 @@ class GeometryBody(CamelModel):
 class LineGeometryBody(CamelModel):
     geometry: str
     number_of_points: int
+
+
+class LineGeometryListBody(CamelModel):
+    geometry: str
+    number_of_points: int
+    layer_names: list[str]
