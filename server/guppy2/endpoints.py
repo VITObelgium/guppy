@@ -210,6 +210,7 @@ def get_line_object_list_for_wkt(db: Session, layer_name: str, body: s.LineObjec
             input_file_df.to_crs(crs='epsg:3857', inplace=True)
             result_df = gpd.sjoin_nearest(input_file_df, line_points_df, max_distance=int(body.distance), distance_col='join_dist')
             result_df = result_df.loc[result_df.groupby('index_right')['join_dist'].idxmin()] #keep closest
+            result_df.fillna('', inplace=True)
             result = result_df.to_dict(orient='records')
             if result:
                 print('get_line_object_list_for_wkt 200', time.time() - t)
