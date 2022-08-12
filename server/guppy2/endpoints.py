@@ -4,6 +4,7 @@ import math
 import os
 import time
 
+import geopandas as gpd
 import numpy as np
 import rasterio
 from fastapi import status
@@ -190,3 +191,30 @@ def get_layer_mapping(db):
         return layer_model
     print('get_layer_mapping 204', time.time() - t)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+def get_line_object_list_for_wkt(db: Session, layer_name: str, body: s.LineObjectGeometryBody):
+    t = time.time()
+    layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
+    line_points_df = None
+    if layer_model:
+        line = wkt.loads(body.geometry)
+        if line.is_valid:
+            line = transform(Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True).transform, line)
+            if line.is_valid:
+                distances = np.linspace(0, line.length, body.number_of_points)
+                points = [line.interpolate(distance) for distance in distances]
+                line_points_df = gpd.GeoDataFrame(crs='epsg:3857', geometry=points)
+        if line_points_df is not None:
+            input_file_df = gpd.read_file(layer_model.file_path)
+            input_file_df.to_crs(crs='epsg:3857', inplace=True)
+            result_df = gpd.sjoin_nearest(input_file_df, line_points_df, max_distance=int(body.distance), distance_col='join_dist')
+            result_df = result_df.loc[result_df.groupby('index_right')['join_dist'].idxmin()] #keep closest
+            result = result_df.to_dict(orient='records')
+            if result:
+                print('get_line_object_list_for_wkt 200', time.time() - t)
+                return result
+        print('get_line_object_list_for_wkt 204', time.time() - t)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    print('get_line_object_list_for_wkt 404', time.time() - t)
+    return Response(status_code=status.HTTP_404_NOT_FOUND)

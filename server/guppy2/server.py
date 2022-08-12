@@ -45,7 +45,7 @@ async def get_line_data_for_wkt(layer_name: str, body: s.LineGeometryBody, db: S
 
 @api.post("/layers/line_data", response_model=list[s.LineData], tags=["data"])
 def get_line_data_list_for_wkt(body: s.LineGeometryListBody, db: Session = Depends(get_db)):
-    return endpoints.get_line_data_list_for_wkt(db=db,body=body)
+    return endpoints.get_line_data_list_for_wkt(db=db, body=body)
 
 
 @api.post("/layers/{layer_name}/stats", response_model=s.StatsResponse, tags=["data"])
@@ -56,6 +56,11 @@ async def get_stats_for_wkt(layer_name: str, body: s.GeometryBody, native: bool 
 @api.get("/layers/{layer_name}/point", response_model=s.PointResponse, tags=["data"])
 async def get_point_value_from_raster(layer_name: str, x: float, y: float, db: Session = Depends(get_db)):
     return endpoints.get_point_value_from_raster(db=db, layer_name=layer_name, x=x, y=y)
+
+
+@api.post("/layers/{layer_name}/object", tags=["data"])
+async def get_line_object_list_for_wkt(layer_name: str, body: s.LineObjectGeometryBody, db: Session = Depends(get_db)):
+    return endpoints.get_line_object_list_for_wkt(db=db, layer_name=layer_name, body=body)
 
 
 @api.get("/layers", response_model=list[s.LayerMetadataSchema], tags=["mapping"])

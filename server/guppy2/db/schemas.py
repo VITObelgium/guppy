@@ -73,3 +73,8 @@ class LineGeometryListBody(CamelModel):
     geometry: str
     number_of_points: int
     layer_names: list[str]
+
+class LineObjectGeometryBody(CamelModel):
+    geometry: str
+    number_of_points: int
+    distance: int

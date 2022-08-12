@@ -18,4 +18,6 @@ dependencies:
   - shapely
   - pyproj
   - joblib
+  - geopandas
+  - pygeos
 prefix: /opt/mapbase3/server/conda-env
