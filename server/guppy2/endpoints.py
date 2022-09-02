@@ -31,7 +31,7 @@ def get_stats_for_bbox(db: Session, layer_name: str, bbox_left: float, bbox_bott
     t = time.time()
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
     if layer_model:
-        path = layer_model.file_path[1:]
+        path = layer_model.file_path
         if os.path.exists(path) and bbox_left and bbox_bottom and bbox_right and bbox_top:
             transformer = Transformer.from_crs("epsg:4326", "epsg:3857")
             bbox_bottom, bbox_left = transformer.transform(bbox_bottom, bbox_left)
