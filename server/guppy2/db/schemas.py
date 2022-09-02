@@ -19,6 +19,8 @@ class LayerMetadataSchema(CamelModel):
     id: int
     layer_name: str
     file_path: str
+    is_rgb: Optional[bool] = False
+    rgb_factor: Optional[float] = None
 
     class Config:
         orm_mode = True

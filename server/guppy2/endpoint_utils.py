@@ -58,3 +58,11 @@ def get_overview(res_x: float, res_y: float, overviews: [int], bounds: (float,))
     if overview_level < 0:
         return None, None
     return overview_level, overviews[overview_level]
+
+
+def _decode(data, base, interval):
+    """
+    Utility to decode RGB encoded data
+    """
+    data = data.astype(np.float64)
+    return base + (((data[0] * 256 * 256) + (data[1] * 256) + data[2]) * interval)

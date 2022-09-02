@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 
 from guppy2.db import models as m
 from guppy2.db import schemas as s
-from guppy2.endpoint_utils import get_overview_factor, create_stats_response, _extract_area_from_dataset, _extract_shape_mask_from_dataset
+from guppy2.endpoint_utils import get_overview_factor, create_stats_response, _extract_area_from_dataset, _extract_shape_mask_from_dataset, _decode
 
 
 def healthcheck(db: Session):
@@ -31,7 +31,7 @@ def get_stats_for_bbox(db: Session, layer_name: str, bbox_left: float, bbox_bott
     t = time.time()
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
     if layer_model:
-        path = layer_model.file_path
+        path = layer_model.file_path[1:]
         if os.path.exists(path) and bbox_left and bbox_bottom and bbox_right and bbox_top:
             transformer = Transformer.from_crs("epsg:4326", "epsg:3857")
             bbox_bottom, bbox_left = transformer.transform(bbox_bottom, bbox_left)
@@ -43,7 +43,11 @@ def get_stats_for_bbox(db: Session, layer_name: str, bbox_left: float, bbox_bott
                 intersection = bb_input.intersection(bb_raster)
                 if not intersection.is_empty:
                     window = from_bounds(intersection.bounds[0], intersection.bounds[1], intersection.bounds[2], intersection.bounds[3], src.transform).round_offsets()
-                    rst = src.read(1, window=window, )
+                    if layer_model.is_rgb:
+                        data = src.read(window=window, )
+                        rst = _decode(data, 0, layer_model.rgb_factor)
+                    else:
+                        rst = src.read(1, window=window, )
                     if rst.size != 0:
                         response = create_stats_response(rst, np.zeros_like(rst).astype(bool), src.nodata, f'bbox stats. Overview level: {overview_factor}, {overview_bin} scale')
                         print('get_stats_for_bbox 200', time.time() - t)
@@ -156,7 +160,7 @@ def get_line_data_list_for_wkt(db: Session, body: s.LineGeometryListBody):
 
 def sample_coordinates(coords, layer_model):
     result = []
-    path = layer_model.file_path
+    path = layer_model.file_path[1:]
     if os.path.exists(path):
         with rasterio.open(path) as src:
             for v in src.sample(coords, indexes=1):
@@ -206,10 +210,10 @@ def get_line_object_list_for_wkt(db: Session, layer_name: str, body: s.LineObjec
                 points = [line.interpolate(distance) for distance in distances]
                 line_points_df = gpd.GeoDataFrame(crs='epsg:3857', geometry=points)
         if line_points_df is not None:
-            input_file_df = gpd.read_file(layer_model.file_path)
+            input_file_df = gpd.read_file(layer_model.file_path[1:])
             input_file_df.to_crs(crs='epsg:3857', inplace=True)
             result_df = gpd.sjoin_nearest(input_file_df, line_points_df, max_distance=int(body.distance), distance_col='join_dist')
-            result_df = result_df.loc[result_df.groupby(['index_right','modeleenheid'])['join_dist'].idxmin()] #keep closest
+            result_df = result_df.loc[result_df.groupby(['index_right', 'modeleenheid'])['join_dist'].idxmin()]  # keep closest
             result_df.fillna('', inplace=True)
             result = result_df.to_dict(orient='records')
             if result:
