@@ -68,7 +68,7 @@ async def get_layers_mapping(db: Session = Depends(get_db), limit: int = 100, of
     return endpoints.get_layers_mapping(db=db, limit=limit, offset=offset)
 
 
-@api.get("/layers/{layer_name}", response_model=list[s.LayerMetadataSchema], tags=["mapping"])
+@api.get("/layers/{layer_name}", response_model=s.LayerMetadataSchema, tags=["mapping"])
 async def get_layer_mapping(layer_name: str, db: Session = Depends(get_db)):
     return endpoints.get_layer_mapping(db=db, layer_name=layer_name)
 
