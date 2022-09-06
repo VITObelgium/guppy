@@ -64,6 +64,11 @@ async def get_line_object_list_for_wkt(layer_name: str, body: s.LineObjectGeomet
 
 
 @api.get("/layers", response_model=list[s.LayerMetadataSchema], tags=["mapping"])
+async def get_layers_mapping(db: Session = Depends(get_db), limit: int = 100, offset: int = 0):
+    return endpoints.get_layers_mapping(db=db, limit=limit, offset=offset)
+
+
+@api.get("/layers/{layer_name}", response_model=list[s.LayerMetadataSchema], tags=["mapping"])
 async def get_layer_mapping(db: Session = Depends(get_db)):
     return endpoints.get_layer_mapping(db=db)
 
@@ -74,4 +79,4 @@ async def healthcheck(db: Session = Depends(get_db)):
 
 
 if __name__ == '__main__':
-    uvicorn.run("server:app", reload=True)
+    uvicorn.run("server:app", port=5000, reload=True)

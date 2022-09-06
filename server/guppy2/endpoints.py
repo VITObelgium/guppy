@@ -187,13 +187,23 @@ def get_point_value_from_raster(db: Session, layer_name: str, x: float, y: float
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-def get_layer_mapping(db):
+def get_layer_mapping(db, layer_name):
     t = time.time()
-    layer_model = db.query(m.LayerMetadata).all()
+    layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
     if layer_model:
         print('get_layer_mapping 200', time.time() - t)
         return layer_model
     print('get_layer_mapping 204', time.time() - t)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+def get_layers_mapping(db, limit=100, offset=0):
+    t = time.time()
+    layer_model = db.query(m.LayerMetadata).limit(limit).offset(offset).all()
+    if layer_model:
+        print('get_layers_mapping 200', time.time() - t)
+        return layer_model
+    print('get_layers_mapping 204', time.time() - t)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
