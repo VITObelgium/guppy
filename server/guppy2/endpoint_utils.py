@@ -1,5 +1,6 @@
 import numpy as np
 import rasterio
+import math
 from rasterio.mask import mask, raster_geometry_mask
 
 from guppy2.db import schemas as s
@@ -15,22 +16,28 @@ def get_overview_factor(bounds, native, path):
     return overview_factor, overview_bin
 
 
+def no_nan(input):
+    if math.isnan(input):
+        return None
+    return input
+
+
 def create_stats_response(rst: np.array, mask_array: np.array, nodata: float, type: str):
     rst = rst.astype(float)
     rst[rst == nodata] = np.nan
     q2, q5, q95, q98 = np.nanquantile(rst, [0.02, 0.05, 0.95, 0.98])
     response = s.StatsResponse(type=type,
-                               min=float(np.nanmin(rst)),
-                               max=float(np.nanmax(rst)),
-                               sum=float(np.nansum(rst)),
-                               mean=float(np.nanmean(rst)),
+                               min=no_nan(float(np.nanmin(rst))),
+                               max=no_nan(float(np.nanmax(rst))),
+                               sum=no_nan(float(np.nansum(rst))),
+                               mean=no_nan(float(np.nanmean(rst))),
                                count_no_data=int(np.sum((~np.isfinite(rst)) & (~mask_array))),
                                count_total=int(np.sum(~mask_array)),
                                count_data=int(np.sum(np.isfinite(rst))),
-                               q02=float(q2),
-                               q05=float(q5),
-                               q95=float(q95),
-                               q98=float(q98),
+                               q02=no_nan(float(q2)),
+                               q05=no_nan(float(q5)),
+                               q95=no_nan(float(q95)),
+                               q98=no_nan(float(q98)),
                                )
     return response
 
