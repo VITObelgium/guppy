@@ -34,17 +34,17 @@ class PointResponse(CamelModel):
 
 class StatsResponse(CamelModel):
     type: str
-    min: float
-    max: float
-    sum: float
-    mean: float
+    min: Optional[float]
+    max: Optional[float]
+    sum: Optional[float]
+    mean: Optional[float]
     count_total: Optional[int]
     count_no_data: Optional[int]
     count_data: int
-    q02: float
-    q05: float
-    q95: float
-    q98: float
+    q02: Optional[float]
+    q05: Optional[float]
+    q95: Optional[float]
+    q98: Optional[float]
 
 
 class DataResponse(CamelModel):
@@ -75,6 +75,7 @@ class LineGeometryListBody(CamelModel):
     geometry: str
     number_of_points: int
     layer_names: list[str]
+
 
 class LineObjectGeometryBody(CamelModel):
     geometry: str
