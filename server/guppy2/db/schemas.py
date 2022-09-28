@@ -47,6 +47,16 @@ class StatsResponse(CamelModel):
     q98: Optional[float]
 
 
+class ClassificationEntry(CamelModel):
+    value: float
+    count: float
+
+
+class ClassificationResult(CamelModel):
+    type: str
+    data: list[ClassificationEntry]
+
+
 class DataResponse(CamelModel):
     type: str
     data: list[list[float]]

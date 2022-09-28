@@ -233,3 +233,35 @@ def get_line_object_list_for_wkt(db: Session, layer_name: str, body: s.LineObjec
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     print('get_line_object_list_for_wkt 404', time.time() - t)
     return Response(status_code=status.HTTP_404_NOT_FOUND)
+
+
+def get_classification_for_wkt(db: Session, layer_name: str, body: s.GeometryBody):
+    t = time.time()
+    layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
+    if layer_model:
+        path = layer_model.file_path
+        if os.path.exists(path) and body:
+            geom = wkt.loads(body.geometry)
+            if geom.is_valid:
+                geom = transform(Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True).transform, geom)
+                if geom.is_valid:
+                    with rasterio.open(path) as src:
+                        if geom.area / (src.res[0] * src.res[1]) > 100000:
+                            return Response(content=f'geometry area too large ({geom.area}m². allowed <={100000 * (src.res[0] * src.res[1])}m²)',
+                                            status_code=status.HTTP_406_NOT_ACCEPTABLE)
+                        rst, _ = _extract_area_from_dataset(src, geom, crop=True)
+                        shape_mask, _, _ = rasterio.mask.raster_geometry_mask(src, [geom], all_touched=False, crop=True)
+                        if rst.size != 0:
+                            values, counts = np.unique(np.where(shape_mask == 0, rst, -999999999999), return_counts=True)
+                            result_classes = []
+                            for v, c in zip(values, counts):
+                                if v != -999999999999:
+                                    result_classes.append(s.ClassificationEntry(values=v, count=c))
+
+                            response = s.ClassificationResult(type='classification', data=result_classes)
+                            print('classification_for_wkt 200', time.time() - t)
+                            return response
+            print('classification_for_wkt invalid geometry', time.time() - t)
+            return Response(content="invalid geometry", status_code=status.HTTP_406_NOT_ACCEPTABLE)
+    print('classification_for_wkt 204', time.time() - t)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
