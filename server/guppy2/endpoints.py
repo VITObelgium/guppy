@@ -277,7 +277,7 @@ def get_classification_for_wkt(db: Session, layer_name: str, body: s.GeometryBod
                         total_count = sum([c for v, c in zip(values, counts) if v != -999999999999])
                         for v, c in zip(values, counts):
                             if v != -999999999999:
-                                result_classes.append(s.ClassificationEntry(value=v, count=c, percentage=c/total_count))
+                                result_classes.append(s.ClassificationEntry(value=v, count=c, percentage=c / total_count * 100))
                         response = s.ClassificationResult(type='classification', data=result_classes)
                         print('classification_for_wkt 200', time.time() - t)
                         return response
