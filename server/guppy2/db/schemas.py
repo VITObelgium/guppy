@@ -50,6 +50,7 @@ class StatsResponse(CamelModel):
 class ClassificationEntry(CamelModel):
     value: float
     count: float
+    percentage: float
 
 
 class ClassificationResult(CamelModel):

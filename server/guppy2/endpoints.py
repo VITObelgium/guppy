@@ -274,10 +274,10 @@ def get_classification_for_wkt(db: Session, layer_name: str, body: s.GeometryBod
                     if rst.size != 0:
                         values, counts = np.unique(np.where(shape_mask == 0, rst, -999999999999), return_counts=True)
                         result_classes = []
+                        total_count = sum([c for v, c in zip(values, counts) if v != -999999999999])
                         for v, c in zip(values, counts):
                             if v != -999999999999:
-                                result_classes.append(s.ClassificationEntry(value=v, count=c))
-
+                                result_classes.append(s.ClassificationEntry(value=v, count=c, percentage=c/total_count))
                         response = s.ClassificationResult(type='classification', data=result_classes)
                         print('classification_for_wkt 200', time.time() - t)
                         return response
