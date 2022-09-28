@@ -73,8 +73,8 @@ def get_data_for_wkt(db: Session, layer_name: str, body: s.GeometryBody):
                 geom = transform(Transformer.from_crs("EPSG:4326", f"EPSG:{target_srs}", always_xy=True).transform, geom)
                 if geom.is_valid:
                     with rasterio.open(path) as src:
-                        if geom.area / (src.res[0] * src.res[1]) > 1000000:
-                            return Response(content=f'geometry area too large ({geom.area}m². allowed <={1000000 * (src.res[0] * src.res[1])}m²)',
+                        if geom.area / (src.res[0] * src.res[1]) > 100000:
+                            return Response(content=f'geometry area too large ({geom.area}m². allowed <={100000 * (src.res[0] * src.res[1])}m²)',
                                             status_code=status.HTTP_406_NOT_ACCEPTABLE)
                         rst, _ = _extract_area_from_dataset(src, [geom], crop=True)
                     if rst.size != 0:
@@ -257,8 +257,8 @@ def get_classification_for_wkt(db: Session, layer_name: str, body: s.GeometryBod
                 geom = transform(Transformer.from_crs("EPSG:4326", f"EPSG:{target_srs}", always_xy=True).transform, geom)
                 if geom.is_valid:
                     with rasterio.open(path) as src:
-                        if geom.area / (src.res[0] * src.res[1]) > 1000000:
-                            return Response(content=f'geometry area too large ({geom.area}m². allowed <={1000000 * (src.res[0] * src.res[1])}m²)',
+                        if geom.area / (src.res[0] * src.res[1]) > 100000:
+                            return Response(content=f'geometry area too large ({geom.area}m². allowed <={100000 * (src.res[0] * src.res[1])}m²)',
                                             status_code=status.HTTP_406_NOT_ACCEPTABLE)
                         rst, _ = _extract_area_from_dataset(src, [geom], crop=True)
                         shape_mask, _, _ = rasterio.mask.raster_geometry_mask(src, [geom], all_touched=False, crop=True)
