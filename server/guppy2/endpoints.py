@@ -33,7 +33,9 @@ def get_stats_for_bbox(db: Session, layer_name: str, bbox_left: float, bbox_bott
     if layer_model:
         path = layer_model.file_path
         if os.path.exists(path) and bbox_left and bbox_bottom and bbox_right and bbox_top:
-            transformer = Transformer.from_crs("epsg:4326", "epsg:3857")
+            with rasterio.open(path) as src:
+                target_srs = src.crs.to_epsg()
+            transformer = Transformer.from_crs("EPSG:4326", f"EPSG:{target_srs}", always_xy=True)
             bbox_bottom, bbox_left = transformer.transform(bbox_bottom, bbox_left)
             bbox_top, bbox_right = transformer.transform(bbox_top, bbox_right)
             overview_factor, overview_bin = get_overview_factor((bbox_bottom, bbox_left, bbox_top, bbox_right), native, path)
@@ -65,18 +67,20 @@ def get_data_for_wkt(db: Session, layer_name: str, body: s.GeometryBody):
         path = layer_model.file_path
         if os.path.exists(path) and body:
             geom = wkt.loads(body.geometry)
+            with rasterio.open(path) as src:
+                target_srs = src.crs.to_epsg()
             if geom.is_valid:
-                geom = transform(Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True).transform, geom)
+                geom = transform(Transformer.from_crs("EPSG:4326", f"EPSG:{target_srs}", always_xy=True).transform, geom)
                 if geom.is_valid:
                     with rasterio.open(path) as src:
-                        if geom.area / (src.res[0] * src.res[1]) > 100000:
-                            return Response(content=f'geometry area too large ({geom.area}m². allowed <={100000 * (src.res[0] * src.res[1])}m²)',
+                        if geom.area / (src.res[0] * src.res[1]) > 1000000:
+                            return Response(content=f'geometry area too large ({geom.area}m². allowed <={1000000 * (src.res[0] * src.res[1])}m²)',
                                             status_code=status.HTTP_406_NOT_ACCEPTABLE)
                         rst, _ = _extract_area_from_dataset(src, [geom], crop=True)
-                        if rst.size != 0:
-                            response = s.DataResponse(type='raw data', data=rst.tolist())
-                            print('get_data_for_wkt 200', time.time() - t)
-                            return response
+                    if rst.size != 0:
+                        response = s.DataResponse(type='raw data', data=rst.tolist())
+                        print('get_data_for_wkt 200', time.time() - t)
+                        return response
         print('get_data_for_wkt 204', time.time() - t)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     print('get_data_for_wkt 404', time.time() - t)
@@ -90,18 +94,20 @@ def get_stats_for_wkt(db: Session, layer_name: str, body: s.GeometryBody, native
         path = layer_model.file_path
         if os.path.exists(path) and body:
             geom = wkt.loads(body.geometry)
+            with rasterio.open(path) as src:
+                target_srs = src.crs.to_epsg()
             if geom.is_valid:
-                geom = transform(Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True).transform, geom)
+                geom = transform(Transformer.from_crs("EPSG:4326", f"EPSG:{target_srs}", always_xy=True).transform, geom)
                 if geom.is_valid:
                     overview_factor, overview_bin = get_overview_factor(geom.bounds, native, path)
                     with rasterio.open(path, overview_level=overview_factor) as src:
                         rst, rast_transform = _extract_area_from_dataset(src, [geom], crop=True)
                         shape_mask = _extract_shape_mask_from_dataset(src, geom, crop=True)
-                        if rst.size != 0:
-                            response = create_stats_response(rst, shape_mask, src.nodata,
-                                                             type=f'stats wkt. Overview level: {overview_factor}, {overview_bin} scale')
-                            print('get_stats_for_wkt 200', time.time() - t)
-                            return response
+                    if rst.size != 0:
+                        response = create_stats_response(rst, shape_mask, src.nodata,
+                                                         type=f'stats wkt. Overview level: {overview_factor}, {overview_bin} scale')
+                        print('get_stats_for_wkt 200', time.time() - t)
+                        return response
         print('get_stats_for_wkt 204', time.time() - t)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     print('get_stats_for_wkt 404', time.time() - t)
@@ -115,8 +121,10 @@ def get_line_data_for_wkt(db: Session, layer_name: str, body: s.LineGeometryBody
         path = layer_model.file_path
         if os.path.exists(path) and body:
             line = wkt.loads(body.geometry)
+            with rasterio.open(path) as src:
+                target_srs = src.crs.to_epsg()
             if line.is_valid:
-                line = transform(Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True).transform, line)
+                line = transform(Transformer.from_crs("EPSG:4326", f"EPSG:{target_srs}", always_xy=True).transform, line)
                 if line.is_valid:
                     distances = np.linspace(0, line.length, body.number_of_points)
                     points = [line.interpolate(distance) for distance in distances]
@@ -178,7 +186,8 @@ def get_point_value_from_raster(db: Session, layer_name: str, x: float, y: float
         if os.path.exists(path) and x and y:
             with rasterio.open(path) as src:
                 nodata = src.nodata
-                transformer = Transformer.from_crs("epsg:4326", "epsg:3857")
+                target_srs = src.crs.to_epsg()
+                transformer = Transformer.from_crs("EPSG:4326", f"EPSG:{target_srs}", always_xy=True)
                 x_, y_ = transformer.transform(x, y)
                 for v in src.sample([(x_, y_)], indexes=1):
                     print('get_point_value_from_raster 200', time.time() - t)
@@ -242,25 +251,27 @@ def get_classification_for_wkt(db: Session, layer_name: str, body: s.GeometryBod
         path = layer_model.file_path
         if os.path.exists(path) and body:
             geom = wkt.loads(body.geometry)
+            with rasterio.open(path) as src:
+                target_srs = src.crs.to_epsg()
             if geom.is_valid:
-                geom = transform(Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True).transform, geom)
+                geom = transform(Transformer.from_crs("EPSG:4326", f"EPSG:{target_srs}", always_xy=True).transform, geom)
                 if geom.is_valid:
                     with rasterio.open(path) as src:
-                        if geom.area / (src.res[0] * src.res[1]) > 100000:
-                            return Response(content=f'geometry area too large ({geom.area}m². allowed <={100000 * (src.res[0] * src.res[1])}m²)',
+                        if geom.area / (src.res[0] * src.res[1]) > 1000000:
+                            return Response(content=f'geometry area too large ({geom.area}m². allowed <={1000000 * (src.res[0] * src.res[1])}m²)',
                                             status_code=status.HTTP_406_NOT_ACCEPTABLE)
                         rst, _ = _extract_area_from_dataset(src, [geom], crop=True)
                         shape_mask, _, _ = rasterio.mask.raster_geometry_mask(src, [geom], all_touched=False, crop=True)
-                        if rst.size != 0:
-                            values, counts = np.unique(np.where(shape_mask == 0, rst, -999999999999), return_counts=True)
-                            result_classes = []
-                            for v, c in zip(values, counts):
-                                if v != -999999999999:
-                                    result_classes.append(s.ClassificationEntry(values=v, count=c))
+                    if rst.size != 0:
+                        values, counts = np.unique(np.where(shape_mask == 0, rst, -999999999999), return_counts=True)
+                        result_classes = []
+                        for v, c in zip(values, counts):
+                            if v != -999999999999:
+                                result_classes.append(s.ClassificationEntry(value=v, count=c))
 
-                            response = s.ClassificationResult(type='classification', data=result_classes)
-                            print('classification_for_wkt 200', time.time() - t)
-                            return response
+                        response = s.ClassificationResult(type='classification', data=result_classes)
+                        print('classification_for_wkt 200', time.time() - t)
+                        return response
             print('classification_for_wkt invalid geometry', time.time() - t)
             return Response(content="invalid geometry", status_code=status.HTTP_406_NOT_ACCEPTABLE)
     print('classification_for_wkt 204', time.time() - t)
