@@ -72,7 +72,7 @@ def get_data_for_wkt(db: Session, layer_name: str, body: s.GeometryBody):
                         if geom.area / (src.res[0] * src.res[1]) > 100000:
                             return Response(content=f'geometry area too large ({geom.area}m². allowed <={100000 * (src.res[0] * src.res[1])}m²)',
                                             status_code=status.HTTP_406_NOT_ACCEPTABLE)
-                        rst, _ = _extract_area_from_dataset(src, geom, crop=True)
+                        rst, _ = _extract_area_from_dataset(src, [geom], crop=True)
                         if rst.size != 0:
                             response = s.DataResponse(type='raw data', data=rst.tolist())
                             print('get_data_for_wkt 200', time.time() - t)
@@ -95,7 +95,7 @@ def get_stats_for_wkt(db: Session, layer_name: str, body: s.GeometryBody, native
                 if geom.is_valid:
                     overview_factor, overview_bin = get_overview_factor(geom.bounds, native, path)
                     with rasterio.open(path, overview_level=overview_factor) as src:
-                        rst, rast_transform = _extract_area_from_dataset(src, geom, crop=True)
+                        rst, rast_transform = _extract_area_from_dataset(src, [geom], crop=True)
                         shape_mask = _extract_shape_mask_from_dataset(src, geom, crop=True)
                         if rst.size != 0:
                             response = create_stats_response(rst, shape_mask, src.nodata,
@@ -249,7 +249,7 @@ def get_classification_for_wkt(db: Session, layer_name: str, body: s.GeometryBod
                         if geom.area / (src.res[0] * src.res[1]) > 100000:
                             return Response(content=f'geometry area too large ({geom.area}m². allowed <={100000 * (src.res[0] * src.res[1])}m²)',
                                             status_code=status.HTTP_406_NOT_ACCEPTABLE)
-                        rst, _ = _extract_area_from_dataset(src, geom, crop=True)
+                        rst, _ = _extract_area_from_dataset(src, [geom], crop=True)
                         shape_mask, _, _ = rasterio.mask.raster_geometry_mask(src, [geom], all_touched=False, crop=True)
                         if rst.size != 0:
                             values, counts = np.unique(np.where(shape_mask == 0, rst, -999999999999), return_counts=True)
