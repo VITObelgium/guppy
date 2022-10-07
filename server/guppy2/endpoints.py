@@ -47,7 +47,7 @@ def get_stats_for_bbox(db: Session, layer_name: str, bbox_left: float, bbox_bott
                     window = from_bounds(intersection.bounds[0], intersection.bounds[1], intersection.bounds[2], intersection.bounds[3], src.transform).round_offsets()
                     if layer_model.is_rgb:
                         data = src.read(window=window, )
-                        rst = _decode(data, 0, layer_model.rgb_factor)
+                        rst = _decode(data)
                     else:
                         rst = src.read(1, window=window, )
                     if rst.size != 0:
