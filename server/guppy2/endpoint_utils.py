@@ -71,4 +71,4 @@ def _decode(data):
     """
     Utility to decode RGB encoded data
     """
-    return np.frombuffer(data.reshape(4, -1).transpose().tobytes(), dtype='>f4').reshape((data[0].shape))
+    return np.frombuffer(data.reshape(4, -1).transpose().tobytes(), dtype='<f4').reshape((data[0].shape))
