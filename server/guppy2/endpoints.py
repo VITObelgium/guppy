@@ -35,7 +35,7 @@ def get_stats_for_bbox(db: Session, layer_name: str, bbox_left: float, bbox_bott
         if os.path.exists(path) and bbox_left and bbox_bottom and bbox_right and bbox_top:
             with rasterio.open(path) as src:
                 target_srs = src.crs.to_epsg()
-            transformer = Transformer.from_crs("EPSG:4326", f"EPSG:{target_srs}", always_xy=True)
+            transformer = Transformer.from_crs("EPSG:4326", f"EPSG:{target_srs}")
             bbox_bottom, bbox_left = transformer.transform(bbox_bottom, bbox_left)
             bbox_top, bbox_right = transformer.transform(bbox_top, bbox_right)
             overview_factor, overview_bin = get_overview_factor((bbox_bottom, bbox_left, bbox_top, bbox_right), native, path)
