@@ -106,7 +106,7 @@ def get_stats_for_wkt(db: Session, layer_name: str, body: s.GeometryBody, native
                     with rasterio.open(path, overview_level=overview_factor) as src:
                         try:
                             rst, _ = _extract_area_from_dataset(src, [geom], crop=True)
-                            shape_mask = _extract_shape_mask_from_dataset(src, geom, crop=True)
+                            shape_mask = _extract_shape_mask_from_dataset(src, [geom], crop=True)
                         except ValueError as e:
                             return Response(content=str(e), status_code=status.HTTP_406_NOT_ACCEPTABLE)
                     if rst.size != 0:
@@ -268,7 +268,7 @@ def get_classification_for_wkt(db: Session, layer_name: str, body: s.GeometryBod
                                             status_code=status.HTTP_406_NOT_ACCEPTABLE)
                         try:
                             rst, _ = _extract_area_from_dataset(src, [geom], crop=True)
-                            shape_mask = _extract_shape_mask_from_dataset(src, geom, crop=True)
+                            shape_mask = _extract_shape_mask_from_dataset(src, [geom], crop=True)
                         except ValueError as e:
                             return Response(content=str(e), status_code=status.HTTP_406_NOT_ACCEPTABLE)
                     if rst.size != 0:
