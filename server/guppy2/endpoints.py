@@ -17,6 +17,7 @@ from shapely.geometry import box
 from shapely.ops import transform
 from sqlalchemy.orm import Session
 
+from guppy2.config import config as cfg
 from guppy2.db import models as m
 from guppy2.db import schemas as s
 from guppy2.endpoint_utils import get_overview_factor, create_stats_response, _extract_area_from_dataset, _extract_shape_mask_from_dataset, _decode
@@ -73,8 +74,8 @@ def get_data_for_wkt(db: Session, layer_name: str, body: s.GeometryBody):
                 geom = transform(Transformer.from_crs("EPSG:4326", f"EPSG:{target_srs}", always_xy=True).transform, geom)
                 if geom.is_valid:
                     with rasterio.open(path) as src:
-                        if geom.area / (src.res[0] * src.res[1]) > 100000:
-                            return Response(content=f'geometry area too large ({geom.area}m². allowed <={100000 * (src.res[0] * src.res[1])}m²)',
+                        if geom.area / (src.res[0] * src.res[1]) > cfg.guppy.size_limit:
+                            return Response(content=f'geometry area too large ({geom.area}m². allowed <={cfg.guppy.size_limit * (src.res[0] * src.res[1])}m²)',
                                             status_code=status.HTTP_406_NOT_ACCEPTABLE)
                         try:
                             rst, _ = _extract_area_from_dataset(src, [geom], crop=True)
@@ -263,8 +264,8 @@ def get_classification_for_wkt(db: Session, layer_name: str, body: s.GeometryBod
                 geom = transform(Transformer.from_crs("EPSG:4326", f"EPSG:{target_srs}", always_xy=True).transform, geom)
                 if geom.is_valid:
                     with rasterio.open(path) as src:
-                        if geom.area / (src.res[0] * src.res[1]) > 100000:
-                            return Response(content=f'geometry area too large ({geom.area}m². allowed <={100000 * (src.res[0] * src.res[1])}m²)',
+                        if geom.area / (src.res[0] * src.res[1]) > cfg.guppy.size_limit:
+                            return Response(content=f'geometry area too large ({geom.area}m². allowed <={cfg.guppy.size_limit * (src.res[0] * src.res[1])}m²)',
                                             status_code=status.HTTP_406_NOT_ACCEPTABLE)
                         try:
                             rst, _ = _extract_area_from_dataset(src, [geom], crop=True)
