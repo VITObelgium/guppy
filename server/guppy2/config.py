@@ -61,7 +61,7 @@ def parse_config_file(config_file: str) -> _Config:
             passwd=yml_data['database']['passwd'],
             db=yml_data['database']['db'],
         ),
-        guppy=_Guppy(size_limit=yml_data['guppy']['size_limit'] if 'guppy' in yml_data else 10000),
+        guppy=_Guppy(size_limit=int(yml_data['guppy']['size_limit']) if 'guppy' in yml_data else 10000),
     )
 
 
@@ -104,7 +104,7 @@ if guppy2_env_vars:
                     passwd=guppy2_env_vars['GUPPY_DATABASE_PASSWD'],
                     db=guppy2_env_vars['GUPPY_DATABASE_DB'],
                 ),
-                guppy=_Guppy(size_limit=guppy2_env_vars['GUPPY_SIZE_LIMIT'] if 'GUPPY_SIZE_LIMIT' in guppy2_env_vars else 10000),
+                guppy=_Guppy(size_limit=int(guppy2_env_vars['GUPPY_SIZE_LIMIT']) if 'GUPPY_SIZE_LIMIT' in guppy2_env_vars else 10000),
             )
         except KeyError as key_error:
             raise SystemExit("Environment variable '%s' not found!" % key_error)
