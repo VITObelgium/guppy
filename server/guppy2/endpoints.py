@@ -78,7 +78,9 @@ def get_data_for_wkt(db: Session, layer_name: str, body: s.GeometryBody):
                             return Response(content=f'geometry area too large ({geom.area}m². allowed <={cfg.guppy.size_limit * (src.res[0] * src.res[1])}m²)',
                                             status_code=status.HTTP_406_NOT_ACCEPTABLE)
                         try:
-                            rst, _ = _extract_area_from_dataset(src, [geom], crop=True)
+                            rst, _ = _extract_area_from_dataset(src, [geom], crop=True, is_rgb=layer_model.is_rgb)
+                            if layer_model.is_rgb:
+                                rst = _decode(rst)
                         except ValueError as e:
                             return Response(content=str(e), status_code=status.HTTP_406_NOT_ACCEPTABLE)
                     if rst.size != 0:
@@ -106,7 +108,9 @@ def get_stats_for_wkt(db: Session, layer_name: str, body: s.GeometryBody, native
                     overview_factor, overview_bin = get_overview_factor(geom.bounds, native, path)
                     with rasterio.open(path, overview_level=overview_factor) as src:
                         try:
-                            rst, _ = _extract_area_from_dataset(src, [geom], crop=True)
+                            rst, _ = _extract_area_from_dataset(src, [geom], crop=True, is_rgb=layer_model.is_rgb)
+                            if layer_model.is_rgb:
+                                rst = _decode(rst)
                             shape_mask = _extract_shape_mask_from_dataset(src, [geom], crop=True)
                         except ValueError as e:
                             return Response(content=str(e), status_code=status.HTTP_406_NOT_ACCEPTABLE)
@@ -268,7 +272,9 @@ def get_classification_for_wkt(db: Session, layer_name: str, body: s.GeometryBod
                             return Response(content=f'geometry area too large ({geom.area}m². allowed <={cfg.guppy.size_limit * (src.res[0] * src.res[1])}m²)',
                                             status_code=status.HTTP_406_NOT_ACCEPTABLE)
                         try:
-                            rst, _ = _extract_area_from_dataset(src, [geom], crop=True)
+                            rst, _ = _extract_area_from_dataset(src, [geom], crop=True, is_rgb=layer_model.is_rgb)
+                            if layer_model.is_rgb:
+                                rst = _decode(rst)
                             shape_mask = _extract_shape_mask_from_dataset(src, [geom], crop=True)
                         except ValueError as e:
                             return Response(content=str(e), status_code=status.HTTP_406_NOT_ACCEPTABLE)

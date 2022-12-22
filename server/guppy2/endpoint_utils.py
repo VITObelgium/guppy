@@ -42,8 +42,10 @@ def create_stats_response(rst: np.array, mask_array: np.array, nodata: float, ty
     return response
 
 
-def _extract_area_from_dataset(raster_ds, geom, crop=True, all_touched=False):
+def _extract_area_from_dataset(raster_ds, geom, crop=True, all_touched=False, is_rgb=False):
     crop_arr, crop_transform = mask(raster_ds, geom, crop=crop, all_touched=all_touched)
+    if is_rgb:
+        return crop_arr, crop_transform
     crop_arr = crop_arr[0]
     return crop_arr, crop_transform
 
