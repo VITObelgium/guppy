@@ -125,14 +125,13 @@ def get_stats_for_wkt(db: Session, layer_name: str, body: s.GeometryBody, native
     return Response(status_code=status.HTTP_404_NOT_FOUND)
 
 
-def get_stats_for_model(layer_model, native):
+def get_stats_for_model(layer_model, native, geom, srs):
     path = layer_model.file_path
-    if os.path.exists(path) and body:
-        geom = wkt.loads(body.geometry)
+    if os.path.exists(path) and geom:
         with rasterio.open(path) as src:
             target_srs = src.crs.to_epsg()
         if geom.is_valid:
-            geom = transform(Transformer.from_crs(body.srs if body.srs else "EPSG:4326", f"EPSG:{target_srs}", always_xy=True).transform, geom)
+            geom = transform(Transformer.from_crs(srs, f"EPSG:{target_srs}", always_xy=True).transform, geom)
             if geom.is_valid:
                 overview_factor, overview_bin = get_overview_factor(geom.bounds, native, path)
                 with rasterio.open(path, overview_level=overview_factor) as src:
@@ -153,7 +152,9 @@ def get_stats_for_wkt_list(db: Session, body: s.GeometryBodyList, native: bool):
     t = time.time()
     layer_models = db.query(m.LayerMetadata).filter(m.LayerMetadata.layer_name.in_(body.layer_names)).all()
     if layer_models:
-        result = Parallel(n_jobs=-1, prefer='threads')(delayed(get_stats_for_model)(layer_model, native) for layer_model in layer_models)
+        geom = wkt.loads(body.geometry)
+        srs = body.srs if body.srs else "EPSG:4326"
+        result = Parallel(n_jobs=-1, prefer='threads')(delayed(get_stats_for_model)(layer_model, native, geom, srs) for layer_model in layer_models)
         if result:
             print('get_stats_for_wkt 200', time.time() - t)
             return result
