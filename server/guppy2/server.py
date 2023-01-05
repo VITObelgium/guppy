@@ -55,6 +55,10 @@ def get_line_data_list_for_wkt(body: s.LineGeometryListBody, db: Session = Depen
 def get_stats_for_wkt(layer_name: str, body: s.GeometryBody, native: bool = False, db: Session = Depends(get_db)):
     return endpoints.get_stats_for_wkt(db=db, layer_name=layer_name, body=body, native=native)
 
+@api.post("/layers/statslist", response_model=list[s.StatsResponse], tags=["data"])
+def get_stats_for_wkt_list(body: s.GeometryBodyList, native: bool = False, db: Session = Depends(get_db)):
+    return endpoints.get_stats_for_wkt_list(db=db, body=body, native=native)
+
 
 @api.get("/layers/{layer_name}/point", response_model=s.PointResponse, tags=["data"])
 def get_point_value_from_raster(layer_name: str, x: float, y: float, db: Session = Depends(get_db)):

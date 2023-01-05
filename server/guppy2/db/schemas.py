@@ -75,11 +75,19 @@ class LineData(CamelModel):
 
 class GeometryBody(CamelModel):
     geometry: str
+    srs: Optional[str] = None
+
+
+class GeometryBodyList(CamelModel):
+    layer_names: list[str]
+    geometry: str
+    srs: Optional[str] = None
 
 
 class LineGeometryBody(CamelModel):
     geometry: str
     number_of_points: int
+    srs: Optional[str] = None
 
 
 class LineGeometryListBody(CamelModel):
@@ -92,3 +100,14 @@ class LineObjectGeometryBody(CamelModel):
     geometry: str
     number_of_points: int
     distance: int
+
+
+class CombineLayersList(CamelModel):
+    layer_name: str
+    operation: str
+    factor: float
+
+
+class CombineLayersGeometryBody(CamelModel):
+    layer_list: list[CombineLayersList]
+    geometry: str

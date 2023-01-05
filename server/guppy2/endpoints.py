@@ -71,7 +71,7 @@ def get_data_for_wkt(db: Session, layer_name: str, body: s.GeometryBody):
             with rasterio.open(path) as src:
                 target_srs = src.crs.to_epsg()
             if geom.is_valid:
-                geom = transform(Transformer.from_crs("EPSG:4326", f"EPSG:{target_srs}", always_xy=True).transform, geom)
+                geom = transform(Transformer.from_crs(body.srs if body.srs else "EPSG:4326", f"EPSG:{target_srs}", always_xy=True).transform, geom)
                 if geom.is_valid:
                     with rasterio.open(path) as src:
                         if geom.area / (src.res[0] * src.res[1]) > cfg.guppy.size_limit:
@@ -103,7 +103,7 @@ def get_stats_for_wkt(db: Session, layer_name: str, body: s.GeometryBody, native
             with rasterio.open(path) as src:
                 target_srs = src.crs.to_epsg()
             if geom.is_valid:
-                geom = transform(Transformer.from_crs("EPSG:4326", f"EPSG:{target_srs}", always_xy=True).transform, geom)
+                geom = transform(Transformer.from_crs(body.srs if body.srs else "EPSG:4326", f"EPSG:{target_srs}", always_xy=True).transform, geom)
                 if geom.is_valid:
                     overview_factor, overview_bin = get_overview_factor(geom.bounds, native, path)
                     with rasterio.open(path, overview_level=overview_factor) as src:
@@ -125,6 +125,44 @@ def get_stats_for_wkt(db: Session, layer_name: str, body: s.GeometryBody, native
     return Response(status_code=status.HTTP_404_NOT_FOUND)
 
 
+def get_stats_for_model(layer_model, native):
+    path = layer_model.file_path
+    if os.path.exists(path) and body:
+        geom = wkt.loads(body.geometry)
+        with rasterio.open(path) as src:
+            target_srs = src.crs.to_epsg()
+        if geom.is_valid:
+            geom = transform(Transformer.from_crs(body.srs if body.srs else "EPSG:4326", f"EPSG:{target_srs}", always_xy=True).transform, geom)
+            if geom.is_valid:
+                overview_factor, overview_bin = get_overview_factor(geom.bounds, native, path)
+                with rasterio.open(path, overview_level=overview_factor) as src:
+                    try:
+                        rst, _ = _extract_area_from_dataset(src, [geom], crop=True, is_rgb=layer_model.is_rgb)
+                        if layer_model.is_rgb:
+                            rst = _decode(rst)
+                        shape_mask = _extract_shape_mask_from_dataset(src, [geom], crop=True)
+                    except ValueError as e:
+                        return Response(content=str(e), status_code=status.HTTP_406_NOT_ACCEPTABLE)
+                if rst.size != 0:
+                    return create_stats_response(rst, shape_mask, src.nodata,
+                                                 type=f'stats wkt. Overview level: {overview_factor}, {overview_bin} scale')
+    return None
+
+
+def get_stats_for_wkt_list(db: Session, body: s.GeometryBodyList, native: bool):
+    t = time.time()
+    layer_models = db.query(m.LayerMetadata).filter(m.LayerMetadata.layer_name.in_(body.layer_names)).all()
+    if layer_models:
+        result = Parallel(n_jobs=-1, prefer='threads')(delayed(get_stats_for_model)(layer_model, native) for layer_model in layer_models)
+        if result:
+            print('get_stats_for_wkt 200', time.time() - t)
+            return result
+        print('get_stats_for_wkt 204', time.time() - t)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    print('get_stats_for_wkt 404', time.time() - t)
+    return Response(status_code=status.HTTP_404_NOT_FOUND)
+
+
 def get_line_data_for_wkt(db: Session, layer_name: str, body: s.LineGeometryBody):
     t = time.time()
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
@@ -135,7 +173,7 @@ def get_line_data_for_wkt(db: Session, layer_name: str, body: s.LineGeometryBody
             with rasterio.open(path) as src:
                 target_srs = src.crs.to_epsg()
             if line.is_valid:
-                line = transform(Transformer.from_crs("EPSG:4326", f"EPSG:{target_srs}", always_xy=True).transform, line)
+                line = transform(Transformer.from_crs(body.srs if body.srs else "EPSG:4326", f"EPSG:{target_srs}", always_xy=True).transform, line)
                 if line.is_valid:
                     distances = np.linspace(0, line.length, body.number_of_points)
                     points = [line.interpolate(distance) for distance in distances]
@@ -265,7 +303,7 @@ def get_classification_for_wkt(db: Session, layer_name: str, body: s.GeometryBod
             with rasterio.open(path) as src:
                 target_srs = src.crs.to_epsg()
             if geom.is_valid:
-                geom = transform(Transformer.from_crs("EPSG:4326", f"EPSG:{target_srs}", always_xy=True).transform, geom)
+                geom = transform(Transformer.from_crs(body.srs if body.srs else "EPSG:4326", f"EPSG:{target_srs}", always_xy=True).transform, geom)
                 if geom.is_valid:
                     with rasterio.open(path) as src:
                         if geom.area / (src.res[0] * src.res[1]) > cfg.guppy.size_limit:
@@ -292,3 +330,36 @@ def get_classification_for_wkt(db: Session, layer_name: str, body: s.GeometryBod
             return Response(content="invalid geometry", status_code=status.HTTP_406_NOT_ACCEPTABLE)
     print('classification_for_wkt 204', time.time() - t)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+def get_combine_layers(db: Session, body: s.CombineLayersGeometryBody):
+    t = time.time()
+    for layer_item in body.layer_list:
+        geom = wkt.loads(body.geometry)
+        layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_item.layer_name).first()
+        if layer_model:
+            path = layer_model.file_path
+            if os.path.exists(path) and body:
+                with rasterio.open(path) as src:
+                    target_srs = src.crs.to_epsg()
+                if geom.is_valid:
+                    geom = transform(Transformer.from_crs("EPSG:4326", f"EPSG:{target_srs}", always_xy=True).transform, geom)
+                    if geom.is_valid:
+                        with rasterio.open(path) as src:
+                            if geom.area / (src.res[0] * src.res[1]) > cfg.guppy.size_limit:
+                                return Response(content=f'geometry area too large ({geom.area}m². allowed <={cfg.guppy.size_limit * (src.res[0] * src.res[1])}m²)',
+                                                status_code=status.HTTP_406_NOT_ACCEPTABLE)
+                            try:
+                                rst, _ = _extract_area_from_dataset(src, [geom], crop=True, is_rgb=layer_model.is_rgb)
+                                if layer_model.is_rgb:
+                                    rst = _decode(rst)
+                            except ValueError as e:
+                                return Response(content=str(e), status_code=status.HTTP_406_NOT_ACCEPTABLE)
+                        if rst.size != 0:
+                            response = s.DataResponse(type='raw data', data=rst.tolist())
+                            print('get_combine_layers 200', time.time() - t)
+                            return response
+            print('get_combine_layers 204', time.time() - t)
+            return Response(status_code=status.HTTP_204_NO_CONTENT)
+    print('get_combine_layers 404', time.time() - t)
+    return Response(status_code=status.HTTP_404_NOT_FOUND)
