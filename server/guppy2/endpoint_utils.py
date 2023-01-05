@@ -22,7 +22,7 @@ def no_nan(input):
     return input
 
 
-def create_stats_response(rst: np.array, mask_array: np.array, nodata: float, type: str):
+def create_stats_response(rst: np.array, mask_array: np.array, nodata: float, type: str, layer_name: str = None):
     rst = rst.astype(float)
     rst[rst == nodata] = np.nan
     q2, q5, q95, q98 = np.nanquantile(rst, [0.02, 0.05, 0.95, 0.98])
@@ -39,6 +39,8 @@ def create_stats_response(rst: np.array, mask_array: np.array, nodata: float, ty
                                q95=no_nan(float(q95)),
                                q98=no_nan(float(q98)),
                                )
+    if layer_name:
+        response.layer_name = layer_name
     return response
 
 

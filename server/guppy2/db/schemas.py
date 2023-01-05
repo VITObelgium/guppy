@@ -34,6 +34,7 @@ class PointResponse(CamelModel):
 
 class StatsResponse(CamelModel):
     type: str
+    layer_name: Optional[str]
     min: Optional[float]
     max: Optional[float]
     sum: Optional[float]

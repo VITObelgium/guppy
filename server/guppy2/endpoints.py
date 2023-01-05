@@ -144,7 +144,9 @@ def get_stats_for_model(layer_model, native, geom, srs):
                         return Response(content=str(e), status_code=status.HTTP_406_NOT_ACCEPTABLE)
                 if rst.size != 0:
                     return create_stats_response(rst, shape_mask, src.nodata,
-                                                 type=f'stats wkt. Overview level: {overview_factor}, {overview_bin} scale')
+                                                 type=f'stats wkt. Overview level: {overview_factor}, {overview_bin} scale',
+                                                 layer_name=layer_model.layer_name
+                                                 )
     return None
 
 
