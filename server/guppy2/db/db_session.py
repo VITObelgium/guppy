@@ -14,7 +14,7 @@ db_url += config.database.host
 db_url += '/'
 db_url += config.database.db
 
-engine = create_engine(db_url, convert_unicode=True, echo=False)
+engine = create_engine(db_url, echo=False)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
