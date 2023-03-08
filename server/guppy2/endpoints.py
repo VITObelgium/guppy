@@ -208,9 +208,11 @@ def get_line_data_list_for_wkt(db: Session, body: s.LineGeometryListBody):
                 points = [line.interpolate(distance) for distance in distances]
                 coords = [(point.x, point.y) for point in points]
         if coords:
-            # result = Parallel(n_jobs=4, prefer='threads')(delayed(sample_coordinates)(coords, layer_model.file_path[1:], layer_model.layer_name) for layer_model in layer_models)
+            result_old = Parallel(n_jobs=4, prefer='threads')(delayed(sample_coordinates)(coords, layer_model.file_path[1:], layer_model.layer_name) for layer_model in layer_models)
             print('get_line_data_list_for_wkt pre sample', time.time() - t)
             result = sample_coordinates_window(coords, layer_models, line.bounds)
+            for r1,r2 in zip(result_old,result):
+                print(np.allclose(r1.data,r2.data))
             if result:
                 print('get_line_data_list_for_wkt 200', time.time() - t)
                 return result
@@ -234,10 +236,12 @@ def sample_coordinates(coords, path, layer_name):
 
 def sample_coordinates_window(coords, layer_models, bounds):
     result_all = []
-    path = layer_models[0].file_path
+    path = layer_models[0].file_path[1:]
     with rasterio.open(path) as src:
         window = from_bounds(bounds[0], bounds[1], bounds[2], bounds[3], src.transform).round_offsets()
         rows, cols = src.index([p[0] for p in coords], [p[1] for p in coords])
+        cols = [c - window.col_off for c in cols]
+        rows = [r - window.row_off for r in rows]
         in_rows = []
         in_cols = []
         out_idx = []
@@ -252,14 +256,13 @@ def sample_coordinates_window(coords, layer_models, bounds):
                 in_rows.append(r)
                 in_cols.append(c)
 
-    # result_all = Parallel(n_jobs=4, prefer='processes')(delayed(sample_layer)(in_cols, in_idx, in_rows, layer_model, out_idx, window) for layer_model in layer_models)
     for layer_model in layer_models:
         result_all.append(sample_layer(in_cols, in_idx, in_rows, layer_model, out_idx, window))
     return result_all
 
 
 def sample_layer(in_cols, in_idx, in_rows, layer_model, out_idx, window):
-    path = layer_model.file_path
+    path = layer_model.file_path[1:]
     with rasterio.open(path) as src:
         data = src.read(1, window=window)
         nodata = src.nodata
