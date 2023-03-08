@@ -263,6 +263,8 @@ def sample_layer(in_cols, in_idx, in_rows, layer_model, out_idx, window):
     with rasterio.open(path) as src:
         data = src.read(1, window=window)
         nodata = src.nodata
+        if nodata is None:
+            nodata = -9999
     result = {}
     f = data[in_rows, in_cols]
     for i, v in zip(in_idx, f):
