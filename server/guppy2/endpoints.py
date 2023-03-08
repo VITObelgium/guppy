@@ -245,7 +245,7 @@ def sample_coordinates_window(coords, layer_models, bounds):
         data = src.read(1, window=window)
         r_max, c_max = data.shape
         for i, (r, c) in enumerate(zip(rows, cols)):
-            if r < 0 or c < 0 or r > r_max or c > c_max:
+            if r < 0 or c < 0 or r >= r_max or c >= c_max:
                 out_idx.append(i)
             else:
                 in_idx.append(i)
