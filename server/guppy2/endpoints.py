@@ -262,12 +262,13 @@ def sample_layer(in_cols, in_idx, in_rows, layer_model, out_idx, window):
     path = layer_model.file_path
     with rasterio.open(path) as src:
         data = src.read(1, window=window)
+        nodata = src.nodata
     result = {}
     f = data[in_rows, in_cols]
     for i, v in zip(in_idx, f):
         result[i] = v
     for i in out_idx:
-        result[i] = -9999
+        result[i] = nodata
     result = [result[key] for key in sorted(result.keys())]
     return s.LineData(layer_name=layer_model.layer_name, data=result)
 
