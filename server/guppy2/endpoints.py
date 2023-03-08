@@ -208,11 +208,9 @@ def get_line_data_list_for_wkt(db: Session, body: s.LineGeometryListBody):
                 points = [line.interpolate(distance) for distance in distances]
                 coords = [(point.x, point.y) for point in points]
         if coords:
-            result_old = Parallel(n_jobs=4, prefer='threads')(delayed(sample_coordinates)(coords, layer_model.file_path[1:], layer_model.layer_name) for layer_model in layer_models)
+            # result_old = Parallel(n_jobs=4, prefer='threads')(delayed(sample_coordinates)(coords, layer_model.file_path[1:], layer_model.layer_name) for layer_model in layer_models)
             print('get_line_data_list_for_wkt pre sample', time.time() - t)
             result = sample_coordinates_window(coords, layer_models, line.bounds)
-            for r1,r2 in zip(result_old,result):
-                print(np.allclose(r1.data,r2.data))
             if result:
                 print('get_line_data_list_for_wkt 200', time.time() - t)
                 return result
