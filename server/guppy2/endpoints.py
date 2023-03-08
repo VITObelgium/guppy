@@ -209,7 +209,7 @@ def get_line_data_list_for_wkt(db: Session, body: s.LineGeometryListBody):
                 coords = [(point.x, point.y) for point in points]
         if coords:
             print('get_line_data_list_for_wkt pre sample', time.time() - t)
-            result = Parallel(n_jobs=4, prefer='processes')(delayed(sample_coordinates)(coords, layer_model.file_path, layer_model.layer_name) for layer_model in layer_models)
+            result = Parallel(n_jobs=4, prefer='threads')(delayed(sample_coordinates)(coords, layer_model.file_path, layer_model.layer_name) for layer_model in layer_models)
             if result:
                 print('get_line_data_list_for_wkt 200', time.time() - t)
                 return result
