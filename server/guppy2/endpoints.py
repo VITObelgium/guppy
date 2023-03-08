@@ -236,7 +236,7 @@ def sample_coordinates(coords, path, layer_name):
 
 def sample_coordinates_window(coords, layer_models, bounds):
     result_all = []
-    path = layer_models[0].file_path[1:]
+    path = layer_models[0].file_path
     with rasterio.open(path) as src:
         window = from_bounds(bounds[0], bounds[1], bounds[2], bounds[3], src.transform).round_offsets()
         rows, cols = src.index([p[0] for p in coords], [p[1] for p in coords])
@@ -262,7 +262,7 @@ def sample_coordinates_window(coords, layer_models, bounds):
 
 
 def sample_layer(in_cols, in_idx, in_rows, layer_model, out_idx, window):
-    path = layer_model.file_path[1:]
+    path = layer_model.file_path
     with rasterio.open(path) as src:
         data = src.read(1, window=window)
         nodata = src.nodata
