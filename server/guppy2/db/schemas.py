@@ -1,5 +1,6 @@
 # coding: utf-8
 from typing import Optional
+from decimal import Decimal
 
 from pydantic import BaseModel
 
@@ -71,7 +72,7 @@ class LineDataResponse(CamelModel):
 
 class LineData(CamelModel):
     layer_name: str
-    data: list[float]
+    data: list[Decimal]
 
 
 class MultiLineData(CamelModel):
@@ -106,6 +107,7 @@ class MultiLineGeometryListBody(CamelModel):
     geometry: list[str]
     number_of_points: int
     layer_names: list[str]
+    round_val: Optional[int]
 
 
 class LineObjectGeometryBody(CamelModel):

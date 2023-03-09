@@ -269,7 +269,7 @@ def sample_coordinates(coords, path, layer_name):
     return s.LineData(layer_name=layer_name, data=result)
 
 
-def sample_coordinates_window(coords_dict, layer_models, bounds):
+def sample_coordinates_window(coords_dict, layer_models, bounds,round_val=None):
     result_all = []
     path = layer_models[0].file_path
     coords = []
@@ -295,11 +295,11 @@ def sample_coordinates_window(coords_dict, layer_models, bounds):
                 in_cols.append(c)
 
     for layer_model in layer_models:
-        result_all.append(sample_layer(in_cols, in_idx, in_rows, layer_model, out_idx, window))
+        result_all.append(sample_layer(in_cols, in_idx, in_rows, layer_model, out_idx, window,round_val))
     return result_all
 
 
-def sample_layer(in_cols, in_idx, in_rows, layer_model, out_idx, window):
+def sample_layer(in_cols, in_idx, in_rows, layer_model, out_idx, window, round_val: int = None):
     path = layer_model.file_path
     with rasterio.open(path) as src:
         data = src.read(1, window=window)
@@ -307,6 +307,8 @@ def sample_layer(in_cols, in_idx, in_rows, layer_model, out_idx, window):
         if nodata is None:
             nodata = -9999
     result = {}
+    if round_val:
+        data = np.round(data, round_val)
     f = data[in_rows, in_cols]
     for i, v in zip(in_idx, f):
         result[i] = v
