@@ -236,7 +236,7 @@ def get_multi_line_data_list_for_wkt(db: Session, body: s.MultiLineGeometryListB
                     coords_list[line] = [(point.x, point.y) for point in points]
                     epsg_lines.append(line)
         if coords_list:
-            print('get_line_data_list_for_wkt pre sample', time.time() - t)
+            print('get_multi_line_data_list_for_wkt pre sample', time.time() - t)
             result = sample_coordinates_window(coords_list, layer_models, MultiLineString(epsg_lines).bounds)
             start_data = 0
             end_data = body.number_of_points
@@ -249,11 +249,11 @@ def get_multi_line_data_list_for_wkt(db: Session, body: s.MultiLineGeometryListB
                 end_data += body.number_of_points
 
             if result_per_line:
-                print('get_line_data_list_for_wkt 200', time.time() - t)
+                print('get_multi_line_data_list_for_wkt 200', time.time() - t)
                 return result_per_line
-        print('get_line_data_list_for_wkt 204', time.time() - t)
+        print('get_multi_line_data_list_for_wkt 204', time.time() - t)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
-    print('get_line_data_list_for_wkt 404', time.time() - t)
+    print('get_multi_line_data_list_for_wkt 404', time.time() - t)
     return Response(status_code=status.HTTP_404_NOT_FOUND)
 
 
