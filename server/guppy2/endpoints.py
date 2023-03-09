@@ -224,6 +224,7 @@ def get_multi_line_data_list_for_wkt(db: Session, body: s.MultiLineGeometryListB
     layer_models = db.query(m.LayerMetadata).filter(m.LayerMetadata.layer_name.in_(body.layer_names)).all()
     coords_list = {}
     result_per_line = []
+    epsg_lines = []
     if layer_models:
         lines = [wkt.loads(line) for line in body.geometry]
         for line in lines:
@@ -233,9 +234,10 @@ def get_multi_line_data_list_for_wkt(db: Session, body: s.MultiLineGeometryListB
                     distances = np.linspace(0, line.length, body.number_of_points)
                     points = [line.interpolate(distance) for distance in distances]
                     coords_list[line] = [(point.x, point.y) for point in points]
+                    epsg_lines.append(line)
         if coords_list:
             print('get_line_data_list_for_wkt pre sample', time.time() - t)
-            result = sample_coordinates_window(coords_list, layer_models, MultiLineString(lines).bounds)
+            result = sample_coordinates_window(coords_list, layer_models, MultiLineString(epsg_lines).bounds)
             start_data = 0
             end_data = body.number_of_points
             for line in body.geometry:
