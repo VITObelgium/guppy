@@ -238,11 +238,11 @@ def get_multi_line_data_list_for_wkt(db: Session, body: s.MultiLineGeometryListB
             result = sample_coordinates_window(coords_list, layer_models, MultiLineString(lines).bounds)
             start_data = 0
             end_data = body.number_of_points
-            for line in lines:
+            for line in body.geometry:
                 datalist = []
                 for r in result:
                     datalist.append(s.LineData(layer_name=r.layer_name, data=r.data[start_data:end_data]))
-                result_per_line.append(s.MultiLineData(key=line.wkt, line_data=datalist))
+                result_per_line.append(s.MultiLineData(key=line, line_data=datalist))
                 start_data += body.number_of_points
                 end_data += body.number_of_points
 
