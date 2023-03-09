@@ -51,9 +51,15 @@ def get_line_data_list_for_wkt(body: s.LineGeometryListBody, db: Session = Depen
     return endpoints.get_line_data_list_for_wkt(db=db, body=body)
 
 
+@api.post("/layers/multi_line_data", response_model=list[s.MultiLineData], tags=["data"])
+def get_line_data_list_for_wkt(body: s.MultiLineGeometryListBody, db: Session = Depends(get_db)):
+    return endpoints.get_multi_line_data_list_for_wkt(db=db, body=body)
+
+
 @api.post("/layers/{layer_name}/stats", response_model=s.StatsResponse, tags=["data"])
 def get_stats_for_wkt(layer_name: str, body: s.GeometryBody, native: bool = False, db: Session = Depends(get_db)):
     return endpoints.get_stats_for_wkt(db=db, layer_name=layer_name, body=body, native=native)
+
 
 @api.post("/layers/statslist", response_model=list[s.StatsResponse], tags=["data"])
 def get_stats_for_wkt_list(body: s.GeometryBodyList, native: bool = False, db: Session = Depends(get_db)):

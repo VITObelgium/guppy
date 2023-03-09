@@ -13,7 +13,7 @@ from joblib import Parallel, delayed
 from pyproj import Transformer
 from rasterio.windows import from_bounds
 from shapely import wkt
-from shapely.geometry import box
+from shapely.geometry import box, MultiLineString
 from shapely.ops import transform
 from sqlalchemy.orm import Session
 
@@ -198,7 +198,7 @@ def get_line_data_for_wkt(db: Session, layer_name: str, body: s.LineGeometryBody
 def get_line_data_list_for_wkt(db: Session, body: s.LineGeometryListBody):
     t = time.time()
     layer_models = db.query(m.LayerMetadata).filter(m.LayerMetadata.layer_name.in_(body.layer_names)).all()
-    coords = None
+    coords = {}
     if layer_models:
         line = wkt.loads(body.geometry)
         if line.is_valid:
@@ -206,14 +206,49 @@ def get_line_data_list_for_wkt(db: Session, body: s.LineGeometryListBody):
             if line.is_valid:
                 distances = np.linspace(0, line.length, body.number_of_points)
                 points = [line.interpolate(distance) for distance in distances]
-                coords = [(point.x, point.y) for point in points]
+                coords['1'] = [(point.x, point.y) for point in points]
         if coords:
-            # result_old = Parallel(n_jobs=4, prefer='threads')(delayed(sample_coordinates)(coords, layer_model.file_path[1:], layer_model.layer_name) for layer_model in layer_models)
             print('get_line_data_list_for_wkt pre sample', time.time() - t)
             result = sample_coordinates_window(coords, layer_models, line.bounds)
             if result:
                 print('get_line_data_list_for_wkt 200', time.time() - t)
                 return result
+        print('get_line_data_list_for_wkt 204', time.time() - t)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    print('get_line_data_list_for_wkt 404', time.time() - t)
+    return Response(status_code=status.HTTP_404_NOT_FOUND)
+
+
+def get_multi_line_data_list_for_wkt(db: Session, body: s.MultiLineGeometryListBody):
+    t = time.time()
+    layer_models = db.query(m.LayerMetadata).filter(m.LayerMetadata.layer_name.in_(body.layer_names)).all()
+    coords_list = {}
+    result_per_line = []
+    if layer_models:
+        lines = [wkt.loads(line) for line in body.geometry]
+        for line in lines:
+            if line.is_valid:
+                line = transform(Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True).transform, line)
+                if line.is_valid:
+                    distances = np.linspace(0, line.length, body.number_of_points)
+                    points = [line.interpolate(distance) for distance in distances]
+                    coords_list[line] = [(point.x, point.y) for point in points]
+        if coords_list:
+            print('get_line_data_list_for_wkt pre sample', time.time() - t)
+            result = sample_coordinates_window(coords_list, layer_models, MultiLineString(lines).bounds)
+            start_data = 0
+            end_data = body.number_of_points
+            for line in lines:
+                datalist = []
+                for r in result:
+                    datalist.append(s.LineData(layer_name=r.layer_name, data=r.data[start_data:end_data]))
+                result_per_line.append(s.MultiLineData(key=line.wkt, line_data=datalist))
+                start_data += body.number_of_points
+                end_data += body.number_of_points
+
+            if result_per_line:
+                print('get_line_data_list_for_wkt 200', time.time() - t)
+                return result_per_line
         print('get_line_data_list_for_wkt 204', time.time() - t)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     print('get_line_data_list_for_wkt 404', time.time() - t)
@@ -232,9 +267,12 @@ def sample_coordinates(coords, path, layer_name):
     return s.LineData(layer_name=layer_name, data=result)
 
 
-def sample_coordinates_window(coords, layer_models, bounds):
+def sample_coordinates_window(coords_dict, layer_models, bounds):
     result_all = []
     path = layer_models[0].file_path
+    coords = []
+    for k, v in coords_dict.items():
+        coords.extend(v)
     with rasterio.open(path) as src:
         window = from_bounds(bounds[0], bounds[1], bounds[2], bounds[3], src.transform).round_offsets()
         rows, cols = src.index([p[0] for p in coords], [p[1] for p in coords])

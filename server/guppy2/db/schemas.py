@@ -74,6 +74,11 @@ class LineData(CamelModel):
     data: list[float]
 
 
+class MultiLineData(CamelModel):
+    key: str
+    line_data: list[LineData]
+
+
 class GeometryBody(CamelModel):
     geometry: str
     srs: Optional[str] = None
@@ -93,6 +98,12 @@ class LineGeometryBody(CamelModel):
 
 class LineGeometryListBody(CamelModel):
     geometry: str
+    number_of_points: int
+    layer_names: list[str]
+
+
+class MultiLineGeometryListBody(CamelModel):
+    geometry: list[str]
     number_of_points: int
     layer_names: list[str]
 
