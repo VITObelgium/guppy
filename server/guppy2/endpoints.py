@@ -16,6 +16,7 @@ from shapely import wkt
 from shapely.geometry import box, MultiLineString
 from shapely.ops import transform
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from guppy2.config import config as cfg
 from guppy2.db import models as m
@@ -24,7 +25,7 @@ from guppy2.endpoint_utils import get_overview_factor, create_stats_response, _e
 
 
 def healthcheck(db: Session):
-    db.execute('SELECT 1')
+    db.execute(text('SELECT 1'))
     return 'OK'
 
 
