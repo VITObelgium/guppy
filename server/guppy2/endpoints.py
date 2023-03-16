@@ -238,7 +238,7 @@ def get_multi_line_data_list_for_wkt(db: Session, body: s.MultiLineGeometryListB
                     epsg_lines.append(line)
         if coords_list:
             print('get_multi_line_data_list_for_wkt pre sample', time.time() - t)
-            result = sample_coordinates_window(coords_list, layer_models, MultiLineString(epsg_lines).bounds)
+            result = sample_coordinates_window(coords_list, layer_models, MultiLineString(epsg_lines).bounds, body.round_val)
             start_data = 0
             end_data = body.number_of_points
             for line in body.geometry:
@@ -375,6 +375,7 @@ def get_line_object_list_for_wkt(db: Session, layer_name: str, body: s.LineObjec
             result_df = gpd.sjoin_nearest(input_file_df, line_points_df, max_distance=int(body.distance), distance_col='join_dist')
             result_df = result_df.loc[result_df.groupby(['index_right', 'modeleenheid'])['join_dist'].idxmin()]  # keep closest
             result_df.fillna('', inplace=True)
+            result_df['geometry'] = result_df.geometry.to_wkt()
             result = result_df.to_dict(orient='records')
             if result:
                 print('get_line_object_list_for_wkt 200', time.time() - t)
