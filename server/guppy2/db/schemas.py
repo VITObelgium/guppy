@@ -111,7 +111,7 @@ class MultiLineGeometryListBody(CamelModel):
 
 
 class LineObjectGeometryBody(CamelModel):
-    geometry: str
+    geometry: Optional[str]
     number_of_points: int
     distance: int
 

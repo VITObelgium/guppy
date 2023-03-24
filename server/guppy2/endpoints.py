@@ -6,6 +6,7 @@ import time
 
 import geopandas as gpd
 import numpy as np
+import pandas as pd
 import rasterio
 from fastapi import status
 from fastapi.responses import Response
@@ -362,24 +363,32 @@ def get_line_object_list_for_wkt(db: Session, layer_name: str, body: s.LineObjec
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
     line_points_df = None
     if layer_model:
-        line = wkt.loads(body.geometry)
-        if line.is_valid:
-            line = transform(Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True).transform, line)
+        if body.geometry:
+            line = wkt.loads(body.geometry)
             if line.is_valid:
-                distances = np.linspace(0, line.length, body.number_of_points)
-                points = [line.interpolate(distance) for distance in distances]
-                line_points_df = gpd.GeoDataFrame(crs='epsg:3857', geometry=points)
+                line = transform(Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True).transform, line)
+                if line.is_valid:
+                    distances = np.linspace(0, line.length, body.number_of_points)
+                    points = [line.interpolate(distance) for distance in distances]
+                    line_points_df = gpd.GeoDataFrame(crs='epsg:3857', geometry=points)
+
+        input_file_df = gpd.read_file(layer_model.file_path)
+        input_file_df.to_crs(crs='epsg:3857', inplace=True)
         if line_points_df is not None:
-            input_file_df = gpd.read_file(layer_model.file_path)
-            input_file_df.to_crs(crs='epsg:3857', inplace=True)
             result_df = gpd.sjoin_nearest(input_file_df, line_points_df, max_distance=int(body.distance), distance_col='join_dist')
             result_df = result_df.loc[result_df.groupby(['index_right', 'modeleenheid'])['join_dist'].idxmin()]  # keep closest
             result_df.fillna('', inplace=True)
             result_df['geometry'] = result_df.geometry.to_wkt()
-            result = result_df.to_dict(orient='records')
-            if result:
-                print('get_line_object_list_for_wkt 200', time.time() - t)
-                return result
+            result_df = pd.DataFrame(result_df)
+            result = result_df.to_json(orient='records')
+        else:
+            input_file_df.fillna('', inplace=True)
+            input_file_df['geometry'] = input_file_df.geometry.to_wkt()
+            result_df = pd.DataFrame(input_file_df)
+            result = result_df.to_json(orient='records')
+        if result:
+            print('get_line_object_list_for_wkt 200', time.time() - t)
+            return Response(result, media_type="application/json")
         print('get_line_object_list_for_wkt 204', time.time() - t)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     print('get_line_object_list_for_wkt 404', time.time() - t)
