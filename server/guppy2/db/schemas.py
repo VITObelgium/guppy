@@ -125,3 +125,12 @@ class CombineLayersList(CamelModel):
 class CombineLayersGeometryBody(CamelModel):
     layer_list: list[CombineLayersList]
     geometry: str
+
+
+class CountourBodyList(CamelModel):
+    layer_names: list[str]
+
+
+class CountourBodyResponse(CamelModel):
+    model: str
+    geometry: str

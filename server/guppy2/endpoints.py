@@ -13,6 +13,7 @@ from fastapi.responses import Response
 from joblib import Parallel, delayed
 from pyproj import Transformer
 from rasterio.windows import from_bounds
+from rasterio.features import dataset_features
 from shapely import wkt
 from shapely.geometry import box, MultiLineString
 from shapely.ops import transform
@@ -271,7 +272,7 @@ def sample_coordinates(coords, path, layer_name):
     return s.LineData(layer_name=layer_name, data=result)
 
 
-def sample_coordinates_window(coords_dict, layer_models, bounds,round_val=None):
+def sample_coordinates_window(coords_dict, layer_models, bounds, round_val=None):
     result_all = []
     path = layer_models[0].file_path
     coords = []
@@ -297,7 +298,7 @@ def sample_coordinates_window(coords_dict, layer_models, bounds,round_val=None):
                 in_cols.append(c)
 
     for layer_model in layer_models:
-        result_all.append(sample_layer(in_cols, in_idx, in_rows, layer_model, out_idx, window,round_val))
+        result_all.append(sample_layer(in_cols, in_idx, in_rows, layer_model, out_idx, window, round_val))
     return result_all
 
 
@@ -378,12 +379,12 @@ def get_line_object_list_for_wkt(db: Session, layer_name: str, body: s.LineObjec
             result_df = gpd.sjoin_nearest(input_file_df, line_points_df, max_distance=int(body.distance), distance_col='join_dist')
             result_df = result_df.loc[result_df.groupby(['index_right', 'modeleenheid'])['join_dist'].idxmin()]  # keep closest
             result_df.fillna('', inplace=True)
-            result_df['geometry'] = result_df.geometry.to_wkt()
+            result_df = result_df.to_wkt()
             result_df = pd.DataFrame(result_df)
             result = result_df.to_json(orient='records')
         else:
             input_file_df.fillna('', inplace=True)
-            input_file_df['geometry'] = input_file_df.geometry.to_wkt()
+            input_file_df = input_file_df.to_wkt()
             result_df = pd.DataFrame(input_file_df)
             result = result_df.to_json(orient='records')
         if result:
@@ -464,4 +465,22 @@ def get_combine_layers(db: Session, body: s.CombineLayersGeometryBody):
             print('get_combine_layers 204', time.time() - t)
             return Response(status_code=status.HTTP_204_NO_CONTENT)
     print('get_combine_layers 404', time.time() - t)
+    return Response(status_code=status.HTTP_404_NOT_FOUND)
+
+
+def get_countour_for_models(db: Session, body: s.CountourBodyList):
+    t = time.time()
+    layer_models = db.query(m.LayerMetadata).filter(m.LayerMetadata.layer_name.in_(body.layer_names)).all()
+    if layer_models:
+        result = []
+        for layer in layer_models:
+            with rasterio.open(layer.file_path) as src:
+                contour_geojson = dataset_features(src, 1, precision=6)
+                result.append({'model': layer.layer_name, 'geometry': contour_geojson})
+        if result:
+            print('get_countour_for_models 200', time.time() - t)
+            return result
+        print('get_countour_for_models 204', time.time() - t)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    print('get_countour_for_models 404', time.time() - t)
     return Response(status_code=status.HTTP_404_NOT_FOUND)
