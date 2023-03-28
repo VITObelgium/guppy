@@ -132,5 +132,5 @@ class CountourBodyList(CamelModel):
 
 
 class CountourBodyResponse(CamelModel):
-    model: str
+    layer_name: str
     geometry: str
