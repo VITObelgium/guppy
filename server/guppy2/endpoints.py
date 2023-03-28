@@ -475,7 +475,7 @@ def get_countour_for_models(db: Session, body: s.CountourBodyList):
         result = []
         for layer in layer_models:
             with rasterio.open(layer.file_path) as src:
-                contour_geojson = dataset_features(src, 1, precision=6)
+                contour_geojson = list(dataset_features(src, bidx=1, as_mask=True, precision=6, band=False))
                 result.append({'layer_name': layer.layer_name, 'geometry': contour_geojson})
         if result:
             print('get_countour_for_models 200', time.time() - t)

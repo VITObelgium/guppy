@@ -133,4 +133,4 @@ class CountourBodyList(CamelModel):
 
 class CountourBodyResponse(CamelModel):
     layer_name: str
-    geometry: str
+    geometry: list[dict]
