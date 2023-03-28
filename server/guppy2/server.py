@@ -86,7 +86,7 @@ def get_layer_mapping(layer_name: str, db: Session = Depends(get_db)):
     return endpoints.get_layer_mapping(db=db, layer_name=layer_name)
 
 
-@api.get("/layers/countours", response_model=s.CountourBodyResponse, tags=["contour"])
+@api.get("/layers/contours", response_model=s.CountourBodyResponse, tags=["contour"])
 def get_countour_for_models(body: s.CountourBodyList, db: Session = Depends(get_db)):
     return endpoints.get_countour_for_models(db=db, body=body)
 
