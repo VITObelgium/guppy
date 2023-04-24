@@ -375,6 +375,8 @@ def get_line_object_list_for_wkt(db: Session, layer_name: str, body: s.LineObjec
 
         input_file_df = gpd.read_file(layer_model.file_path)
         input_file_df.to_crs(crs='epsg:3857', inplace=True)
+        input_file_df = input_file_df[~pd.isna(input_file_df.geometry)]
+        input_file_df = input_file_df[~input_file_df.is_empty]
         if line_points_df is not None:
             result_df = gpd.sjoin_nearest(input_file_df, line_points_df, max_distance=int(body.distance), distance_col='join_dist')
             result_df = result_df.loc[result_df.groupby(['index_right', 'modeleenheid'])['join_dist'].idxmin()]  # keep closest
