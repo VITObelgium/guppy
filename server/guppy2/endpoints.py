@@ -372,8 +372,10 @@ def get_line_object_list_for_wkt(db: Session, layer_name: str, body: s.LineObjec
                     distances = np.linspace(0, line.length, body.number_of_points)
                     points = [line.interpolate(distance) for distance in distances]
                     line_points_df = gpd.GeoDataFrame(crs='epsg:3857', geometry=points)
-
-        input_file_df = gpd.read_file(layer_model.file_path)
+        if layer_model.file_path.endswith('.pkl'):
+            input_file_df = pd.read_pickle(layer_model.file_path)
+        else:
+            input_file_df = gpd.read_file(layer_model.file_path)
         input_file_df.to_crs(crs='epsg:3857', inplace=True)
         input_file_df = input_file_df[~pd.isna(input_file_df.geometry)]
         input_file_df = input_file_df[~input_file_df.is_empty]
