@@ -472,15 +472,17 @@ def get_combine_layers(db: Session, body: s.CombineLayersGeometryBody):
     return Response(status_code=status.HTTP_404_NOT_FOUND)
 
 
+def get_layer_contour(layer):
+    with rasterio.open(layer.file_path) as src:
+        contour_geojson = list(dataset_features(src, bidx=1, as_mask=True, precision=6, band=False))
+        return {'layer_name': layer.layer_name, 'geometry': contour_geojson}
+
+
 def get_countour_for_models(db: Session, body: s.CountourBodyList):
     t = time.time()
     layer_models = db.query(m.LayerMetadata).filter(m.LayerMetadata.layer_name.in_(body.layer_names)).all()
     if layer_models:
-        result = []
-        for layer in layer_models:
-            with rasterio.open(layer.file_path) as src:
-                contour_geojson = list(dataset_features(src, bidx=1, as_mask=True, precision=6, band=False))
-                result.append({'layer_name': layer.layer_name, 'geometry': contour_geojson})
+        result = Parallel(n_jobs=-1, prefer='threads')(delayed(get_layer_contour)(layer) for layer in layer_models)
         if result:
             print('get_countour_for_models 200', time.time() - t)
             return result
