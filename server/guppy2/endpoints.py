@@ -274,7 +274,7 @@ def sample_coordinates(coords, path, layer_name):
 
 def sample_coordinates_window(coords_dict, layer_models, bounds, round_val=None):
     result_all = []
-    path = layer_models[0].file_path[1:]
+    path = layer_models[0].file_path
     coords = []
     for k, v in coords_dict.items():
         coords.extend(v)
@@ -303,7 +303,7 @@ def sample_coordinates_window(coords_dict, layer_models, bounds, round_val=None)
 
 
 def sample_layer(in_cols, in_idx, in_rows, layer_model, out_idx, window, round_val: int = None):
-    path = layer_model.file_path[1:]
+    path = layer_model.file_path
     with rasterio.open(path) as src:
         data = src.read(1, window=window)
         nodata = src.nodata
@@ -373,9 +373,9 @@ def get_line_object_list_for_wkt(db: Session, layer_name: str, body: s.LineObjec
                     points = [line.interpolate(distance) for distance in distances]
                     line_points_df = gpd.GeoDataFrame(crs='epsg:3857', geometry=points)
         if layer_model.file_path.endswith('.pkl'):
-            input_file_df = pd.read_pickle(layer_model.file_path[1:])
+            input_file_df = pd.read_pickle(layer_model.file_path)
         else:
-            input_file_df = gpd.read_file(layer_model.file_path[1:])
+            input_file_df = gpd.read_file(layer_model.file_path)
         input_file_df.to_crs(crs='epsg:3857', inplace=True)
         input_file_df = input_file_df[~pd.isna(input_file_df.geometry)]
         input_file_df = input_file_df[~input_file_df.is_empty]
