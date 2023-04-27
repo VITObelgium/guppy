@@ -20,4 +20,5 @@ dependencies:
   - joblib
   - geopandas
   - pygeos
+  - orjson
 prefix: /opt/mapbase3/server/conda-env
