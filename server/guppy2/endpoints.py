@@ -475,7 +475,7 @@ def get_combine_layers(db: Session, body: s.CombineLayersGeometryBody):
 def get_layer_contour(layer):
     with rasterio.open(layer.file_path) as src:
         contour_geojson = list(dataset_features(src, bidx=1, as_mask=True, precision=1, band=False, geographic=False))
-        return {'layer_name': layer.layer_name, 'geometry': contour_geojson}
+        return s.CountourBodyResponse(layer_name=layer.layer_name, geometry=contour_geojson)
 
 
 def get_countour_for_models(db: Session, body: s.CountourBodyList):
