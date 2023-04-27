@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import rasterio
 from fastapi import status
-from fastapi.responses import Response
+from fastapi.responses import Response, ORJSONResponse
 from joblib import Parallel, delayed
 from pyproj import Transformer
 from rasterio.windows import from_bounds
@@ -475,7 +475,7 @@ def get_combine_layers(db: Session, body: s.CombineLayersGeometryBody):
 def get_layer_contour(layer):
     with rasterio.open(layer.file_path) as src:
         contour_geojson = list(dataset_features(src, bidx=1, as_mask=True, precision=1, band=False, geographic=False))
-        return s.CountourBodyResponse(layer_name=layer.layer_name, geometry=contour_geojson)
+        return {'layerName': layer.layer_name, 'geometry': contour_geojson}
 
 
 def get_countour_for_models(db: Session, body: s.CountourBodyList):
@@ -485,7 +485,7 @@ def get_countour_for_models(db: Session, body: s.CountourBodyList):
         result = Parallel(n_jobs=-1, prefer='threads')(delayed(get_layer_contour)(layer) for layer in layer_models)
         if result:
             print('get_countour_for_models 200', time.time() - t)
-            return result
+            return ORJSONResponse(content=result)
         print('get_countour_for_models 204', time.time() - t)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     print('get_countour_for_models 404', time.time() - t)
