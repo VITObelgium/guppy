@@ -72,7 +72,7 @@ class LineDataResponse(CamelModel):
 
 class LineData(CamelModel):
     layer_name: str
-    data: list[Decimal]
+    data: list[float]
 
 
 class MultiLineData(CamelModel):

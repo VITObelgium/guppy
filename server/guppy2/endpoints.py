@@ -215,7 +215,7 @@ def get_line_data_list_for_wkt(db: Session, body: s.LineGeometryListBody):
             result = sample_coordinates_window(coords, layer_models, line.bounds)
             if result:
                 print('get_line_data_list_for_wkt 200', time.time() - t)
-                return result
+                return ORJSONResponse(content=result)
         print('get_line_data_list_for_wkt 204', time.time() - t)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     print('get_line_data_list_for_wkt 404', time.time() - t)
@@ -246,14 +246,14 @@ def get_multi_line_data_list_for_wkt(db: Session, body: s.MultiLineGeometryListB
             for line in body.geometry:
                 datalist = []
                 for r in result:
-                    datalist.append(s.LineData(layer_name=r.layer_name, data=r.data[start_data:end_data]))
-                result_per_line.append(s.MultiLineData(key=line, line_data=datalist))
+                    datalist.append({'layerName': r['layerName'], 'data': r['data'][start_data:end_data]})
+                result_per_line.append({'key': line, 'lineData': datalist})
                 start_data += body.number_of_points
                 end_data += body.number_of_points
 
             if result_per_line:
                 print('get_multi_line_data_list_for_wkt 200', time.time() - t)
-                return result_per_line
+                return ORJSONResponse(content=result_per_line)
         print('get_multi_line_data_list_for_wkt 204', time.time() - t)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     print('get_multi_line_data_list_for_wkt 404', time.time() - t)
@@ -318,7 +318,7 @@ def sample_layer(in_cols, in_idx, in_rows, layer_model, out_idx, window, round_v
     for i in out_idx:
         result[i] = nodata
     result = [result[key] for key in sorted(result.keys())]
-    return s.LineData(layer_name=layer_model.layer_name, data=result)
+    return {'layerName': layer_model.layer_name, 'data': result}
 
 
 def get_point_value_from_raster(db: Session, layer_name: str, x: float, y: float):
