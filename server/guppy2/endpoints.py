@@ -385,15 +385,15 @@ def get_line_object_list_for_wkt(db: Session, layer_name: str, body: s.LineObjec
             result_df.fillna('', inplace=True)
             result_df = result_df.to_wkt()
             result_df = pd.DataFrame(result_df)
-            result = result_df.to_json(orient='records')
+            result = result_df.to_dict(orient='records')
         else:
             input_file_df.fillna('', inplace=True)
             input_file_df = input_file_df.to_wkt()
             result_df = pd.DataFrame(input_file_df)
-            result = result_df.to_json(orient='records')
+            result = result_df.to_dict(orient='records')
         if result:
             print('get_line_object_list_for_wkt 200', time.time() - t)
-            return Response(result, media_type="application/json")
+            return ORJSONResponse(result)
         print('get_line_object_list_for_wkt 204', time.time() - t)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     print('get_line_object_list_for_wkt 404', time.time() - t)

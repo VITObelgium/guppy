@@ -1,9 +1,8 @@
 # coding: utf-8
-
 import uvicorn
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
-
+from fastapi.responses import ORJSONResponse
 import guppy2.db.schemas as s
 import guppy2.endpoints as endpoints
 from guppy2.config import config as cfg
@@ -71,7 +70,7 @@ def get_point_value_from_raster(layer_name: str, x: float, y: float, db: Session
     return endpoints.get_point_value_from_raster(db=db, layer_name=layer_name, x=x, y=y)
 
 
-@api.post("/layers/{layer_name}/object", tags=["data"])
+@api.post("/layers/{layer_name}/object", tags=["data"], response_class=ORJSONResponse)
 def get_line_object_list_for_wkt(layer_name: str, body: s.LineObjectGeometryBody, db: Session = Depends(get_db)):
     return endpoints.get_line_object_list_for_wkt(db=db, layer_name=layer_name, body=body)
 
