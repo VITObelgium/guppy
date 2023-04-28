@@ -279,16 +279,30 @@ def sample_coordinates_window(coords_dict, layer_models, bounds, round_val=None)
     for k, v in coords_dict.items():
         coords.extend(v)
     with rasterio.open(path) as src:
-        window = from_bounds(bounds[0], bounds[1], bounds[2], bounds[3], src.transform).round_offsets()
+        geometry_window = from_bounds(bounds[0], bounds[1], bounds[2], bounds[3], src.transform).round_offsets()
         rows, cols = src.index([p[0] for p in coords], [p[1] for p in coords])
-        cols = [c - window.col_off for c in cols]
-        rows = [r - window.row_off for r in rows]
+        cols = [c - geometry_window.col_off for c in cols]
+        rows = [r - geometry_window.row_off for r in rows]
         in_rows = []
         in_cols = []
         out_idx = []
         in_idx = []
-        data = src.read(1, window=window)
-        r_max, c_max = data.shape
+        data = src.read(1, window=geometry_window)
+        clipped_data = np.full((max(int(geometry_window.height), data.shape[0]), max(data.shape[1], int(geometry_window.width))), fill_value=0, dtype=np.float32)
+        if data.shape == clipped_data.shape:
+            clipped_data = data
+        else:
+            transform = rasterio.windows.transform(geometry_window, src.transform)
+            # Clip the raster using the geometry
+            # Update the portion of clipped_data that overlaps with the geometry
+            window = rasterio.windows.from_bounds(*bounds, transform=transform)
+            row_offset = abs(int(geometry_window.row_off)) if geometry_window.row_off < 0 else 0
+            col_offset = abs(int(geometry_window.col_off)) if geometry_window.col_off < 0 else 0
+            clipped_data[row_offset:row_offset + int(data.shape[0]), col_offset:col_offset + int(data.shape[1])] = data
+
+        # create the metadata for the dataset
+
+        r_max, c_max = clipped_data.shape
         for i, (r, c) in enumerate(zip(rows, cols)):
             if r < 0 or c < 0 or r >= r_max or c >= c_max:
                 out_idx.append(i)
@@ -298,21 +312,34 @@ def sample_coordinates_window(coords_dict, layer_models, bounds, round_val=None)
                 in_cols.append(c)
 
     for layer_model in layer_models:
-        result_all.append(sample_layer(in_cols, in_idx, in_rows, layer_model, out_idx, window, round_val))
+        result_all.append(sample_layer(in_cols, in_idx, in_rows, layer_model, out_idx, geometry_window, round_val, bounds))
     return result_all
 
 
-def sample_layer(in_cols, in_idx, in_rows, layer_model, out_idx, window, round_val: int = None):
+def sample_layer(in_cols, in_idx, in_rows, layer_model, out_idx, geometry_window, round_val: int = None, bounds=None):
     path = layer_model.file_path
     with rasterio.open(path) as src:
-        data = src.read(1, window=window)
+        data = src.read(1, window=geometry_window)
         nodata = src.nodata
         if nodata is None:
             nodata = -9999
+
+        clipped_data = np.full((max(int(geometry_window.height), data.shape[0]), max(data.shape[1], int(geometry_window.width))), fill_value=nodata, dtype=np.float32)
+        if data.shape == clipped_data.shape:
+            clipped_data = data
+        else:
+            transform = rasterio.windows.transform(geometry_window, src.transform)
+            # Clip the raster using the geometry
+            # Update the portion of clipped_data that overlaps with the geometry
+            window = rasterio.windows.from_bounds(*bounds, transform=transform)
+            row_offset = abs(int(geometry_window.row_off)) if geometry_window.row_off < 0 else 0
+            col_offset = abs(int(geometry_window.col_off)) if geometry_window.col_off < 0 else 0
+            clipped_data[row_offset:row_offset + int(data.shape[0]), col_offset:col_offset + int(data.shape[1])] = data
+
     result = {}
     if round_val:
-        data = np.round(data, round_val)
-    f = data[in_rows, in_cols]
+        clipped_data = np.round(clipped_data, round_val)
+    f = clipped_data[in_rows, in_cols]
     for i, v in zip(in_idx, f):
         result[i] = v
     for i in out_idx:
