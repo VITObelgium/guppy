@@ -288,7 +288,7 @@ def sample_coordinates_window(coords_dict, layer_models, bounds, round_val=None)
         out_idx = []
         in_idx = []
         data = src.read(1, window=geometry_window)
-        clipped_data = np.full((max(int(geometry_window.height), data.shape[0]), max(data.shape[1], int(geometry_window.width))), fill_value=0, dtype=np.float32)
+        clipped_data = np.full((max(math.ceil(geometry_window.height), data.shape[0]), max(data.shape[1], math.ceil(geometry_window.width))), fill_value=0, dtype=np.float32)
         if data.shape == clipped_data.shape:
             clipped_data = data
         else:
@@ -324,7 +324,7 @@ def sample_layer(in_cols, in_idx, in_rows, layer_model, out_idx, geometry_window
         if nodata is None:
             nodata = -9999
 
-        clipped_data = np.full((max(int(geometry_window.height), data.shape[0]), max(data.shape[1], int(geometry_window.width))), fill_value=nodata, dtype=np.float32)
+        clipped_data = np.full((max(math.ceil(geometry_window.height), data.shape[0]), max(data.shape[1], math.ceil(geometry_window.width))), fill_value=nodata, dtype=np.float32)
         if data.shape == clipped_data.shape:
             clipped_data = data
         else:
