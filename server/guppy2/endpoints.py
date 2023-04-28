@@ -292,10 +292,8 @@ def sample_coordinates_window(coords_dict, layer_models, bounds, round_val=None)
         if data.shape == clipped_data.shape:
             clipped_data = data
         else:
-            transform = rasterio.windows.transform(geometry_window, src.transform)
             # Clip the raster using the geometry
             # Update the portion of clipped_data that overlaps with the geometry
-            window = rasterio.windows.from_bounds(*bounds, transform=transform)
             row_offset = abs(int(geometry_window.row_off)) if geometry_window.row_off < 0 else 0
             col_offset = abs(int(geometry_window.col_off)) if geometry_window.col_off < 0 else 0
             clipped_data[row_offset:row_offset + int(data.shape[0]), col_offset:col_offset + int(data.shape[1])] = data
@@ -328,10 +326,7 @@ def sample_layer(in_cols, in_idx, in_rows, layer_model, out_idx, geometry_window
         if data.shape == clipped_data.shape:
             clipped_data = data
         else:
-            transform = rasterio.windows.transform(geometry_window, src.transform)
-            # Clip the raster using the geometry
             # Update the portion of clipped_data that overlaps with the geometry
-            window = rasterio.windows.from_bounds(*bounds, transform=transform)
             row_offset = abs(int(geometry_window.row_off)) if geometry_window.row_off < 0 else 0
             col_offset = abs(int(geometry_window.col_off)) if geometry_window.col_off < 0 else 0
             clipped_data[row_offset:row_offset + int(data.shape[0]), col_offset:col_offset + int(data.shape[1])] = data
