@@ -1,6 +1,6 @@
 # coding: utf-8
 import uvicorn
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, APIRouter
 from sqlalchemy.orm import Session
 from fastapi.responses import ORJSONResponse
 import guppy2.db.schemas as s
@@ -10,9 +10,8 @@ from guppy2.db.db_session import SessionLocal, engine
 from guppy2.db.models import Base
 
 app = FastAPI()
-api = FastAPI()
+api = APIRouter(prefix="/api")
 
-app.mount(f"{cfg.deploy.path}", api)
 Base.metadata.create_all(bind=engine)
 
 
@@ -95,5 +94,6 @@ def healthcheck(db: Session = Depends(get_db)):
     return endpoints.healthcheck(db=db)
 
 
+app.include_router(api)
 if __name__ == '__main__':
     uvicorn.run("server:app", port=5000, reload=True)
