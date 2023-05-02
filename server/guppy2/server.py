@@ -10,7 +10,7 @@ from guppy2.db.db_session import SessionLocal, engine
 from guppy2.db.models import Base
 
 app = FastAPI()
-api = APIRouter(prefix=f"/{cfg.deploy.path}")
+api = APIRouter(prefix=f"{cfg.deploy.path}")
 
 Base.metadata.create_all(bind=engine)
 
