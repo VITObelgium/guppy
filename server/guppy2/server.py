@@ -2,9 +2,10 @@
 import uvicorn
 from fastapi import FastAPI, Depends, APIRouter
 from sqlalchemy.orm import Session
-from fastapi.responses import ORJSONResponse
+from fastapi.responses import ORJSONResponse, StreamingResponse
 import guppy2.db.schemas as s
 import guppy2.endpoints as endpoints
+import guppy2.endpoints_calc as endpoints_calc
 from guppy2.config import config as cfg
 from guppy2.db.db_session import SessionLocal, engine
 from guppy2.db.models import Base
@@ -87,6 +88,11 @@ def get_layer_mapping(layer_name: str, db: Session = Depends(get_db)):
 @api.post("/layers/contours", response_model=list[s.CountourBodyResponse], tags=["contour"])
 def get_countour_for_models(body: s.CountourBodyList, db: Session = Depends(get_db)):
     return endpoints.get_countour_for_models(db=db, body=body)
+
+
+@api.post("/layers/calculate", response_class=StreamingResponse, tags=["calculation"])
+def get_countour_for_models(body: s.RasterCalculationBody, db: Session = Depends(get_db)):
+    return endpoints_calc.raster_calculation(db=db, body=body)
 
 
 @api.get("/healthcheck")

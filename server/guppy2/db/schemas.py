@@ -1,7 +1,7 @@
 # coding: utf-8
 from typing import Optional
 from decimal import Decimal
-
+from enum import Enum as PyEnum
 from pydantic import BaseModel
 
 
@@ -116,10 +116,16 @@ class LineObjectGeometryBody(CamelModel):
     distance: int
 
 
+class AllowedOperations(str, PyEnum):
+    add = "add"
+    subtract = "subtract"
+    multiply = "multiply"
+
+
 class CombineLayersList(CamelModel):
     layer_name: str
-    operation: str
-    factor: float
+    operation: AllowedOperations
+    factor: Optional[float] = 1
 
 
 class CombineLayersGeometryBody(CamelModel):
@@ -134,3 +140,7 @@ class CountourBodyList(CamelModel):
 class CountourBodyResponse(CamelModel):
     layer_name: str
     geometry: list[dict]
+
+
+class RasterCalculationBody(CamelModel):
+    layer_list: list[CombineLayersList]
