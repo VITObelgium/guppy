@@ -90,7 +90,7 @@ def get_countour_for_models(body: s.CountourBodyList, db: Session = Depends(get_
     return endpoints.get_countour_for_models(db=db, body=body)
 
 
-@api.post("/layers/calculate", response_class=StreamingResponse, tags=["calculation"])
+@api.post("/layers/calculate", tags=["calculation"])
 def get_countour_for_models(body: s.RasterCalculationBody, db: Session = Depends(get_db)):
     return endpoints_calc.raster_calculation(db=db, body=body)
 

@@ -23,10 +23,17 @@ class _Guppy:
 
 
 @dataclass(frozen=True)
+class _Geoserver:
+    username: str
+    password: str
+
+
+@dataclass(frozen=True)
 class _Config:
     deploy: _Deploy
     database: _Database
     guppy: _Guppy
+    geoserver: _Geoserver
 
 
 default_deploy_path: str = '/api'
@@ -62,6 +69,7 @@ def parse_config_file(config_file: str) -> _Config:
             db=yml_data['database']['db'],
         ),
         guppy=_Guppy(size_limit=int(float(yml_data['guppy']['size_limit'])) if 'guppy' in yml_data else 10000),
+        geoserver=_Geoserver(username=yml_data['geoserver']['username'], password=yml_data['geoserver']['password'])
     )
 
 
@@ -105,6 +113,7 @@ if guppy2_env_vars:
                     db=guppy2_env_vars['GUPPY_DATABASE_DB'],
                 ),
                 guppy=_Guppy(size_limit=int(float(guppy2_env_vars['GUPPY_SIZE_LIMIT'])) if 'GUPPY_SIZE_LIMIT' in guppy2_env_vars else 10000),
+                geoserver=_Geoserver(username=guppy2_env_vars['GUPPY_GEOSERVER_USER'], password=guppy2_env_vars['GUPPY_GEOSERVER_PASSWD'])
             )
         except KeyError as key_error:
             raise SystemExit("Environment variable '%s' not found!" % key_error)
