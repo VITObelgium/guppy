@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from starlette import status
 from starlette.responses import Response
 import requests
-from error import create_error
+from guppy2.error import create_error
 from fastapi.responses import StreamingResponse
 from rasterio.enums import Resampling
 from guppy2.config import config as cfg
