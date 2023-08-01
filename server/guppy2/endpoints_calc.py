@@ -74,7 +74,7 @@ def create_geoserver_layer(data_source, layer_name):
     }
 
     base_url = "http://geoserver:8080/geoserver/rest/"
-    base_url = "https://guppy2.marvintest.vito.be/geoserver/rest/"
+    # base_url = "https://guppy2.marvintest.vito.be/geoserver/rest/"
     headers = {"Content-Type": "application/json"}
     url = f"{base_url}workspaces/{workspace}/coveragestores"
 
