@@ -13,7 +13,7 @@ def to_camel(s):
 class CamelModel(BaseModel):
     class Config:
         alias_generator = to_camel
-        allow_population_by_field_name = True
+        populate_by_name = True
 
 
 class LayerMetadataSchema(CamelModel):
@@ -24,7 +24,7 @@ class LayerMetadataSchema(CamelModel):
     rgb_factor: Optional[float] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class PointResponse(CamelModel):
