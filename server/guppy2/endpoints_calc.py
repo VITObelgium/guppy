@@ -37,17 +37,23 @@ def create_raster(input_arr, crs, r_transform, dtype=None, nodata=-9999, geoserv
         dst.update_tags(ns='rio_overview', resampling='nearest')
         nan_arr = input_arr[input_arr != nodata]
         dst.update_tags(minimum=np.nanmin(nan_arr), maximum=np.nanmax(nan_arr), source='guppy.calculate')
+        nan_arr = None
+        input_arr = None
     mem.seek(0)
     print("done geotiff generation", time.time() - t)
     if geoserver:
         t = time.time()
-        base_path = 'content/tifs/generated'
+        base_path = '/content/tifs/generated'
         if not os.path.exists(base_path):
             os.mkdir(base_path)
         with open(os.path.join(base_path, 'test.tif'), "wb") as file:
             file.write(mem.getvalue())
-        geoserver_layer = create_geoserver_layer('test.tif', 'generated_tif')
-        print("done geoserver", time.time() - t)
+        try:
+            geoserver_layer = create_geoserver_layer('test.tif', 'generated_tif')
+            print("done geoserver", time.time() - t)
+        except requests.exceptions.ConnectionError as e:
+            mem = None
+            create_error(message='geoserver caused error')
     mem.seek(0)
     return mem, geoserver_layer
 
