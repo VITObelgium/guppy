@@ -21,11 +21,16 @@ from guppy2.endpoint_utils import _extract_area_from_dataset, _decode
 
 def create_raster(input_arr, crs, r_transform, dtype=None, nodata=-9999, geoserver=False):
     t = time.time()
-    mem = io.BytesIO()
+    file_location = io.BytesIO()
+    if geoserver:
+        base_path = '/content/tifs/generated'
+        if not os.path.exists(base_path):
+            os.mkdir(base_path)
+        file_location = os.path.join(base_path, 'test.tif')
     geoserver_layer = None
     if np.all(np.mod(input_arr, 1) == 0):
         input_arr = np.array(input_arr, dtype=np.int32)
-    with rasterio.open(mem, 'w', driver='GTiff',
+    with rasterio.open(file_location, 'w', driver='GTiff',
                        height=input_arr.shape[0], width=input_arr.shape[1],
                        count=1, dtype=str(input_arr.dtype) if dtype is None else dtype,
                        crs=crs,
@@ -39,23 +44,18 @@ def create_raster(input_arr, crs, r_transform, dtype=None, nodata=-9999, geoserv
         dst.update_tags(minimum=np.nanmin(nan_arr), maximum=np.nanmax(nan_arr), source='guppy.calculate')
         nan_arr = None
         input_arr = None
-    mem.seek(0)
     print("done geotiff generation", time.time() - t)
     if geoserver:
         t = time.time()
-        base_path = '/content/tifs/generated'
-        if not os.path.exists(base_path):
-            os.mkdir(base_path)
-        with open(os.path.join(base_path, 'test.tif'), "wb") as file:
-            file.write(mem.getvalue())
         try:
             geoserver_layer = create_geoserver_layer('test.tif', 'generated_tif')
             print("done geoserver", time.time() - t)
         except requests.exceptions.ConnectionError as e:
-            mem = None
+            file_location = None
             create_error(message='geoserver caused error')
-    mem.seek(0)
-    return mem, geoserver_layer
+    else:
+        file_location.seek(0)
+    return file_location, geoserver_layer
 
 
 def create_geoserver_layer(data_source, layer_name):
@@ -141,7 +141,7 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
     for layer_item in body.layer_list:
         layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_item.layer_name).first()
         if layer_model:
-            path = layer_model.file_path
+            path = layer_model.file_path[1:]
             if os.path.exists(path) and body:
                 with rasterio.open(path) as src:
                     rst_arr = src.read(1)
