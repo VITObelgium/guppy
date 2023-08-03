@@ -97,15 +97,13 @@ def generate_raster_response(generated_file):
 def perform_operation(input_arr, base_arr, nodata, operation: s.AllowedOperations, factor, is_rgb):
     if is_rgb:
         input_arr = _decode(input_arr)
-    if base_arr is None:
-        base_arr = input_arr * factor
-    else:
-        if operation == s.AllowedOperations.multiply:
-            base_arr = np.where(base_arr == nodata, base_arr, base_arr * np.where(input_arr == nodata, input_arr, input_arr * factor))
-        elif operation == s.AllowedOperations.add:
-            base_arr = np.where(base_arr == nodata, base_arr, base_arr + np.where(input_arr == nodata, 0, input_arr * factor))
-        elif operation == s.AllowedOperations.subtract:
-            base_arr = np.where(base_arr == nodata, base_arr, base_arr - np.where(input_arr == nodata, 0, input_arr * factor))
+
+    if operation == s.AllowedOperations.multiply:
+        base_arr = np.where(base_arr == nodata, base_arr, base_arr * np.where(input_arr == nodata, 1, input_arr * factor))
+    elif operation == s.AllowedOperations.add:
+        base_arr = np.where(base_arr == nodata, base_arr, base_arr + np.where(input_arr == nodata, 0, input_arr * factor))
+    elif operation == s.AllowedOperations.subtract:
+        base_arr = np.where(base_arr == nodata, base_arr, base_arr - np.where(input_arr == nodata, 0, input_arr * factor))
     return base_arr
 
 
