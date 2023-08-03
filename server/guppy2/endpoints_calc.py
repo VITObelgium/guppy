@@ -124,7 +124,7 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
     for layer_item in body.layer_list:
         layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_item.layer_name).first()
         if layer_model:
-            path = layer_model.file_path[1:]
+            path = layer_model.file_path
             if os.path.exists(path) and body:
                 with rasterio.open(path) as src:
                     if nodata is None:
