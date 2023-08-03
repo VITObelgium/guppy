@@ -8,11 +8,10 @@ dependencies:
   - gunicorn
   - uvicorn
   - psycopg2
-  - python=3.9
+  - python=3.11
   - sqlalchemy
   - pyyaml
   - json5
-  - python-jose
   - requests
   - rasterio
   - shapely
