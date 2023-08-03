@@ -21,4 +21,6 @@ dependencies:
   - geopandas
   - pygeos
   - orjson
+  - dask
+  - rioxarray
 prefix: /opt/mapbase3/server/conda-env
