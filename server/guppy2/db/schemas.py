@@ -145,3 +145,4 @@ class CountourBodyResponse(CamelModel):
 class RasterCalculationBody(CamelModel):
     layer_list: list[CombineLayersList]
     geoserver: Optional[bool] = False
+    rgb: Optional[bool] = False
