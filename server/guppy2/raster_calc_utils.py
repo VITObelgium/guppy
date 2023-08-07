@@ -90,23 +90,32 @@ def generate_raster_response(generated_file):
     return StreamingResponse(generate_geotiff(), media_type="image/tiff")
 
 
-def perform_operation(input_arr, base_arr, nodata, operation: s.AllowedOperations, factor, is_rgb):
-    if is_rgb:
-        input_arr = _decode(input_arr)
+def perform_operation(*input_arrs, layer_args, output_rgb):
+    output_arr = None
+    first = True
+    out_nodata = -9999
+    for input_arr, args_dict in zip(input_arrs, layer_args):
+        nodata = args_dict['nodata']
+        factor = args_dict['factor']
+        operation = args_dict['operation']
+        is_rgb = args_dict['is_rgb']
+        if is_rgb:
+            input_arr = _decode(input_arr)
+        if first:
+            output_arr = np.where(input_arr == nodata, input_arr, input_arr * factor)
+            out_nodata = nodata
+            first = False
+        else:
+            if operation == s.AllowedOperations.multiply:
+                output_arr = np.where(output_arr == nodata, output_arr, output_arr * np.where(input_arr == nodata, 1, input_arr * factor))
+            elif operation == s.AllowedOperations.add:
+                output_arr = np.where(output_arr == nodata, output_arr, output_arr + np.where(input_arr == nodata, 0, input_arr * factor))
+            elif operation == s.AllowedOperations.subtract:
+                output_arr = np.where(output_arr == nodata, output_arr, output_arr - np.where(input_arr == nodata, 0, input_arr * factor))
+    if output_rgb:
+        output_arr = data_to_rgba(output_arr, out_nodata)
+    return output_arr
 
-    if operation == s.AllowedOperations.multiply:
-        base_arr = np.where(base_arr == nodata, base_arr, base_arr * np.where(input_arr == nodata, 1, input_arr * factor))
-    elif operation == s.AllowedOperations.add:
-        base_arr = np.where(base_arr == nodata, base_arr, base_arr + np.where(input_arr == nodata, 0, input_arr * factor))
-    elif operation == s.AllowedOperations.subtract:
-        base_arr = np.where(base_arr == nodata, base_arr, base_arr - np.where(input_arr == nodata, 0, input_arr * factor))
-    return base_arr
-
-
-def perform_operation_first(input_arr, nodata, factor, is_rgb):
-    if is_rgb:
-        input_arr = _decode(input_arr)
-    return np.where(input_arr == nodata, input_arr, input_arr * factor)
 
 
 def data_to_rgba(data, nodata):
@@ -124,57 +133,6 @@ def data_to_rgba(data, nodata):
     rgb[0] = np.where(data == nodata, 255, rgb[0])
 
     return rgb
-
-
-def process_raster_with_function_in_chunks(input_file: str, output_file: str, like_file: str,
-                                           function_to_apply: Callable[..., np.ndarray],
-                                           function_arguments: {} = None, chunks: int = 10, overlap_cells: tuple = 0,
-                                           dtype=None, output_bands=1, out_nodata=None):
-    """ Function to process large rasters in smaller parts to reduce memory footprint and enable parallelization.
-
-     Args:
-         input_file: path to input raster file
-         output_file: path to output raster file
-         like_file: raster file to use as output format
-         function_to_apply: function to apply on the raster. Has to have a ndarray as first parameter, and should return a ndarray.
-         function_arguments: arguments to be given to the function_to_apply as dict. ex: {'factor':2}
-         chunks: number of horizontal and vertical tiles to make
-         overlap_cells: number of cells that the individual tiles share with their neighbors
-         dtype: output array dtype.If None, dask tries to guess it from a limited set.
-     """
-    if function_arguments is None:
-        function_arguments = {}
-    if not os.path.exists(os.path.dirname(output_file)) and os.path.dirname(output_file):
-        os.mkdir(os.path.dirname(output_file))
-    t = time.time()
-
-    ds = rasterio.open(like_file)
-    values_da_arr = xr.open_rasterio(input_file, chunks=(1, int(ds.shape[0] / chunks), int(ds.shape[1] / chunks)))
-    r = da.map_overlap(function_to_apply, values_da_arr.data, depth=overlap_cells, boundary='reflect', trim=True,
-                       align_arrays=True, dtype=dtype, **function_arguments)
-    profile = ds.profile
-    profile.update(
-        driver='GTiff',
-        count=output_bands,
-        tiled=True,
-        compress='deflate',
-        num_threads='ALL_CPUS',
-        width=ds.shape[1],
-        height=ds.shape[0],
-        blockxsize=256,
-        blockysize=256,
-        bigtiff='YES')
-    if dtype == np.float32:
-        profile.update(dtype=rasterio.float32)
-    elif dtype is not None:
-        profile.update(dtype=dtype)
-    if out_nodata is not None:
-        profile.update(nodata=out_nodata)
-    with RIOFile(output_file, 'w', **profile) as r_file:
-        da.store(r, r_file, lock=True)
-
-    values_da_arr.close()
-    print(f"process_function_in_chunks done, {time.time() - t}")
 
 
 def _get_raster_epsg(input_raster_ds):
@@ -240,7 +198,7 @@ def compare_rasters(raster_path_a: str, raster_path_b: str, check_nodata: bool =
 def process_raster_list_with_function_in_chunks(input_file_list: [str], output_file: str, like_file: str, function_to_apply: Callable[..., np.ndarray], function_arguments: {} = None,
                                                 chunks: int = 10,
                                                 overlap_cells: tuple = 0,
-                                                dtype=None):
+                                                dtype=None, output_bands=1, out_nodata=None):
     """ Function to process large rasters in smaller parts to reduce memory footprint and enable parallelization.
 
      Args:
@@ -277,7 +235,7 @@ def process_raster_list_with_function_in_chunks(input_file_list: [str], output_f
     profile = ds.profile
     profile.update(
         driver='GTiff',
-        count=1,
+        count=output_bands,
         tiled=True,
         compress='deflate',
         num_threads='ALL_CPUS',
@@ -288,6 +246,10 @@ def process_raster_list_with_function_in_chunks(input_file_list: [str], output_f
         bigtiff='YES')
     if dtype == np.float32:
         profile.update(dtype=rasterio.float32)
+    elif dtype is not None:
+        profile.update(dtype=dtype)
+    if out_nodata is not None:
+        profile.update(nodata=out_nodata)
     with RIOFile(output_file, 'w', **profile) as r_file:
         da.store(r, r_file, lock=True)
     for open_da in open_da_arrays:
