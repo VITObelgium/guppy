@@ -5,8 +5,7 @@ import time
 import rasterio
 import numpy as np
 
-from guppy2.raster_calc_utils import create_raster, generate_raster_response, perform_operation, data_to_rgba, process_raster_with_function_in_chunks, \
-    process_raster_list_with_function_in_chunks
+from guppy2.raster_calc_utils import create_raster, generate_raster_response, perform_operation, process_raster_list_with_function_in_chunks
 from sqlalchemy.orm import Session
 from starlette import status
 from starlette.responses import Response
