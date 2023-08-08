@@ -3,6 +3,9 @@ import uvicorn
 from fastapi import FastAPI, Depends, APIRouter
 from sqlalchemy.orm import Session
 from fastapi.responses import ORJSONResponse, StreamingResponse
+from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.openapi.utils import get_openapi
+from fastapi.responses import HTMLResponse, JSONResponse
 import guppy2.db.schemas as s
 import guppy2.endpoints as endpoints
 import guppy2.endpoints_calc as endpoints_calc
@@ -23,6 +26,17 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+@api.get("/docs", response_class=HTMLResponse, tags=["documentation"])
+async def swagger_ui_html():
+    openapi_url = app.url_path_for("get_open_api_endpoint")
+    return get_swagger_ui_html(openapi_url=openapi_url, title="API documentation")
+
+
+@api.get("/openapi.json", tags=["documentation"])
+async def get_open_api_endpoint():
+    return JSONResponse(get_openapi(title="Your API", version="1.0.0", routes=app.routes))
 
 
 @api.get("/layers/{layer_name}/bbox_stats", response_model=s.StatsResponse, tags=["stats"])
