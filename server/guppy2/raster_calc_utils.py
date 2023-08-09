@@ -112,10 +112,13 @@ def perform_operation(*input_arrs, layer_args, output_rgb):
                 output_arr = np.where(output_arr == nodata, output_arr, output_arr + np.where(input_arr == nodata, 0, input_arr * factor))
             elif operation == s.AllowedOperations.subtract:
                 output_arr = np.where(output_arr == nodata, output_arr, output_arr - np.where(input_arr == nodata, 0, input_arr * factor))
+            elif operation == s.AllowedOperations.boolean_mask:
+                output_arr = np.where(output_arr == nodata, output_arr, output_arr * np.where(input_arr == nodata, 1, input_arr))
+            elif operation == s.AllowedOperations.invert_boolean_mask:
+                output_arr = np.where(output_arr == nodata, output_arr, output_arr * np.where(input_arr == nodata, 1, 1 - input_arr))
     if output_rgb:
         output_arr = data_to_rgba(output_arr, out_nodata)
     return output_arr
-
 
 
 def data_to_rgba(data, nodata):

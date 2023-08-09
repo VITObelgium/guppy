@@ -120,6 +120,8 @@ class AllowedOperations(str, PyEnum):
     add = "add"
     subtract = "subtract"
     multiply = "multiply"
+    invert_boolean_mask = "invert_boolean_mask"
+    boolean_mask = "boolean_mask"
 
 
 class CombineLayersList(CamelModel):
