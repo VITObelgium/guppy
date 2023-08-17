@@ -62,6 +62,7 @@ def delete_generated_store(layer_name):
 
     workspace = "generated"
     coverage_store = layer_name.split(":")[0]
+    base_path = '/content/tifs/generated'
 
     base_url = "http://geoserver:8080/geoserver/rest/"
     # base_url = "https://guppy2.marvintest.vito.be/geoserver/rest/"
@@ -72,6 +73,7 @@ def delete_generated_store(layer_name):
 
     if response.status_code == 200:
         print(f"Raster store {coverage_store} deleted successfully.")
+        os.remove(os.path.join(base_path, f'{layer_name.split(":")[1]}.tif'))
     else:
         print(f"Failed to delete raster store {coverage_store}. Status code: {response.status_code}")
         print(response.text)
