@@ -1,11 +1,12 @@
 # coding: utf-8
 import uvicorn
 from fastapi import FastAPI, Depends, APIRouter
-from sqlalchemy.orm import Session
-from fastapi.responses import ORJSONResponse, StreamingResponse
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import ORJSONResponse
+from sqlalchemy.orm import Session
+
 import guppy2.db.schemas as s
 import guppy2.endpoints as endpoints
 import guppy2.endpoints_calc as endpoints_calc
@@ -107,6 +108,11 @@ def get_countour_for_models(body: s.CountourBodyList, db: Session = Depends(get_
 @api.post("/layers/calculate", tags=["calculation"])
 def raster_calculation(body: s.RasterCalculationBody, db: Session = Depends(get_db)):
     return endpoints_calc.raster_calculation(db=db, body=body)
+
+
+@api.delete("/layers/delete", tags=["calculation"])
+def delete_generated_store(layer: str):
+    return endpoints_calc.delete_generated_store(layer)
 
 
 @api.get("/healthcheck")

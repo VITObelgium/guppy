@@ -1,17 +1,19 @@
-import random
+import datetime
 import os
+import random
 import time
 
-import rasterio
 import numpy as np
-
-from guppy2.raster_calc_utils import create_raster, generate_raster_response, perform_operation, process_raster_list_with_function_in_chunks
+import rasterio
+import requests
+from osgeo import gdal
 from sqlalchemy.orm import Session
 from starlette import status
 from starlette.responses import Response
+
+from guppy2.config import config as cfg
 from guppy2.db import schemas as s, models as m
-from osgeo import gdal
-import datetime
+from guppy2.raster_calc_utils import create_raster, generate_raster_response, perform_operation, process_raster_list_with_function_in_chunks
 
 
 def raster_calculation(db: Session, body: s.RasterCalculationBody):
@@ -50,3 +52,27 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
         return Response(content=geoserver_layer, status_code=status.HTTP_201_CREATED)
     else:
         return generate_raster_response(os.path.join(base_path, raster_name))
+
+
+def delete_generated_store(layer_name):
+    print('delete_generated_store')
+    username = cfg.geoserver.username
+    password = cfg.geoserver.password
+    auth = (username, password)
+
+    workspace = "generated"
+    coverage_store = layer_name.split(":")[0]
+
+    base_url = "http://geoserver:8080/geoserver/rest/"
+    # base_url = "https://guppy2.marvintest.vito.be/geoserver/rest/"
+    headers = {"Content-Type": "application/json"}
+    url = f"{base_url}workspaces/{workspace}/coveragestores/{coverage_store}?purge=all&recurse=true"
+
+    response = requests.delete(url, auth=auth, headers=headers)
+
+    if response.status_code == 200:
+        print(f"Raster store {coverage_store} deleted successfully.")
+    else:
+        print(f"Failed to delete raster store {coverage_store}. Status code: {response.status_code}")
+        print(response.text)
+    return response
