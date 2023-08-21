@@ -22,4 +22,5 @@ dependencies:
   - orjson
   - dask
   - rioxarray
+  - jenkspy
 prefix: /opt/mapbase3/server/conda-env

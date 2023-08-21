@@ -3,6 +3,7 @@ import os
 import random
 import time
 
+import jenkspy
 import numpy as np
 import rasterio
 import requests
@@ -10,10 +11,10 @@ from osgeo import gdal
 from sqlalchemy.orm import Session
 from starlette import status
 from starlette.responses import Response
-
+from dask import array as da
 from guppy2.config import config as cfg
 from guppy2.db import schemas as s, models as m
-from guppy2.raster_calc_utils import create_raster, generate_raster_response, perform_operation, process_raster_list_with_function_in_chunks
+from guppy2.raster_calc_utils import create_raster, generate_raster_response, perform_operation, process_raster_list_with_function_in_chunks, rescale_result
 
 
 def raster_calculation(db: Session, body: s.RasterCalculationBody):
@@ -41,6 +42,30 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
     process_raster_list_with_function_in_chunks(path_list, os.path.join(base_path, raster_name), path_list[0],
                                                 function_to_apply=perform_operation, function_arguments={'layer_args': arguments_list, 'output_rgb': body.rgb},
                                                 chunks=20, output_bands=4 if body.rgb else 1, dtype=np.uint8 if body.rgb else None, out_nodata=255 if body.rgb else None)
+
+    if body.rescale_result:
+        os.rename(src=os.path.join(base_path, raster_name), dst=os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif')))
+
+        with rasterio.open(os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif'))) as ds:
+            input_arr = ds.read()
+            input_arr = np.where(input_arr == nodata, np.nan, input_arr)
+            input_arr = input_arr[~np.isnan(input_arr)]
+            if body.rescale_result.rescale_type == s.AllowedRescaleTypes.quantile:
+                rescale_result_list = [np.nanquantile(input_arr, b) for b in body.rescale_result.breaks]
+            elif body.rescale_result.rescale_type == s.AllowedRescaleTypes.equal_interval:
+                input_arr *= 1.0 / input_arr.max()
+                rescale_result_list = body.rescale_result.breaks
+            elif body.rescale_result.rescale_type == s.AllowedRescaleTypes.natural_breaks:
+                input_arr *= 1.0 / input_arr.max()
+                sample_arr = np.random.choice(input_arr[input_arr!=0], size=10000) # needs low samples or jenks is too slow
+                rescale_result_list = jenkspy.jenks_breaks(sample_arr, n_classes=len(body.rescale_result.breaks))
+        print(rescale_result_list)
+        process_raster_list_with_function_in_chunks([os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif'))], os.path.join(base_path, raster_name),
+                                                    os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif')),
+                                                    function_to_apply=rescale_result,
+                                                    function_arguments={'output_rgb': body.rgb, 'rescale_result_list': rescale_result_list, 'nodata': arguments_list[0]['nodata']},
+                                                    chunks=20, output_bands=4 if body.rgb else 1, dtype=np.uint8 if body.rgb else None, out_nodata=255 if body.rgb else None)
+
     build_overview_tiles = [2, 4, 8, 16, 32, 64]
     image = gdal.Open(os.path.join(base_path, raster_name), 1)  # 0 = read-only, 1 = read-write.
     gdal.SetConfigOption('COMPRESS_OVERVIEW', 'DEFLATE')

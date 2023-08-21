@@ -144,7 +144,19 @@ class CountourBodyResponse(CamelModel):
     geometry: list[dict]
 
 
+class AllowedRescaleTypes(str, PyEnum):
+    quantile = "quantile"
+    natural_breaks = "natural breaks"
+    equal_interval = "equal interval"
+
+
+class RescaleResult(CamelModel):
+    rescale_type: AllowedRescaleTypes
+    breaks: list[float]
+
+
 class RasterCalculationBody(CamelModel):
     layer_list: list[CombineLayersList]
     geoserver: Optional[bool] = False
     rgb: Optional[bool] = False
+    rescale_result: Optional[RescaleResult] = None

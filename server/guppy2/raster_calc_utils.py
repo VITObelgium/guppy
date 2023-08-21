@@ -121,6 +121,23 @@ def perform_operation(*input_arrs, layer_args, output_rgb):
     return output_arr
 
 
+def rescale_result(*input_arrs, output_rgb, rescale_result_list = None, nodata=None):
+    rescaled_output_arr = None
+    if nodata is None:
+        nodata = -9999
+    for input_arr in input_arrs:
+        if output_rgb:
+            input_arr = _decode(input_arr)
+        output_arr = np.where(input_arr == nodata, np.nan, input_arr)
+        min_val = 0
+        for index, value in enumerate(rescale_result_list):
+            max_val = value
+            rescaled_output_arr = np.where((min_val <= output_arr) & (output_arr < max_val), index * 1 / len(rescale_result_list), output_arr)
+    if output_rgb:
+        rescaled_output_arr = data_to_rgba(rescaled_output_arr, nodata)
+    return rescaled_output_arr
+
+
 def data_to_rgba(data, nodata):
     data = np.squeeze(data)
     data = data.astype(np.float32)
