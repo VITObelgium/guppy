@@ -1,7 +1,7 @@
 import os
 import time
 from typing import Callable
-
+from sqlalchemy.orm import Session
 import numpy as np
 import rasterio
 import requests
@@ -12,6 +12,7 @@ from starlette.responses import StreamingResponse
 
 from guppy2.config import config as cfg
 from guppy2.db import schemas as s
+from guppy2.db import models as m
 from guppy2.endpoint_utils import _decode
 from guppy2.error import create_error
 from guppy2.rasterio_file_streamer import RIOFile
@@ -25,6 +26,13 @@ def create_raster(raster_name):
         return geoserver_layer
     except requests.exceptions.ConnectionError as e:
         create_error(message='geoserver caused error')
+
+
+def insert_into_guppy_db(db: Session, filename, file_path, is_rgb):
+    layer_name = filename.split('.')[-1]
+    new_layer = m.LayerMetadata(layer_name=f"{layer_name}_store:{layer_name}", file_path=file_path, is_rgb=is_rgb)
+    db.add(new_layer)
+    db.commit()
 
 
 def create_geoserver_layer(data_source, layer_name):
@@ -121,7 +129,7 @@ def perform_operation(*input_arrs, layer_args, output_rgb):
     return output_arr
 
 
-def rescale_result(*input_arrs, output_rgb, rescale_result_list = None, nodata=None):
+def rescale_result(*input_arrs, output_rgb, rescale_result_list=None, nodata=None):
     rescaled_output_arr = None
     if nodata is None:
         nodata = -9999

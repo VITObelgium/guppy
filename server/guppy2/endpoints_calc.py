@@ -14,7 +14,7 @@ from starlette.responses import Response
 from dask import array as da
 from guppy2.config import config as cfg
 from guppy2.db import schemas as s, models as m
-from guppy2.raster_calc_utils import create_raster, generate_raster_response, perform_operation, process_raster_list_with_function_in_chunks, rescale_result
+from guppy2.raster_calc_utils import create_raster, generate_raster_response, perform_operation, process_raster_list_with_function_in_chunks, rescale_result, insert_into_guppy_db
 
 
 def raster_calculation(db: Session, body: s.RasterCalculationBody):
@@ -57,7 +57,7 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
                 rescale_result_list = body.rescale_result.breaks
             elif body.rescale_result.rescale_type == s.AllowedRescaleTypes.natural_breaks:
                 input_arr *= 1.0 / input_arr.max()
-                sample_arr = np.random.choice(input_arr[input_arr!=0], size=10000) # needs low samples or jenks is too slow
+                sample_arr = np.random.choice(input_arr[input_arr != 0], size=10000)  # needs low samples or jenks is too slow
                 rescale_result_list = jenkspy.jenks_breaks(sample_arr, n_classes=len(body.rescale_result.breaks))
         print(rescale_result_list)
         process_raster_list_with_function_in_chunks([os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif'))], os.path.join(base_path, raster_name),
@@ -72,6 +72,7 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
     image.BuildOverviews("NEAREST", build_overview_tiles)
     del image
     print('raster_calculation 200', time.time() - t)
+    insert_into_guppy_db(db, raster_name, os.path.join(base_path, raster_name), body.rgb)
     if body.geoserver:
         geoserver_layer = create_raster(raster_name)
         return Response(content=geoserver_layer, status_code=status.HTTP_201_CREATED)
