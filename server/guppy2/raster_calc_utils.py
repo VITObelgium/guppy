@@ -283,3 +283,100 @@ def process_raster_list_with_function_in_chunks(input_file_list: [str], output_f
     for open_da in open_da_arrays:
         open_da.close()
     print(f"combine_rasters_with_function_in_chunks done, {time.time() - t}")
+
+
+def warp_raster(input_raster_file: str, output_raster_file: str, resolution: float, output_bounds: [], target_epsg: int, nodata: float, resampling=gdal.GRA_Average,
+                as_array: bool = False, error_threshold: float = 0.125, options: [] = None,
+                build_overviews: bool = False, resolution_y: float = None, source_epsg: int = None):
+    """
+    Args:
+        input_raster_file: path to input file
+        output_raster_file: path to output file
+        resolution: the target resolution (float)
+        output_bounds: [x_min, y_min, x_max, y_max]
+        target_epsg: output epsg code (int)
+        nodata: This value will be used for cells withoyt data.
+        resampling: resampling algorithm (default gdal.GRA_Average)
+        as_array: return numpy array (default False)
+        error_threshold: Error threshold for transformation approximation (in pixel units - defaults to 0.125)
+        options: These options will be passed without modification to the 'options' argument of the gdal.Warp() function. (dflt:  ['COMPRESS=LZW', "TILED=YES"])
+        build_overviews: If not None and not empty, the overview-tiles of the given resample values will be created.
+        resolution_y: in case x and y resolution are not the same.
+        source_epsg: input epsg code (int, default None)
+    Returns:
+        numpy array (ONLY if parameter as_array == True)
+    """
+    if options is None:
+        options = ['COMPRESS=DEFLATE', "TILED=YES", 'BIGTIFF=YES', 'NUM_THREADS=ALL_CPUS']
+    output_raster_file = str(output_raster_file)
+    kwargs = {}
+    input_raster = gdal.Open(str(input_raster_file))
+    raster_srs = osr.SpatialReference()
+    if target_epsg is None:
+        raster_srs.ImportFromWkt(input_raster.GetProjectionRef())
+    else:
+        raster_srs.ImportFromEPSG(int(target_epsg))
+    kwargs['dstSRS'] = raster_srs
+    source_srs = osr.SpatialReference()
+    if source_epsg is None:
+        source_srs.ImportFromWkt(input_raster.GetProjectionRef())
+    else:
+        source_srs.ImportFromEPSG(int(source_epsg))
+    kwargs['srcSRS'] = source_srs
+
+    if output_bounds is not None:
+        kwargs['outputBoundsSRS'] = raster_srs
+        kwargs['outputBounds'] = output_bounds
+    if resolution is not None:
+        kwargs['xRes'] = resolution
+        if resolution_y is not None:
+            kwargs['yRes'] = resolution_y
+        else:
+            kwargs['yRes'] = resolution
+    if error_threshold is not None:
+        kwargs['errorThreshold'] = error_threshold
+    if resampling is not None:
+        kwargs['resampleAlg'] = resampling
+    if nodata is not None:
+        kwargs['dstNodata'] = nodata
+    if options is not None:
+        kwargs['creationOptions'] = options
+
+    kwargs['format'] = 'GTiff'
+    kwargs['multithread'] = True
+    kwargs['warpOptions'] = ['NUM_THREADS=ALL_CPUS']
+
+    output_raster = gdal.Warp(output_raster_file, input_raster, **kwargs)
+    print("warp done")
+
+    return_array = output_raster.ReadAsArray() if as_array else []
+    output_raster = None
+    if build_overviews:
+        build_overview_tiles = [2, 4, 8, 16, 32, 64]
+        image = gdal.Open(output_raster_file, 1)  # 0 = read-only, 1 = read-write.
+        gdal.SetConfigOption('COMPRESS_OVERVIEW', 'DEFLATE')
+        image.BuildOverviews("AVERAGE", build_overview_tiles)
+        del image
+
+    return return_array
+
+
+def convert_raster_to_likeraster(input_raster_file: str, like_raster_file: str, output_file: str, error_threshold: float = 0.125, resampling=gdal.GRA_Average):
+    """convert raster to match the likeraster given
+
+    Args:
+        input_raster_file: path to file
+        like_raster_file: path to file
+        output_file: path to output file
+        error_threshold: error_threshold used for the resampling. default:  0.125
+        resampling: type of resampling to use. default: gdal.GRA_Average
+    """
+    input_ds = gdal.Open(input_raster_file)
+    like_ds = gdal.Open(like_raster_file)
+    band = like_ds.GetRasterBand(1)
+    x_min, y_min, x_max, y_max, resolution_x, resolution_y = _get_raster_bounds(like_ds)
+    nodata = band.GetNoDataValue()
+    output_bounds = [x_min, y_min, x_max, y_max]
+    target_epsg = _get_raster_epsg(like_ds)
+    warp_raster(input_raster_file, output_file, resolution_x, output_bounds, target_epsg, nodata, resampling=resampling, error_threshold=error_threshold, resolution_y=resolution_y)
+    print("done conversion")

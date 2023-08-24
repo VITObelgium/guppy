@@ -14,7 +14,8 @@ from starlette.responses import Response
 from dask import array as da
 from guppy2.config import config as cfg
 from guppy2.db import schemas as s, models as m
-from guppy2.raster_calc_utils import create_raster, generate_raster_response, perform_operation, process_raster_list_with_function_in_chunks, rescale_result, insert_into_guppy_db
+from guppy2.raster_calc_utils import create_raster, generate_raster_response, perform_operation, process_raster_list_with_function_in_chunks, rescale_result, insert_into_guppy_db, compare_rasters, \
+    convert_raster_to_likeraster
 
 
 def raster_calculation(db: Session, body: s.RasterCalculationBody):
@@ -39,6 +40,14 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
                 print('WARNING: file does not exists', path)
                 return Response(content='layer not found', status_code=status.HTTP_404_NOT_FOUND)
             arguments_list.append({'nodata': nodata, 'factor': layer_item.factor, 'operation': layer_item.operation, 'is_rgb': layer_model.is_rgb})
+    fixed_path_list = []
+    for file in path_list:
+        if not compare_rasters(file, path_list[0], check_nodata=False):
+            convert_raster_to_likeraster(file, path_list[0], os.path.join(base_path, raster_name))
+            fixed_path_list.append(file.replace(".tif", f"_{unique_identifier}.tif"))
+        else:
+            fixed_path_list.append(file)
+
     process_raster_list_with_function_in_chunks(path_list, os.path.join(base_path, raster_name), path_list[0],
                                                 function_to_apply=perform_operation, function_arguments={'layer_args': arguments_list, 'output_rgb': body.rgb},
                                                 chunks=20, output_bands=4 if body.rgb else 1, dtype=np.uint8 if body.rgb else None, out_nodata=255 if body.rgb else None)
