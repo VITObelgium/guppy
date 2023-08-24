@@ -21,8 +21,9 @@ from guppy2.raster_calc_utils import create_raster, generate_raster_response, pe
 def raster_calculation(db: Session, body: s.RasterCalculationBody):
     print('raster_calculation')
     t = time.time()
-    base_path = '/content/tifs/generated'
-    raster_name = f'generated_{datetime.datetime.now().strftime("%Y-%m-%d")}_{str(random.randint(0, 10000000))}.tif'
+    base_path = 'content/tifs/generated'
+    unique_identifier = f'{datetime.datetime.now().strftime("%Y-%m-%d")}_{str(random.randint(0, 10000000))}'
+    raster_name = f'generated_{unique_identifier}.tif'
     nodata = None
     first = True
     path_list = []
@@ -56,7 +57,7 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
         os.rename(src=os.path.join(base_path, raster_name), dst=os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif')))
 
         with rasterio.open(os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif'))) as ds:
-            input_arr = ds.read()
+            input_arr = ds.read(out_shape=(int(ds.height / 4), int(ds.width / 4)))
             input_arr = np.where(input_arr == nodata, np.nan, input_arr)
             input_arr = input_arr[~np.isnan(input_arr)]
             if body.rescale_result.rescale_type == s.AllowedRescaleTypes.quantile:
