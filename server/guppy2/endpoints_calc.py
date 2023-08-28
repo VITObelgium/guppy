@@ -65,18 +65,23 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
         input_arr = input_arr[~np.isnan(input_arr)]
         if body.rescale_result.rescale_type == s.AllowedRescaleTypes.quantile:
             rescale_result_list = [np.nanquantile(input_arr, b) for b in body.rescale_result.breaks]
+            rescale_result_dict = {k: v for k, v in enumerate(rescale_result_list)}
         elif body.rescale_result.rescale_type == s.AllowedRescaleTypes.equal_interval:
             input_arr *= 1.0 / input_arr.max()
             rescale_result_list = body.rescale_result.breaks
+            rescale_result_dict = {k: v for k, v in enumerate(rescale_result_list)}
         elif body.rescale_result.rescale_type == s.AllowedRescaleTypes.natural_breaks:
             input_arr *= 1.0 / input_arr.max()
             sample_arr = np.random.choice(input_arr[input_arr != 0], size=10000)  # needs low samples or jenks is too slow
             rescale_result_list = jenkspy.jenks_breaks(sample_arr, n_classes=len(body.rescale_result.breaks))
-        print(rescale_result_list)
+            rescale_result_dict = {k: v for k, v in enumerate(rescale_result_list)}
+        elif body.rescale_result.rescale_type == s.AllowedRescaleTypes.provided:
+            rescale_result_dict = body.rescale_result.breaks
+        print(rescale_result_dict)
         process_raster_list_with_function_in_chunks([os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif'))], os.path.join(base_path, raster_name),
                                                     os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif')),
                                                     function_to_apply=rescale_result,
-                                                    function_arguments={'output_rgb': body.rgb, 'rescale_result_list': rescale_result_list, 'nodata': arguments_list[0]['nodata']},
+                                                    function_arguments={'output_rgb': body.rgb, 'rescale_result_dict': rescale_result_dict, 'nodata': arguments_list[0]['nodata']},
                                                     chunks=20, output_bands=4 if body.rgb else 1, dtype=np.uint8 if body.rgb else None, out_nodata=255 if body.rgb else None)
 
         build_overview_tiles = [2, 4, 8, 16, 32, 64]

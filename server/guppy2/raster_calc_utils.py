@@ -1,3 +1,4 @@
+import itertools
 import os
 import time
 from typing import Callable
@@ -124,23 +125,34 @@ def perform_operation(*input_arrs, layer_args, output_rgb):
                 output_arr = np.where(output_arr == nodata, output_arr, output_arr * np.where(input_arr == nodata, 1, input_arr))
             elif operation == s.AllowedOperations.invert_boolean_mask:
                 output_arr = np.where(output_arr == nodata, output_arr, output_arr * np.where(input_arr == nodata, 1, 1 - input_arr))
+            elif operation == s.AllowedOperations.unique_product:
+                combo_arr = itertools.product(np.unique(output_arr[~np.isnan(output_arr)]), np.unique(input_arr[~np.innan(input_arr)]))
+                for idx, combination in enumerate(combo_arr):
+                    output_arr = combo_arr[(np.where(output_arr == combination[0]) & (input_arr == combination[1]))] = idx
     if output_rgb:
         output_arr = data_to_rgba(output_arr, out_nodata)
     return output_arr
 
 
-def rescale_result(*input_arrs, output_rgb, rescale_result_list=None, nodata=None):
+def rescale_result(*input_arrs, output_rgb, rescale_result_dict=None, nodata=None):
     rescaled_output_arr = None
     if nodata is None:
         nodata = -9999
     for input_arr in input_arrs:
         if output_rgb:
             input_arr = _decode(input_arr)
-        output_arr = np.where(input_arr == nodata, np.nan, input_arr)
-        min_val = 0
-        for index, value in enumerate(rescale_result_list):
-            max_val = value
-            rescaled_output_arr = np.where((min_val <= output_arr) & (output_arr < max_val), index * 1 / len(rescale_result_list), output_arr)
+        input_arr_nan = np.where(input_arr == nodata, np.nan, input_arr)
+        for key, value in rescale_result_dict.items():
+            if '-' in str(value) and not str(value).startswith('-'):
+                min_val = float(value.split('-')[0])
+                max_val = float(value.split('-')[1])
+                rescaled_output_arr = np.where((min_val <= input_arr_nan) & (input_arr_nan < max_val), key, rescaled_output_arr)
+            else:
+                try:
+                    iterator = iter(value)  # test if value is iterable
+                    rescaled_output_arr = np.where(np.isin(input_arr_nan, value), key, rescaled_output_arr)
+                except TypeError:
+                    rescaled_output_arr = np.where(input_arr_nan == value, key, rescaled_output_arr)
     if output_rgb:
         rescaled_output_arr = data_to_rgba(rescaled_output_arr, nodata)
     return rescaled_output_arr

@@ -1,5 +1,5 @@
 # coding: utf-8
-from typing import Optional
+from typing import Optional, Union
 from decimal import Decimal
 from enum import Enum as PyEnum
 from pydantic import BaseModel
@@ -122,6 +122,7 @@ class AllowedOperations(str, PyEnum):
     multiply = "multiply"
     invert_boolean_mask = "invert_boolean_mask"
     boolean_mask = "boolean_mask"
+    unique_product = "unique_product"
 
 
 class CombineLayersList(CamelModel):
@@ -148,11 +149,12 @@ class AllowedRescaleTypes(str, PyEnum):
     quantile = "quantile"
     natural_breaks = "natural breaks"
     equal_interval = "equal interval"
+    provided = "provided"
 
 
 class RescaleResult(CamelModel):
     rescale_type: AllowedRescaleTypes
-    breaks: list[float]
+    breaks: Union[list[float], dict]
 
 
 class RasterCalculationBody(CamelModel):
