@@ -87,7 +87,7 @@ def create_geoserver_layer(data_source, layer_name):
     else:
         print(f"Failed to create layer. Status code: {response.status_code}")
         print(response.text)
-    return f"{coverage_store}:{layer_name}"
+    return f"{workspace}:{layer_name}"
 
 
 def generate_raster_response(generated_file):
