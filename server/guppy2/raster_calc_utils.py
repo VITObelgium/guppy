@@ -126,9 +126,11 @@ def perform_operation(*input_arrs, layer_args, output_rgb):
             elif operation == s.AllowedOperations.invert_boolean_mask:
                 output_arr = np.where(output_arr == nodata, output_arr, output_arr * np.where(input_arr == nodata, 1, 1 - input_arr))
             elif operation == s.AllowedOperations.unique_product:
-                combo_arr = itertools.product(np.unique(output_arr[~np.isnan(output_arr)]), np.unique(input_arr[~np.isnan(input_arr)]))
-                for idx, combination in enumerate(combo_arr):
-                    output_arr = combo_arr[(np.where(output_arr == combination[0]) & (input_arr == combination[1]))] = idx
+                combo = itertools.product(np.unique(output_arr[~np.isnan(output_arr)]), np.unique(input_arr[~np.isnan(input_arr)]))
+                combo_arr = output_arr.copy()
+                for idx, combination in enumerate(combo):
+                    combo_arr[(np.where(output_arr == combination[0]) & (input_arr == combination[1]))] = idx
+                output_arr = combo_arr.copy()
     if output_rgb:
         output_arr = data_to_rgba(output_arr, out_nodata)
     return output_arr
