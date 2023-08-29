@@ -49,7 +49,7 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
         else:
             fixed_path_list.append(file)
 
-    process_raster_list_with_function_in_chunks(path_list, os.path.join(base_path, raster_name), path_list[0],
+    process_raster_list_with_function_in_chunks(fixed_path_list, os.path.join(base_path, raster_name), path_list[0],
                                                 function_to_apply=perform_operation, function_arguments={'layer_args': arguments_list, 'output_rgb': body.rgb},
                                                 chunks=20, output_bands=4 if body.rgb else 1, dtype=np.uint8 if body.rgb else None, out_nodata=255 if body.rgb else None)
     build_overview_tiles = [2, 4, 8, 16, 32, 64]
