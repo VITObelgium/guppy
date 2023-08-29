@@ -31,7 +31,7 @@ def create_raster(raster_name):
 
 def insert_into_guppy_db(db: Session, filename, file_path, is_rgb):
     layer_name = filename.split('.')[0]
-    new_layer = m.LayerMetadata(layer_name=f"{layer_name}_store:{layer_name}", file_path=file_path, is_rgb=is_rgb)
+    new_layer = m.LayerMetadata(layer_name=f"generated:{layer_name}", file_path=file_path, is_rgb=is_rgb)
     db.add(new_layer)
     db.commit()
 
