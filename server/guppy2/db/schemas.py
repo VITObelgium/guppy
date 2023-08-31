@@ -162,3 +162,4 @@ class RasterCalculationBody(CamelModel):
     geoserver: Optional[bool] = False
     rgb: Optional[bool] = False
     rescale_result: Optional[RescaleResult] = None
+    result_style: Optional[str] = None

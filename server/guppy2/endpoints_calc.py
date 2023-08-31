@@ -48,7 +48,11 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
             fixed_path_list.append(file.replace(".tif", f"_{unique_identifier}.tif"))
         else:
             fixed_path_list.append(file)
-
+    unique_values = []
+    for path in fixed_path_list:
+        with rasterio.open(path) as ds:
+            input_arr = ds.read(out_shape=(int(ds.height / 4), int(ds.width / 4)))
+        unique_values.append(np.unique(input_arr))
     process_raster_list_with_function_in_chunks(fixed_path_list, os.path.join(base_path, raster_name), path_list[0],
                                                 function_to_apply=perform_operation, function_arguments={'layer_args': arguments_list, 'output_rgb': body.rgb},
                                                 chunks=20, output_bands=4 if body.rgb else 1, dtype=np.uint8 if body.rgb else None, out_nodata=255 if body.rgb else None)
@@ -92,7 +96,7 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
     print('raster_calculation 200', time.time() - t)
     insert_into_guppy_db(db, raster_name, os.path.join(base_path, raster_name), body.rgb)
     if body.geoserver:
-        geoserver_layer = create_raster(raster_name)
+        geoserver_layer = create_raster(raster_name, body.result_style)
         return Response(content=geoserver_layer, status_code=status.HTTP_201_CREATED)
     else:
         return generate_raster_response(os.path.join(base_path, raster_name))

@@ -19,10 +19,10 @@ from guppy2.error import create_error
 from guppy2.rasterio_file_streamer import RIOFile
 
 
-def create_raster(raster_name):
+def create_raster(raster_name, style=None):
     t = time.time()
     try:
-        geoserver_layer = create_geoserver_layer(raster_name, raster_name.split('.')[0])
+        geoserver_layer = create_geoserver_layer(raster_name, raster_name.split('.')[0], style)
         print("done geoserver", time.time() - t)
         return geoserver_layer
     except requests.exceptions.ConnectionError as e:
@@ -36,7 +36,7 @@ def insert_into_guppy_db(db: Session, filename, file_path, is_rgb):
     db.commit()
 
 
-def create_geoserver_layer(data_source, layer_name):
+def create_geoserver_layer(data_source, layer_name, sld_name=None):
     # Set up authentication (if required)
     username = cfg.geoserver.username
     password = cfg.geoserver.password
@@ -87,6 +87,13 @@ def create_geoserver_layer(data_source, layer_name):
     else:
         print(f"Failed to create layer. Status code: {response.status_code}")
         print(response.text)
+    if sld_name and len(str(sld_name).strip()) > 0 and str(sld_name).strip() != 'nan':
+        url = base_url + f'workspaces/{workspace}/layers/{layer_name}.xml'
+        headers = {'content-type': 'text/xml', 'Accept-Charset': 'UTF-8'}
+        data = f'<layer><defaultStyle><name>{sld_name}</name></defaultStyle></layer>'
+        r = requests.put(url, data=data, headers=headers, auth=auth)
+        if not r.ok:
+            print(layer_name, 'set style failed', r)
     return f"{workspace}:{layer_name}"
 
 
@@ -129,7 +136,7 @@ def perform_operation(*input_arrs, layer_args, output_rgb):
                 combo = itertools.product(np.unique(output_arr[~np.isnan(output_arr)]), np.unique(input_arr[~np.isnan(input_arr)]))
                 combo_arr = output_arr.copy()
                 for idx, combination in enumerate(combo):
-                    combo_arr[(np.where(output_arr == combination[0]) & (input_arr == combination[1]))] = idx
+                    combo_arr[np.where((output_arr == combination[0]) & (input_arr == combination[1]))] = idx
                 output_arr = combo_arr.copy()
     if output_rgb:
         output_arr = data_to_rgba(output_arr, out_nodata)
