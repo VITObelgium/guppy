@@ -106,11 +106,11 @@ def generate_raster_response(generated_file):
     return StreamingResponse(generate_geotiff(), media_type="image/tiff")
 
 
-def perform_operation(*input_arrs, layer_args, output_rgb):
+def perform_operation(*input_arrs, layer_args, output_rgb, unique_values=None):
     output_arr = None
     first = True
     out_nodata = -9999
-    for input_arr, args_dict in zip(input_arrs, layer_args):
+    for input_arr, args_dict, unique_vals in zip(input_arrs, layer_args, unique_values):
         nodata = args_dict['nodata']
         factor = args_dict['factor']
         operation = args_dict['operation']
@@ -120,6 +120,7 @@ def perform_operation(*input_arrs, layer_args, output_rgb):
         if first:
             output_arr = np.where(input_arr == nodata, input_arr, input_arr * factor)
             out_nodata = nodata
+            out_unique = unique_vals
             first = False
         else:
             if operation == s.AllowedOperations.multiply:
@@ -133,7 +134,7 @@ def perform_operation(*input_arrs, layer_args, output_rgb):
             elif operation == s.AllowedOperations.invert_boolean_mask:
                 output_arr = np.where(output_arr == nodata, output_arr, output_arr * np.where(input_arr == nodata, 1, 1 - input_arr))
             elif operation == s.AllowedOperations.unique_product:
-                combo = itertools.product(np.unique(output_arr[~np.isnan(output_arr)]), np.unique(input_arr[~np.isnan(input_arr)]))
+                combo = itertools.product(out_unique, unique_vals)
                 combo_arr = output_arr.copy()
                 for idx, combination in enumerate(combo):
                     combo_arr[np.where((output_arr == combination[0]) & (input_arr == combination[1]))] = idx
