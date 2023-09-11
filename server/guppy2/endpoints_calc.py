@@ -45,7 +45,7 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
     for file in path_list:
         if not compare_rasters(file, path_list[0], check_nodata=False):
             if not os.path.exists(os.path.join(base_path, file.replace(".tif", f"_fixed_{unique_identifier}.tif"))):
-                convert_raster_to_likeraster(file, path_list[0], os.path.join(base_path, file.replace(".tif", f"_fixed_{unique_identifier}.tif")))
+                convert_raster_to_likeraster(file, path_list[0], file.replace(".tif", f"_fixed_{unique_identifier}.tif"))
             fixed_path_list.append(file.replace(".tif", f"_{unique_identifier}.tif"))
         else:
             fixed_path_list.append(file)
