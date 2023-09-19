@@ -119,7 +119,8 @@ if guppy2_env_vars:
                     db=guppy2_env_vars['GUPPY_DATABASE_DB'],
                 ),
                 guppy=_Guppy(size_limit=int(float(guppy2_env_vars['GUPPY_SIZE_LIMIT'])) if 'GUPPY_SIZE_LIMIT' in guppy2_env_vars else 10000),
-                geoserver=_Geoserver(username=guppy2_env_vars['GUPPY_GEOSERVER_USER'], password=guppy2_env_vars['GUPPY_GEOSERVER_PASSWD'])
+                geoserver=_Geoserver(username=guppy2_env_vars['GUPPY_GEOSERVER_USER'] if 'GUPPY_GEOSERVER_USER' in guppy2_env_vars else '',
+                                     password=guppy2_env_vars['GUPPY_GEOSERVER_PASSWD'] if 'GUPPY_GEOSERVER_PASSWD' in guppy2_env_vars else '')
             )
         except KeyError as key_error:
             raise SystemExit("Environment variable '%s' not found!" % key_error)
