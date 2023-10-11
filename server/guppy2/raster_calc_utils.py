@@ -108,20 +108,19 @@ def generate_raster_response(generated_file):
 
 def perform_operation(*input_arrs, layer_args, output_rgb, unique_values=None):
     output_arr = None
-    first = True
     out_nodata = -9999
-    for input_arr, args_dict, unique_vals in zip(input_arrs, layer_args, unique_values):
+    unique_values = unique_values or [None] * len(input_arrs)  # Ensure unique_values has the same length as input_arrs
+    for idx, (input_arr, args_dict, unique_vals) in enumerate(zip(input_arrs, layer_args, unique_values)):
         nodata = args_dict['nodata']
         factor = args_dict['factor']
         operation = args_dict['operation']
         is_rgb = args_dict['is_rgb']
         if is_rgb:
             input_arr = _decode(input_arr)
-        if first:
+        if idx == 0:
             output_arr = np.where(input_arr == nodata, input_arr, input_arr * factor)
             out_nodata = nodata
             out_unique = unique_vals
-            first = False
         else:
             if operation == s.AllowedOperations.multiply:
                 output_arr = np.where(output_arr == nodata, output_arr, output_arr * np.where(input_arr == nodata, 1, input_arr * factor))
