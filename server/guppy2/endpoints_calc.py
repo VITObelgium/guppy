@@ -56,6 +56,7 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
                 input_arr = ds.read(out_shape=(int(ds.height / 4), int(ds.width / 4)))
             unique_values.append(np.unique(input_arr))
             input_arr = None
+    print('perform_operation', time.time()-t)
     process_raster_list_with_function_in_chunks(fixed_path_list, os.path.join(base_path, raster_name), fixed_path_list[0],
                                                 function_to_apply=perform_operation, function_arguments={'layer_args': arguments_list, 'output_rgb': body.rgb, 'unique_values': unique_values},
                                                 chunks=10, output_bands=4 if body.rgb else 1, dtype=np.uint8 if body.rgb else None, out_nodata=255 if body.rgb else None)
@@ -87,6 +88,7 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
         else:
             rescale_result_dict = body.rescale_result.breaks
         print(rescale_result_dict, bins)
+        print('rescale_result', time.time() - t)
         process_raster_list_with_function_in_chunks([os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif'))], os.path.join(base_path, raster_name),
                                                     os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif')),
                                                     function_to_apply=rescale_result,
