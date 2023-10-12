@@ -8,10 +8,11 @@ import numpy as np
 import rasterio
 import requests
 from osgeo import gdal
+from rasterio.enums import Resampling
 from sqlalchemy.orm import Session
 from starlette import status
 from starlette.responses import Response
-from dask import array as da
+
 from guppy2.config import config as cfg
 from guppy2.db import schemas as s, models as m
 from guppy2.raster_calc_utils import create_raster, generate_raster_response, perform_operation, process_raster_list_with_function_in_chunks, rescale_result, insert_into_guppy_db, compare_rasters, \
