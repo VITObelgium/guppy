@@ -152,7 +152,6 @@ def rescale_result(*input_arrs, output_rgb, rescale_result_dict=None, nodata=Non
             input_arr = _decode(input_arr)
         if bins:
             bin_borders = [value for key, value in rescale_result_dict.items()]
-            print(bin_borders)
             rescaled_output_arr = np.where(np.isnan(input_arr), np.nan, np.digitize(input_arr, bins=bin_borders, right=True))
             for i, key in enumerate([key for key, value in rescale_result_dict.items()]):
                 rescaled_output_arr = np.where(rescaled_output_arr == i, key, rescaled_output_arr)
