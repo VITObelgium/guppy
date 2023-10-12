@@ -143,23 +143,30 @@ def perform_operation(*input_arrs, layer_args, output_rgb, unique_values=None):
     return output_arr
 
 
-def rescale_result(*input_arrs, output_rgb, rescale_result_dict=None, nodata=None):
+def rescale_result(*input_arrs, output_rgb, rescale_result_dict=None, nodata=None, bins=False):
     if nodata is None:
         nodata = -9999
     rescaled_output_arr = np.full_like(input_arrs[0], nodata)
     for input_arr in input_arrs:
         if output_rgb:
             input_arr = _decode(input_arr)
-        for key, value in rescale_result_dict.items():
-            if '-' in str(value) and not str(value).startswith('-'):
-                min_val = float(value.split('-')[0])
-                max_val = float(value.split('-')[1])
-                rescaled_output_arr[(min_val <= input_arr) & (input_arr < max_val)] = int(key)
-            else:
-                if isinstance(value, list):
-                    rescaled_output_arr[np.isin(input_arr, value)] = int(key)
+        if bins:
+            bin_borders = [value for key, value in rescale_result_dict.items()]
+            print(bin_borders)
+            rescaled_output_arr = np.where(np.isnan(input_arr), np.nan, np.digitize(input_arr, bins=bin_borders, right=True))
+            for i, key in enumerate([key for key, value in rescale_result_dict.items()]):
+                rescaled_output_arr = np.where(rescaled_output_arr == i, key, rescaled_output_arr)
+        else:
+            for key, value in rescale_result_dict.items():
+                if '-' in str(value) and not str(value).startswith('-'):
+                    min_val = float(value.split('-')[0])
+                    max_val = float(value.split('-')[1])
+                    rescaled_output_arr[(min_val <= input_arr) & (input_arr < max_val)] = int(key)
                 else:
-                    rescaled_output_arr[input_arr == value] = int(key)
+                    if isinstance(value, list):
+                        rescaled_output_arr[np.isin(input_arr, value)] = int(key)
+                    else:
+                        rescaled_output_arr[input_arr == value] = int(key)
     if output_rgb:
         rescaled_output_arr = data_to_rgba(rescaled_output_arr, nodata)
     return rescaled_output_arr
