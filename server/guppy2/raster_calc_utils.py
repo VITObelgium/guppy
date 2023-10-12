@@ -122,16 +122,19 @@ def perform_operation(*input_arrs, layer_args, output_rgb, unique_values=None):
             out_nodata = nodata
             out_unique = unique_vals
         else:
+            mask_nodata = input_arr != nodata  # Compute mask once to reuse it
+            input_arr_masked = np.where(mask_nodata, input_arr * factor, 0)  # Factor multiplication once
+
             if operation == s.AllowedOperations.multiply:
-                output_arr = np.where(output_arr == nodata, output_arr, output_arr * np.where(input_arr == nodata, 1, input_arr * factor))
+                np.multiply(output_arr, np.where(mask_nodata, input_arr_masked, 1), out=output_arr, where=output_arr!=nodata)
             elif operation == s.AllowedOperations.add:
-                output_arr = np.where(output_arr == nodata, output_arr, output_arr + np.where(input_arr == nodata, 0, input_arr * factor))
+                np.add(output_arr, input_arr_masked, out=output_arr, where=output_arr!=nodata)
             elif operation == s.AllowedOperations.subtract:
-                output_arr = np.where(output_arr == nodata, output_arr, output_arr - np.where(input_arr == nodata, 0, input_arr * factor))
+                np.subtract(output_arr, input_arr_masked, out=output_arr, where=output_arr!=nodata)
             elif operation == s.AllowedOperations.boolean_mask:
-                output_arr = np.where(output_arr == nodata, output_arr, output_arr * np.where(input_arr == nodata, 1, input_arr))
+                np.multiply(output_arr, np.where(mask_nodata, input_arr, 1), out=output_arr, where=output_arr!=nodata)
             elif operation == s.AllowedOperations.invert_boolean_mask:
-                output_arr = np.where(output_arr == nodata, output_arr, output_arr * np.where(input_arr == nodata, 1, 1 - input_arr))
+                np.multiply(output_arr, np.where(mask_nodata, 1 - input_arr, 1), out=output_arr, where=output_arr!=nodata)
             elif operation == s.AllowedOperations.unique_product:
                 combo = itertools.product(out_unique, unique_vals)
                 combo_arr = output_arr.copy()
