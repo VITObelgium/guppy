@@ -46,6 +46,11 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
         if not compare_rasters(file, path_list[0], check_nodata=False):
             if not os.path.exists(os.path.join(base_path, file.replace(".tif", f"_fixed.tif"))):
                 convert_raster_to_likeraster(file, path_list[0], file.replace(".tif", f"_fixed.tif"))
+                build_overview_tiles = [2, 4, 8, 16, 32, 64]
+                image = gdal.Open(file.replace(".tif", f"_fixed.tif"), 1)  # 0 = read-only, 1 = read-write.
+                gdal.SetConfigOption('COMPRESS_OVERVIEW', 'DEFLATE')
+                image.BuildOverviews("NEAREST", build_overview_tiles)
+                del image
             fixed_path_list.append(file.replace(".tif", f"_fixed.tif"))
         else:
             fixed_path_list.append(file)
@@ -53,7 +58,7 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
     if s.AllowedOperations.unique_product in [arg['operation'] for arg in arguments_list]:
         for path in fixed_path_list:
             with rasterio.open(path) as ds:
-                input_arr = ds.read(out_shape=(int(ds.height / 4), int(ds.width / 4)))
+                input_arr = ds.read(out_shape=(int(ds.height / 4), int(ds.width / 4)), resampling=Resampling.nearest)
             unique_values.append(np.unique(input_arr))
             input_arr = None
     print('perform_operation', time.time()-t)
