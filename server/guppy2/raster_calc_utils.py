@@ -136,11 +136,10 @@ def perform_operation(*input_arrs, layer_args, output_rgb, unique_values=None):
             elif operation == s.AllowedOperations.invert_boolean_mask:
                 np.multiply(output_arr, np.where(mask_nodata, 1 - input_arr, 1), out=output_arr, where=output_arr!=nodata)
             elif operation == s.AllowedOperations.unique_product:
-                combo = itertools.product(out_unique, unique_vals)
-                combo_arr = output_arr.copy()
-                for idx, combination in enumerate(combo):
-                    combo_arr[np.where((output_arr == combination[0]) & (input_arr == combination[1]))] = idx
-                output_arr = combo_arr.copy()
+                unique_pairs = np.array(np.meshgrid(out_unique, unique_vals)).T.reshape(-1, 2)
+                condition = (output_arr[..., None] == unique_pairs[:, 0]) & (input_arr[..., None] == unique_pairs[:, 1])
+                indices = np.arange(len(unique_pairs))
+                output_arr = np.where(condition, indices, output_arr)
     if output_rgb:
         output_arr = data_to_rgba(output_arr, out_nodata)
     return output_arr
