@@ -96,7 +96,7 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
                                                     os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif')),
                                                     function_to_apply=rescale_result,
                                                     function_arguments={'output_rgb': body.rgb, 'rescale_result_dict': rescale_result_dict, 'nodata': arguments_list[0]['nodata'], 'bins': bins},
-                                                    chunks=10, output_bands=4 if body.rgb else 1, dtype=np.uint8 if body.rgb  else np.int if bins  else None, out_nodata=255 if body.rgb else nodata)
+                                                    chunks=10, output_bands=4 if body.rgb else 1, dtype=np.uint8 if body.rgb  else rasterio.int32 if bins else None, out_nodata=255 if body.rgb else nodata)
     build_overview_tiles = [2, 4, 8, 16, 32, 64]
     image = gdal.Open(os.path.join(base_path, raster_name), 1)  # 0 = read-only, 1 = read-write.
     gdal.SetConfigOption('COMPRESS_OVERVIEW', 'DEFLATE')
