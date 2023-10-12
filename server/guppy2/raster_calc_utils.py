@@ -115,7 +115,6 @@ def perform_operation(*input_arrs, layer_args, output_rgb, unique_values=None):
         factor = args_dict['factor']
         operation = args_dict['operation']
         is_rgb = args_dict['is_rgb']
-        print(unique_vals)
         if is_rgb:
             input_arr = _decode(input_arr)
         if idx == 0:
@@ -139,7 +138,6 @@ def perform_operation(*input_arrs, layer_args, output_rgb, unique_values=None):
             elif operation == s.AllowedOperations.unique_product:
                 combo_arr = output_arr.copy()
                 for idx, (u1, u2) in enumerate(itertools.product(out_unique, unique_vals)):
-                    print(idx, u1, u2)
                     mask = (output_arr == u1) & (input_arr == u2)
                     combo_arr[mask] = idx
                 output_arr[:] = combo_arr  # Update output_arr in-place

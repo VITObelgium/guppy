@@ -46,12 +46,7 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
     for file in path_list:
         if not compare_rasters(file, path_list[0], check_nodata=False):
             if not os.path.exists(os.path.join(base_path, file.replace(".tif", f"_fixed.tif"))):
-                convert_raster_to_likeraster(file, path_list[0], file.replace(".tif", f"_fixed.tif"))
-                build_overview_tiles = [2, 4, 8, 16, 32, 64]
-                image = gdal.Open(file.replace(".tif", f"_fixed.tif"), 1)  # 0 = read-only, 1 = read-write.
-                gdal.SetConfigOption('COMPRESS_OVERVIEW', 'DEFLATE')
-                image.BuildOverviews("NEAREST", build_overview_tiles)
-                del image
+                convert_raster_to_likeraster(file, path_list[0], file.replace(".tif", f"_fixed.tif"), resampling=gdal.GRA_NearestNeighbour)
             fixed_path_list.append(file.replace(".tif", f"_fixed.tif"))
         else:
             fixed_path_list.append(file)
@@ -59,10 +54,10 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
     if s.AllowedOperations.unique_product in [arg['operation'] for arg in arguments_list]:
         for path in fixed_path_list:
             with rasterio.open(path) as ds:
-                input_arr = ds.read(out_shape=(int(ds.height / 4), int(ds.width / 4)), resampling=Resampling.nearest)
+                input_arr = ds.read(out_shape=(int(ds.height / 4), int(ds.width / 4)))
             unique_values.append(np.unique(input_arr))
             input_arr = None
-    print('perform_operation', time.time()-t)
+    print('perform_operation', time.time()-t, unique_values)
     process_raster_list_with_function_in_chunks(fixed_path_list, os.path.join(base_path, raster_name), fixed_path_list[0],
                                                 function_to_apply=perform_operation, function_arguments={'layer_args': arguments_list, 'output_rgb': body.rgb, 'unique_values': unique_values},
                                                 chunks=10, output_bands=4 if body.rgb else 1, dtype=np.uint8 if body.rgb else None, out_nodata=255 if body.rgb else None)
