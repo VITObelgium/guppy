@@ -277,7 +277,7 @@ def process_raster_list_with_function_in_chunks(input_file_list: [str], output_f
     if len(input_file_list) > 1:
         for input_file in input_file_list[1:]:
             if not compare_rasters(input_file_list[0], input_file, check_nodata=False):
-                raise AssertionError(f"Input raster {input_file} is not comparable to the first one. Please align them first with convert_raster_to_likeraster()")
+                raise AssertionError(f"Input raster {input_file} is not comparable to {input_file_list[0]}. Please align them first with convert_raster_to_likeraster()")
     input_da_arrays = []
     open_da_arrays = []
     ds = rasterio.open(like_file)
