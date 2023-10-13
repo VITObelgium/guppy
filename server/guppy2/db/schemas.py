@@ -128,6 +128,7 @@ class AllowedOperations(str, PyEnum):
 class CombineLayersList(CamelModel):
     layer_name: str
     operation: AllowedOperations
+    operation_data: Optional[list[float]] = None
     factor: Optional[float] = 1
 
 

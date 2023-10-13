@@ -41,62 +41,15 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
             else:
                 print('WARNING: file does not exists', path)
                 return Response(content='layer not found', status_code=status.HTTP_404_NOT_FOUND)
-            arguments_list.append({'nodata': nodata, 'factor': layer_item.factor, 'operation': layer_item.operation, 'is_rgb': layer_model.is_rgb})
-    fixed_path_list = []
-    for file in path_list:
-        if not compare_rasters(file, path_list[0], check_nodata=False):
-            if not os.path.exists(os.path.join(base_path, file.replace(".tif", f"_fixed.tif"))):
-                convert_raster_to_likeraster(file, path_list[0], file.replace(".tif", f"_fixed.tif"), resampling=gdal.GRA_NearestNeighbour)
-            fixed_path_list.append(file.replace(".tif", f"_fixed.tif"))
-        else:
-            fixed_path_list.append(file)
-    unique_values = []
-    if s.AllowedOperations.unique_product in [arg['operation'] for arg in arguments_list]:
-        for path in fixed_path_list:
-            with rasterio.open(path) as ds:
-                input_arr = ds.read(out_shape=(int(ds.height / 4), int(ds.width / 4)))
-            unique_values.append(np.unique(input_arr))
-            input_arr = None
-    print('perform_operation', time.time()-t, unique_values)
+            arguments_list.append({'nodata': nodata, 'factor': layer_item.factor, 'operation': layer_item.operation, 'operation_data': layer_item.operation_data, 'is_rgb': layer_model.is_rgb})
+    fixed_path_list = align_files(base_path, path_list)
+    unique_values = get_unique_values(arguments_list, fixed_path_list)
+    print('perform_operation', time.time() - t, unique_values)
     process_raster_list_with_function_in_chunks(fixed_path_list, os.path.join(base_path, raster_name), fixed_path_list[0],
                                                 function_to_apply=perform_operation, function_arguments={'layer_args': arguments_list, 'output_rgb': body.rgb, 'unique_values': unique_values},
                                                 chunks=10, output_bands=4 if body.rgb else 1, dtype=np.uint8 if body.rgb else None, out_nodata=255 if body.rgb else None)
     if body.rescale_result:
-        bins = False
-        os.rename(src=os.path.join(base_path, raster_name), dst=os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif')))
-        if body.rescale_result.rescale_type != s.AllowedRescaleTypes.provided:
-            with rasterio.open(os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif'))) as ds:
-                input_arr = ds.read(1)
-            input_arr = np.where(input_arr == nodata, np.nan, input_arr)
-            input_arr = input_arr[~np.isnan(input_arr)]
-            if body.rescale_result.rescale_type == s.AllowedRescaleTypes.quantile:
-                rescale_result_list = [np.nanquantile(input_arr, b) for b in body.rescale_result.breaks]
-                rescale_result_dict = {k: v for k, v in enumerate(rescale_result_list)}
-                bins = True
-            elif body.rescale_result.rescale_type == s.AllowedRescaleTypes.equal_interval:
-                input_arr *= 1.0 / input_arr.max()
-                rescale_result_list = body.rescale_result.breaks
-                rescale_result_dict = {k: v for k, v in enumerate(rescale_result_list)}
-                bins = True
-            elif body.rescale_result.rescale_type == s.AllowedRescaleTypes.natural_breaks:
-                input_arr *= 1.0 / input_arr.max()
-                sample_arr = np.random.choice(input_arr[input_arr != 0], size=10000)  # needs low samples or jenks is too slow
-                rescale_result_list = jenkspy.jenks_breaks(sample_arr, n_classes=len(body.rescale_result.breaks))
-                rescale_result_dict = {k: v for k, v in enumerate(rescale_result_list)}
-                sample_arr = None
-                bins = True
-            input_arr = None
-        else:
-            rescale_result_dict = body.rescale_result.breaks
-        print(rescale_result_dict, bins)
-        print('rescale_result', time.time() - t)
-        if nodata.is_integer():
-            nodata = int(nodata)
-        process_raster_list_with_function_in_chunks([os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif'))], os.path.join(base_path, raster_name),
-                                                    os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif')),
-                                                    function_to_apply=rescale_result,
-                                                    function_arguments={'output_rgb': body.rgb, 'rescale_result_dict': rescale_result_dict, 'nodata': arguments_list[0]['nodata'], 'bins': bins},
-                                                    chunks=10, output_bands=4 if body.rgb else 1, dtype=np.uint8 if body.rgb  else rasterio.int32 if bins else None, out_nodata=255 if body.rgb else nodata)
+        process_rescaling(arguments_list, base_path, body, nodata, raster_name, t)
     build_overview_tiles = [2, 4, 8, 16, 32, 64]
     image = gdal.Open(os.path.join(base_path, raster_name), 1)  # 0 = read-only, 1 = read-write.
     gdal.SetConfigOption('COMPRESS_OVERVIEW', 'DEFLATE')
@@ -110,6 +63,72 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
         return Response(content=geoserver_layer, status_code=status.HTTP_201_CREATED)
     else:
         return generate_raster_response(os.path.join(base_path, raster_name))
+
+
+def get_unique_values(arguments_list, fixed_path_list):
+    unique_values = []
+    if s.AllowedOperations.unique_product in [arg['operation'] for arg in arguments_list]:
+        for path, arg in zip(fixed_path_list, arguments_list):
+            if arg['operation_data']:
+                unique_values.append(arg['operation_data'])
+            else:
+                unique_values_set = set()
+                with rasterio.open(path) as src:
+                    for ji, window in src.block_windows():
+                        arr = src.read(window=window)
+                        unique_values_set.update(np.unique(arr))
+                unique_values.append(list(unique_values_set))
+    return unique_values
+
+
+def align_files(base_path, path_list):
+    fixed_path_list = []
+    for file in path_list:
+        if not compare_rasters(file, path_list[0], check_nodata=False):
+            if not os.path.exists(os.path.join(base_path, file.replace(".tif", f"_fixed.tif"))):
+                convert_raster_to_likeraster(file, path_list[0], file.replace(".tif", f"_fixed.tif"), resampling=gdal.GRA_NearestNeighbour)
+            fixed_path_list.append(file.replace(".tif", f"_fixed.tif"))
+        else:
+            fixed_path_list.append(file)
+    return fixed_path_list
+
+
+def process_rescaling(arguments_list, base_path, body, nodata, raster_name, t):
+    bins = False
+    os.rename(src=os.path.join(base_path, raster_name), dst=os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif')))
+    if body.rescale_result.rescale_type != s.AllowedRescaleTypes.provided:
+        with rasterio.open(os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif'))) as ds:
+            input_arr = ds.read(1)
+        input_arr = np.where(input_arr == nodata, np.nan, input_arr)
+        input_arr = input_arr[~np.isnan(input_arr)]
+        if body.rescale_result.rescale_type == s.AllowedRescaleTypes.quantile:
+            rescale_result_list = [np.nanquantile(input_arr, b) for b in body.rescale_result.breaks]
+            rescale_result_dict = {k: v for k, v in enumerate(rescale_result_list)}
+            bins = True
+        elif body.rescale_result.rescale_type == s.AllowedRescaleTypes.equal_interval:
+            input_arr *= 1.0 / input_arr.max()
+            rescale_result_list = body.rescale_result.breaks
+            rescale_result_dict = {k: v for k, v in enumerate(rescale_result_list)}
+            bins = True
+        elif body.rescale_result.rescale_type == s.AllowedRescaleTypes.natural_breaks:
+            input_arr *= 1.0 / input_arr.max()
+            sample_arr = np.random.choice(input_arr[input_arr != 0], size=10000)  # needs low samples or jenks is too slow
+            rescale_result_list = jenkspy.jenks_breaks(sample_arr, n_classes=len(body.rescale_result.breaks))
+            rescale_result_dict = {k: v for k, v in enumerate(rescale_result_list)}
+            sample_arr = None
+            bins = True
+        input_arr = None
+    else:
+        rescale_result_dict = body.rescale_result.breaks
+    print(rescale_result_dict, bins)
+    print('rescale_result', time.time() - t)
+    if nodata.is_integer():
+        nodata = int(nodata)
+    process_raster_list_with_function_in_chunks([os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif'))], os.path.join(base_path, raster_name),
+                                                os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif')),
+                                                function_to_apply=rescale_result,
+                                                function_arguments={'output_rgb': body.rgb, 'rescale_result_dict': rescale_result_dict, 'nodata': arguments_list[0]['nodata'], 'bins': bins},
+                                                chunks=10, output_bands=4 if body.rgb else 1, dtype=np.uint8 if body.rgb else rasterio.int32 if bins else None, out_nodata=255 if body.rgb else nodata)
 
 
 def delete_generated_store(layer_name):
