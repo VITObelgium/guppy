@@ -408,3 +408,37 @@ def convert_raster_to_likeraster(input_raster_file: str, like_raster_file: str, 
     target_epsg = _get_raster_epsg(like_ds)
     warp_raster(input_raster_file, output_file, resolution_x, output_bounds, target_epsg, nodata, resampling=resampling, error_threshold=error_threshold, resolution_y=resolution_y)
     print("done conversion")
+
+
+def cleanup_files(path_list, unique_identifier):
+    for path in path_list:
+        if path.endswith(f'{unique_identifier}_fixed.tif') and os.path.exists(path):
+            os.remove(path)
+
+
+def get_unique_values(arguments_list, fixed_path_list):
+    unique_values = []
+    if s.AllowedOperations.unique_product in [arg['operation'] for arg in arguments_list]:
+        for path, arg in zip(fixed_path_list, arguments_list):
+            if arg['operation_data']:
+                unique_values.append(arg['operation_data'])
+            else:
+                unique_values_set = set()
+                with rasterio.open(path) as src:
+                    for ji, window in src.block_windows():
+                        arr = src.read(window=window)
+                        unique_values_set.update(np.unique(arr))
+                unique_values.append(list(unique_values_set))
+    return unique_values
+
+
+def align_files(base_path, path_list, unique_identifier):
+    fixed_path_list = []
+    for file in path_list:
+        if not compare_rasters(file, path_list[0], check_nodata=False):
+            if not os.path.exists(os.path.join(base_path, file.replace(".tif", f"_{unique_identifier}_fixed.tif"))):
+                convert_raster_to_likeraster(file, path_list[0], file.replace(".tif", f"_{unique_identifier}_fixed.tif"), resampling=gdal.GRA_NearestNeighbour)
+            fixed_path_list.append(file.replace(".tif", f"_{unique_identifier}_fixed.tif"))
+        else:
+            fixed_path_list.append(file)
+    return fixed_path_list

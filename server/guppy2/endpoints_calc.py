@@ -8,15 +8,14 @@ import numpy as np
 import rasterio
 import requests
 from osgeo import gdal
-from rasterio.enums import Resampling
 from sqlalchemy.orm import Session
 from starlette import status
 from starlette.responses import Response
 
 from guppy2.config import config as cfg
 from guppy2.db import schemas as s, models as m
-from guppy2.raster_calc_utils import create_raster, generate_raster_response, perform_operation, process_raster_list_with_function_in_chunks, rescale_result, insert_into_guppy_db, compare_rasters, \
-    convert_raster_to_likeraster
+from guppy2.raster_calc_utils import create_raster, generate_raster_response, perform_operation, process_raster_list_with_function_in_chunks, rescale_result, insert_into_guppy_db, cleanup_files, \
+    get_unique_values, align_files
 
 
 def raster_calculation(db: Session, body: s.RasterCalculationBody):
@@ -42,7 +41,7 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
                 print('WARNING: file does not exists', path)
                 return Response(content='layer not found', status_code=status.HTTP_404_NOT_FOUND)
             arguments_list.append({'nodata': nodata, 'factor': layer_item.factor, 'operation': layer_item.operation, 'operation_data': layer_item.operation_data, 'is_rgb': layer_model.is_rgb})
-    fixed_path_list = align_files(base_path, path_list)
+    fixed_path_list = align_files(base_path, path_list, unique_identifier)
     unique_values = get_unique_values(arguments_list, fixed_path_list)
     print('perform_operation', time.time() - t, unique_values)
     process_raster_list_with_function_in_chunks(fixed_path_list, os.path.join(base_path, raster_name), fixed_path_list[0],
@@ -55,7 +54,7 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
     gdal.SetConfigOption('COMPRESS_OVERVIEW', 'DEFLATE')
     image.BuildOverviews("NEAREST", build_overview_tiles)
     del image
-
+    cleanup_files(fixed_path_list, unique_identifier)
     print('raster_calculation 200', time.time() - t)
     insert_into_guppy_db(db, raster_name, os.path.join(base_path, raster_name), body.rgb)
     if body.geoserver:
@@ -63,34 +62,6 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
         return Response(content=geoserver_layer, status_code=status.HTTP_201_CREATED)
     else:
         return generate_raster_response(os.path.join(base_path, raster_name))
-
-
-def get_unique_values(arguments_list, fixed_path_list):
-    unique_values = []
-    if s.AllowedOperations.unique_product in [arg['operation'] for arg in arguments_list]:
-        for path, arg in zip(fixed_path_list, arguments_list):
-            if arg['operation_data']:
-                unique_values.append(arg['operation_data'])
-            else:
-                unique_values_set = set()
-                with rasterio.open(path) as src:
-                    for ji, window in src.block_windows():
-                        arr = src.read(window=window)
-                        unique_values_set.update(np.unique(arr))
-                unique_values.append(list(unique_values_set))
-    return unique_values
-
-
-def align_files(base_path, path_list):
-    fixed_path_list = []
-    for file in path_list:
-        if not compare_rasters(file, path_list[0], check_nodata=False):
-            if not os.path.exists(os.path.join(base_path, file.replace(".tif", f"_fixed.tif"))):
-                convert_raster_to_likeraster(file, path_list[0], file.replace(".tif", f"_fixed.tif"), resampling=gdal.GRA_NearestNeighbour)
-            fixed_path_list.append(file.replace(".tif", f"_fixed.tif"))
-        else:
-            fixed_path_list.append(file)
-    return fixed_path_list
 
 
 def process_rescaling(arguments_list, base_path, body, nodata, raster_name, t):
