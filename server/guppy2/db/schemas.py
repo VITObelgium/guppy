@@ -123,6 +123,7 @@ class AllowedOperations(str, PyEnum):
     invert_boolean_mask = "invert_boolean_mask"
     boolean_mask = "boolean_mask"
     unique_product = "unique_product"
+    clip = "clip"
 
 
 class CombineLayersList(CamelModel):
