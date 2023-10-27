@@ -98,7 +98,7 @@ def process_rescaling(arguments_list, base_path, body, nodata, raster_name, t):
     process_raster_list_with_function_in_chunks([os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif'))], os.path.join(base_path, raster_name),
                                                 os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif')),
                                                 function_to_apply=rescale_result,
-                                                function_arguments={'output_rgb': body.rgb, 'rescale_result_dict': rescale_result_dict, 'nodata': arguments_list[0]['nodata'], 'bins': bins},
+                                                function_arguments={'output_rgb': body.rgb, 'rescale_result_dict': rescale_result_dict, 'nodata': nodata, 'bins': bins},
                                                 chunks=10, output_bands=4 if body.rgb else 1, dtype=np.uint8 if body.rgb else rasterio.int32 if bins else None, out_nodata=255 if body.rgb else nodata)
 
 
