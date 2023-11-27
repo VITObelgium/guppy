@@ -132,11 +132,11 @@ def perform_operation(*input_arrs, layer_args, output_rgb, unique_values=None):
             elif operation == s.AllowedOperations.subtract:
                 np.subtract(output_arr, input_arr_masked, out=output_arr, where=output_arr!=nodata)
             elif operation == s.AllowedOperations.boolean_mask:
-                np.multiply(output_arr, input_arr, out=output_arr, where=output_arr!=nodata)
+                np.multiply(output_arr, input_arr, out=output_arr, where=(output_arr!=nodata) & (input_arr!=nodata))
             elif operation == s.AllowedOperations.clip:
                 output_arr[input_arr != 1] = out_nodata
             elif operation == s.AllowedOperations.invert_boolean_mask:
-                np.multiply(output_arr, 1 - input_arr, out=output_arr, where=output_arr!=nodata)
+                np.multiply(output_arr, 1 - input_arr, out=output_arr, where=(output_arr!=nodata) & (input_arr!=nodata))
             elif operation == s.AllowedOperations.unique_product:
                 combo_arr = output_arr.copy()
                 for idx, (u1, u2) in enumerate(itertools.product(out_unique, unique_vals)):
