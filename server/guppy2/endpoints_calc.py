@@ -14,7 +14,7 @@ from starlette.responses import Response
 
 from guppy2.config import config as cfg
 from guppy2.db import schemas as s, models as m
-from guppy2.raster_calc_utils import create_raster, generate_raster_response, perform_operation, process_raster_list_with_function_in_chunks, rescale_result, insert_into_guppy_db, cleanup_files, \
+from guppy2.raster_calc_utils import create_raster, generate_raster_response, perform_operation, process_raster_list_with_function_in_chunks, apply_rescale_result, insert_into_guppy_db, cleanup_files, \
     get_unique_values, align_files
 
 
@@ -66,6 +66,7 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
 
 def process_rescaling(arguments_list, base_path, body, nodata, raster_name, t):
     bins = False
+    normalize = None
     os.rename(src=os.path.join(base_path, raster_name), dst=os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif')))
     if body.rescale_result.rescale_type != s.AllowedRescaleTypes.provided:
         with rasterio.open(os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif'))) as ds:
@@ -77,14 +78,16 @@ def process_rescaling(arguments_list, base_path, body, nodata, raster_name, t):
             rescale_result_dict = {k: v for k, v in enumerate(rescale_result_list)}
             bins = True
         elif body.rescale_result.rescale_type == s.AllowedRescaleTypes.equal_interval:
-            input_arr *= 1.0 / input_arr.max()
+            normalize = input_arr.max()
+            input_arr *= 1.0 / normalize
             rescale_result_list = body.rescale_result.breaks
             rescale_result_dict = {k: v for k, v in enumerate(rescale_result_list)}
             bins = True
         elif body.rescale_result.rescale_type == s.AllowedRescaleTypes.natural_breaks:
-            input_arr *= 1.0 / input_arr.max()
+            normalize = input_arr.max()
+            input_arr *= 1.0 / normalize
             sample_arr = np.random.choice(input_arr[input_arr != 0], size=10000)  # needs low samples or jenks is too slow
-            rescale_result_list = jenkspy.jenks_breaks(sample_arr, n_classes=len(body.rescale_result.breaks))
+            rescale_result_list = jenkspy.jenks_breaks(sample_arr, n_classes=len(body.rescale_result.breaks)-1)
             rescale_result_dict = {k: v for k, v in enumerate(rescale_result_list)}
             sample_arr = None
             bins = True
@@ -97,8 +100,8 @@ def process_rescaling(arguments_list, base_path, body, nodata, raster_name, t):
         nodata = int(nodata)
     process_raster_list_with_function_in_chunks([os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif'))], os.path.join(base_path, raster_name),
                                                 os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif')),
-                                                function_to_apply=rescale_result,
-                                                function_arguments={'output_rgb': body.rgb, 'rescale_result_dict': rescale_result_dict, 'nodata': nodata, 'bins': bins},
+                                                function_to_apply=apply_rescale_result,
+                                                function_arguments={'output_rgb': body.rgb, 'rescale_result_dict': rescale_result_dict, 'nodata': nodata, 'bins': bins, 'normalize': normalize},
                                                 chunks=10, output_bands=4 if body.rgb else 1, dtype=np.uint8 if body.rgb else rasterio.int32 if bins else None, out_nodata=255 if body.rgb else nodata)
 
 

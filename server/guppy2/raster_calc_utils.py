@@ -126,17 +126,17 @@ def perform_operation(*input_arrs, layer_args, output_rgb, unique_values=None):
             input_arr_masked = np.where(mask_nodata, input_arr * factor, 0)  # Factor multiplication once
 
             if operation == s.AllowedOperations.multiply:
-                np.multiply(output_arr, np.where(mask_nodata, input_arr_masked, 1), out=output_arr, where=output_arr!=nodata)
+                np.multiply(output_arr, np.where(mask_nodata, input_arr_masked, 1), out=output_arr, where=output_arr != nodata)
             elif operation == s.AllowedOperations.add:
-                np.add(output_arr, input_arr_masked, out=output_arr, where=output_arr!=nodata)
+                np.add(output_arr, input_arr_masked, out=output_arr, where=output_arr != nodata)
             elif operation == s.AllowedOperations.subtract:
-                np.subtract(output_arr, input_arr_masked, out=output_arr, where=output_arr!=nodata)
+                np.subtract(output_arr, input_arr_masked, out=output_arr, where=output_arr != nodata)
             elif operation == s.AllowedOperations.boolean_mask:
-                np.multiply(output_arr, input_arr, out=output_arr, where=(output_arr!=nodata) & (input_arr!=nodata))
+                np.multiply(output_arr, input_arr, out=output_arr, where=(output_arr != nodata) & (input_arr != nodata))
             elif operation == s.AllowedOperations.clip:
                 output_arr[input_arr != 1] = out_nodata
             elif operation == s.AllowedOperations.invert_boolean_mask:
-                np.multiply(output_arr, 1 - input_arr, out=output_arr, where=(output_arr!=nodata) & (input_arr!=nodata))
+                np.multiply(output_arr, 1 - input_arr, out=output_arr, where=(output_arr != nodata) & (input_arr != nodata))
             elif operation == s.AllowedOperations.unique_product:
                 combo_arr = output_arr.copy()
                 for idx, (u1, u2) in enumerate(itertools.product(out_unique, unique_vals)):
@@ -148,16 +148,20 @@ def perform_operation(*input_arrs, layer_args, output_rgb, unique_values=None):
     return output_arr
 
 
-def rescale_result(*input_arrs, output_rgb, rescale_result_dict=None, nodata=None, bins=False):
+def apply_rescale_result(*input_arrs, output_rgb, rescale_result_dict=None, nodata=None, bins=False, normalize=None):
     if nodata is None:
         nodata = -9999
     rescaled_output_arr = np.full_like(input_arrs[0], nodata)
     for input_arr in input_arrs:
         if output_rgb:
             input_arr = _decode(input_arr)
+        if normalize is not None:
+            input_arr_norm = input_arr * (1.0 / normalize)
+        else:
+            input_arr_norm = input_arr
         if bins:
             bin_borders = [value for key, value in rescale_result_dict.items()]
-            rescaled_output_arr = np.where(np.isnan(input_arr), np.nan, np.digitize(input_arr, bins=bin_borders, right=True))
+            rescaled_output_arr = np.where((np.isnan(input_arr)) | (input_arr == nodata), nodata, np.digitize(input_arr_norm, bins=bin_borders, right=True))
             for i, key in enumerate([key for key, value in rescale_result_dict.items()]):
                 rescaled_output_arr = np.where(rescaled_output_arr == i, key, rescaled_output_arr)
         else:
@@ -165,12 +169,12 @@ def rescale_result(*input_arrs, output_rgb, rescale_result_dict=None, nodata=Non
                 if '-' in str(value) and not str(value).startswith('-'):
                     min_val = float(value.split('-')[0])
                     max_val = float(value.split('-')[1])
-                    rescaled_output_arr[(min_val <= input_arr) & (input_arr < max_val)] = int(key)
+                    rescaled_output_arr[(not np.isnan(input_arr)) & (input_arr != nodata) & (min_val <= input_arr_norm) & (input_arr_norm < max_val)] = int(key)
                 else:
                     if isinstance(value, list):
-                        rescaled_output_arr[np.isin(input_arr, value)] = int(key)
+                        rescaled_output_arr[np.isin(input_arr_norm, value)] = int(key)
                     else:
-                        rescaled_output_arr[input_arr == value] = int(key)
+                        rescaled_output_arr[input_arr_norm == value] = int(key)
     if output_rgb:
         rescaled_output_arr = data_to_rgba(rescaled_output_arr, nodata)
     return rescaled_output_arr
