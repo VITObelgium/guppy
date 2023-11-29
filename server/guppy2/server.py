@@ -1,9 +1,6 @@
 # coding: utf-8
 import uvicorn
 from fastapi import FastAPI, Depends, APIRouter
-from fastapi.openapi.docs import get_swagger_ui_html
-from fastapi.openapi.utils import get_openapi
-from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.responses import ORJSONResponse
 from sqlalchemy.orm import Session
 
@@ -14,7 +11,7 @@ from guppy2.config import config as cfg
 from guppy2.db.db_session import SessionLocal, engine
 from guppy2.db.models import Base
 
-app = FastAPI()
+app = FastAPI(docs_url=f"{cfg.deploy.path}/docs", openapi_url=f"{cfg.deploy.path}")
 api = APIRouter(prefix=f"{cfg.deploy.path}")
 
 Base.metadata.create_all(bind=engine)
@@ -27,17 +24,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
-
-@api.get("/docs", response_class=HTMLResponse, tags=["documentation"])
-async def swagger_ui_html():
-    openapi_url = app.url_path_for("get_open_api_endpoint")
-    return get_swagger_ui_html(openapi_url=openapi_url, title="API documentation")
-
-
-@api.get("/openapi.json", tags=["documentation"])
-async def get_open_api_endpoint():
-    return JSONResponse(get_openapi(title="Your API", version="1.0.0", routes=app.routes))
 
 
 @api.get("/layers/{layer_name}/bbox_stats", response_model=s.StatsResponse, tags=["stats"])
