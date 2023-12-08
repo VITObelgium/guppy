@@ -119,6 +119,7 @@ def perform_operation(*input_arrs, layer_args, output_rgb, unique_values=None):
             input_arr = _decode(input_arr)
         if idx == 0:
             output_arr = np.where(input_arr == nodata, out_nodata, input_arr * factor)
+            output_arr = output_arr.astype(np.float64)
             out_unique = unique_vals
         else:
             mask_nodata = input_arr != nodata  # Compute mask once to reuse it
