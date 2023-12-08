@@ -44,6 +44,7 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
     fixed_path_list = align_files(base_path, path_list, unique_identifier)
     unique_values = get_unique_values(arguments_list, fixed_path_list)
     print('perform_operation', time.time() - t, unique_values)
+    print(path_list,arguments_list)
     process_raster_list_with_function_in_chunks(fixed_path_list, os.path.join(base_path, raster_name), fixed_path_list[0],
                                                 function_to_apply=perform_operation, function_arguments={'layer_args': arguments_list, 'output_rgb': body.rgb, 'unique_values': unique_values},
                                                 chunks=10, output_bands=4 if body.rgb else 1, dtype=np.uint8 if body.rgb else None, out_nodata=255 if body.rgb else None)
