@@ -98,8 +98,6 @@ def process_rescaling(arguments_list, base_path, body, nodata, raster_name, t):
         rescale_result_dict = body.rescale_result.breaks
     print(rescale_result_dict, bins)
     print('rescale_result', time.time() - t)
-    if nodata.is_integer():
-        nodata = int(nodata)
     process_raster_list_with_function_in_chunks([os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif'))], os.path.join(base_path, raster_name),
                                                 os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif')),
                                                 function_to_apply=apply_rescale_result,
