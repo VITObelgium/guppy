@@ -48,7 +48,7 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
     print('perform_operation', time.time() - t, unique_values)
     process_raster_list_with_function_in_chunks(fixed_path_list, os.path.join(base_path, raster_name), fixed_path_list[0],
                                                 function_to_apply=perform_operation, function_arguments={'layer_args': arguments_list, 'output_rgb': body.rgb, 'unique_values': unique_values},
-                                                chunks=10, output_bands=4 if body.rgb else 1, dtype=np.uint8 if body.rgb else None, out_nodata=255 if body.rgb else None)
+                                                chunks=10, output_bands=4 if body.rgb else 1, dtype=np.uint8 if body.rgb else None, out_nodata=255 if body.rgb else -9999)
     if body.rescale_result:
         process_rescaling(arguments_list, base_path, body, nodata, raster_name, t)
     build_overview_tiles = [2, 4, 8, 16, 32, 64]
@@ -89,7 +89,7 @@ def process_rescaling(arguments_list, base_path, body, nodata, raster_name, t):
             normalize = input_arr.max()
             input_arr *= 1.0 / normalize
             sample_arr = np.random.choice(input_arr[input_arr != 0], size=10000)  # needs low samples or jenks is too slow
-            rescale_result_list = jenkspy.jenks_breaks(sample_arr, n_classes=len(body.rescale_result.breaks)-1)
+            rescale_result_list = jenkspy.jenks_breaks(sample_arr, n_classes=len(body.rescale_result.breaks) - 1)
             rescale_result_dict = {k: v for k, v in enumerate(rescale_result_list)}
             sample_arr = None
             bins = True
