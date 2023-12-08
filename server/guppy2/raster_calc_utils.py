@@ -176,6 +176,7 @@ def apply_rescale_result(*input_arrs, output_rgb, rescale_result_dict=None, noda
                         rescaled_output_arr[input_arr_norm == value] = int(key)
     if output_rgb:
         rescaled_output_arr = data_to_rgba(rescaled_output_arr, nodata)
+    print((~np.isnan(rescaled_output_arr)).all())
     return rescaled_output_arr
 
 
