@@ -321,6 +321,7 @@ def process_raster_list_with_function_in_chunks(input_file_list: [str], output_f
         da.store(r, r_file, lock=True)
     for open_da in open_da_arrays:
         open_da.close()
+    input_da_arrays = None
     print(f"combine_rasters_with_function_in_chunks done, {time.time() - t}")
 
 
