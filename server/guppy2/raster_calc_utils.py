@@ -130,7 +130,7 @@ def perform_operation(*input_arrs, layer_args, output_rgb, unique_values=None):
             elif operation == s.AllowedOperations.add:
                 np.add(output_arr, input_arr_masked, out=output_arr, where=(output_arr != out_nodata) & (input_arr != out_nodata))
             elif operation == s.AllowedOperations.subtract:
-                np.subtract(output_arr, input_arr_masked, out=output_arr, where=output_arr != nodata)
+                np.subtract(output_arr, input_arr_masked, out=output_arr, where=output_arr != out_nodata)
             elif operation == s.AllowedOperations.boolean_mask:
                 np.multiply(output_arr, input_arr, out=output_arr, where=(output_arr != out_nodata) & (input_arr != out_nodata))
             elif operation == s.AllowedOperations.clip:

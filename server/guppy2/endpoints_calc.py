@@ -47,10 +47,14 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
     unique_values = get_unique_values(arguments_list, fixed_path_list)
     print('perform_operation', time.time() - t, unique_values)
     process_raster_list_with_function_in_chunks(fixed_path_list, os.path.join(base_path, raster_name), fixed_path_list[0],
-                                                function_to_apply=perform_operation, function_arguments={'layer_args': arguments_list, 'output_rgb': body.rgb, 'unique_values': unique_values},
-                                                chunks=10, output_bands=4 if body.rgb else 1, dtype=np.uint8 if body.rgb else None, out_nodata=255 if body.rgb else -9999)
+                                                function_to_apply=perform_operation,
+                                                function_arguments={'layer_args': arguments_list, 'output_rgb': body.rgb, 'unique_values': unique_values},
+                                                chunks=10,
+                                                output_bands=4 if body.rgb else 1,
+                                                dtype=np.uint8 if body.rgb else None,
+                                                out_nodata=255 if body.rgb else -9999)
     if body.rescale_result:
-        process_rescaling(arguments_list, base_path, body, -9999, raster_name, t)
+        process_rescaling(base_path, body, -9999, raster_name, t)
     build_overview_tiles = [2, 4, 8, 16, 32, 64]
     image = gdal.Open(os.path.join(base_path, raster_name), 1)  # 0 = read-only, 1 = read-write.
     gdal.SetConfigOption('COMPRESS_OVERVIEW', 'DEFLATE')
@@ -66,17 +70,18 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
         return generate_raster_response(os.path.join(base_path, raster_name))
 
 
-def process_rescaling(arguments_list, base_path, body, nodata, raster_name, t):
+
+def process_rescaling(base_path, body, nodata, raster_name, t):
+    print('process_rescaling')
     bins = False
     normalize = None
     os.rename(src=os.path.join(base_path, raster_name), dst=os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif')))
     if body.rescale_result.rescale_type != s.AllowedRescaleTypes.provided:
         with rasterio.open(os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif'))) as ds:
             input_arr = ds.read(1)
-        input_arr = np.where(input_arr == nodata, np.nan, input_arr)
-        input_arr = input_arr[~np.isnan(input_arr)]
+        input_arr = input_arr[input_arr != nodata]
         if body.rescale_result.rescale_type == s.AllowedRescaleTypes.quantile:
-            rescale_result_list = [np.nanquantile(input_arr, b) for b in body.rescale_result.breaks]
+            rescale_result_list = [np.quantile(input_arr, b) for b in body.rescale_result.breaks]
             rescale_result_dict = {k: v for k, v in enumerate(rescale_result_list)}
             bins = True
         elif body.rescale_result.rescale_type == s.AllowedRescaleTypes.equal_interval:
