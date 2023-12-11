@@ -49,7 +49,7 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
     process_raster_list_with_function_in_chunks(fixed_path_list, os.path.join(base_path, raster_name), fixed_path_list[0],
                                                 function_to_apply=perform_operation,
                                                 function_arguments={'layer_args': arguments_list, 'output_rgb': body.rgb, 'unique_values': unique_values},
-                                                chunks=10,
+                                                chunks=16,
                                                 output_bands=4 if body.rgb else 1,
                                                 dtype=np.uint8 if body.rgb else np.float32 if unique_values else None,
                                                 out_nodata=255 if body.rgb else -9999)
@@ -112,7 +112,7 @@ def process_rescaling(base_path, body, nodata, raster_name, t):
                                                 os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif')),
                                                 function_to_apply=apply_rescale_result,
                                                 function_arguments={'output_rgb': body.rgb, 'rescale_result_dict': rescale_result_dict, 'nodata': nodata, 'bins': bins, 'normalize': normalize},
-                                                chunks=10, output_bands=4 if body.rgb else 1, dtype=np.uint8 if body.rgb else rasterio.int32 if bins else None, out_nodata=255 if body.rgb else nodata)
+                                                chunks=16, output_bands=4 if body.rgb else 1, dtype=np.uint8 if body.rgb else rasterio.int32 if bins else None, out_nodata=255 if body.rgb else nodata)
 
 
 def delete_generated_store(layer_name):
