@@ -108,7 +108,7 @@ def generate_raster_response(generated_file):
 
 def perform_operation(*input_arrs, layer_args, output_rgb, unique_values=None):
     out_nodata = -9999
-    output_arr = np.full_like(input_arrs[0], out_nodata)
+    output_arr = None
     unique_values = unique_values or [None] * len(input_arrs)  # Ensure unique_values has the same length as input_arrs
 
     for idx, (input_arr, args_dict, unique_vals) in enumerate(zip(input_arrs, layer_args, unique_values)):
@@ -120,7 +120,7 @@ def perform_operation(*input_arrs, layer_args, output_rgb, unique_values=None):
         input_arr[input_arr == args_dict['nodata']] = out_nodata
         input_arr[np.isnan(input_arr)] = out_nodata
         if idx == 0:
-            np.multiply(input_arr, factor, out=output_arr, where=input_arr != out_nodata)
+            output_arr = np.where(input_arr != out_nodata, input_arr * factor, input_arr)
             out_unique = unique_vals
             output_arr_nodata = output_arr != out_nodata
         else:
