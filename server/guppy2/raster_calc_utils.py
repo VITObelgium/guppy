@@ -111,32 +111,32 @@ def perform_operation(*input_arrs, layer_args, output_rgb, unique_values=None):
     out_nodata = -9999
     unique_values = unique_values or [None] * len(input_arrs)  # Ensure unique_values has the same length as input_arrs
     for idx, (input_arr, args_dict, unique_vals) in enumerate(zip(input_arrs, layer_args, unique_values)):
-        nodata = args_dict['nodata']
         factor = args_dict['factor']
         operation = args_dict['operation']
         is_rgb = args_dict['is_rgb']
         if is_rgb:
             input_arr = _decode(input_arr)
+        input_arr[input_arr == args_dict['nodata']] = out_nodata
+        input_arr[np.isnan(input_arr)] = out_nodata
         if idx == 0:
-            output_arr = np.where(input_arr == nodata, out_nodata, input_arr * factor)
-            output_arr = output_arr.astype(np.float64)
+            output_arr = input_arr * factor
             out_unique = unique_vals
         else:
-            mask_nodata = input_arr != nodata  # Compute mask once to reuse it
+            mask_nodata = input_arr != out_nodata  # Compute mask once to reuse it
             input_arr_masked = np.where(mask_nodata, input_arr * factor, 0)  # Factor multiplication once
 
             if operation == s.AllowedOperations.multiply:
-                np.multiply(output_arr, np.where(mask_nodata, input_arr_masked, 1), out=output_arr, where=output_arr != nodata)
+                np.multiply(output_arr, np.where(mask_nodata, input_arr_masked, 1), out=output_arr, where=(output_arr != out_nodata) & (input_arr != out_nodata))
             elif operation == s.AllowedOperations.add:
-                np.add(output_arr, input_arr_masked, out=output_arr, where=output_arr != nodata)
+                np.add(output_arr, input_arr_masked, out=output_arr, where=(output_arr != out_nodata) & (input_arr != out_nodata))
             elif operation == s.AllowedOperations.subtract:
                 np.subtract(output_arr, input_arr_masked, out=output_arr, where=output_arr != nodata)
             elif operation == s.AllowedOperations.boolean_mask:
-                np.multiply(output_arr, input_arr, out=output_arr, where=(output_arr != nodata) & (input_arr != nodata))
+                np.multiply(output_arr, input_arr, out=output_arr, where=(output_arr != out_nodata) & (input_arr != out_nodata))
             elif operation == s.AllowedOperations.clip:
                 output_arr[input_arr != 1] = out_nodata
             elif operation == s.AllowedOperations.invert_boolean_mask:
-                np.multiply(output_arr, 1 - input_arr, out=output_arr, where=(output_arr != nodata) & (input_arr != nodata))
+                np.multiply(output_arr, 1 - input_arr, out=output_arr, where=(output_arr != out_nodata) & (input_arr != out_nodata))
             elif operation == s.AllowedOperations.unique_product:
                 combo_arr = output_arr.copy()
                 for idx, (u1, u2) in enumerate(itertools.product(out_unique, unique_vals)):
