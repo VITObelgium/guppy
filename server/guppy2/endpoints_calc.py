@@ -83,9 +83,10 @@ def process_rescaling(base_path, body, nodata, raster_name, t):
     print('process_rescaling')
     bins = False
     normalize = None
-    os.rename(src=os.path.join(base_path, raster_name), dst=os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif')))
+    tmp_raster_path = os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif'))
+    os.rename(src=os.path.join(base_path, raster_name), dst=tmp_raster_path)
     if body.rescale_result.rescale_type != s.AllowedRescaleTypes.provided:
-        input_arr = read_raster_without_nodata_as_array(os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif')))
+        input_arr = read_raster_without_nodata_as_array(tmp_raster_path)
         print(f"Memory size of array: {input_arr.nbytes/1024/1024} Mbytes")
         if body.rescale_result.rescale_type == s.AllowedRescaleTypes.quantile:
             rescale_result_list = [np.quantile(input_arr, b) for b in body.rescale_result.breaks]
@@ -108,12 +109,12 @@ def process_rescaling(base_path, body, nodata, raster_name, t):
         rescale_result_dict = body.rescale_result.breaks
     print(rescale_result_dict, bins)
     print('rescale_result', time.time() - t)
-    process_raster_list_with_function_in_chunks([os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif'))], os.path.join(base_path, raster_name),
-                                                os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif')),
+    process_raster_list_with_function_in_chunks([tmp_raster_path], os.path.join(base_path, raster_name),
+                                                tmp_raster_path,
                                                 function_to_apply=apply_rescale_result,
                                                 function_arguments={'output_rgb': body.rgb, 'rescale_result_dict': rescale_result_dict, 'nodata': nodata, 'bins': bins, 'normalize': normalize},
                                                 chunks=16, output_bands=4 if body.rgb else 1, dtype=np.uint8 if body.rgb else rasterio.int32 if bins else None, out_nodata=255 if body.rgb else nodata)
-
+    os.remove(tmp_raster_path)
 
 def delete_generated_store(layer_name):
     print('delete_generated_store')
