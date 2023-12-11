@@ -28,4 +28,4 @@ ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
 EXPOSE 8080
-CMD ["conda-env/bin/gunicorn", "--bind", "0.0.0.0:8080", "--worker-tmp-dir", "/dev/shm", "--workers=2", "--threads=4", "--worker-class=uvicorn.workers.UvicornWorker", "--log-file=-", "guppy2.server:app"]
+CMD ["conda-env/bin/gunicorn", "--bind", "0.0.0.0:8080", "--worker-tmp-dir", "/dev/shm", "--workers=2", "--timeout=300", "--threads=4", "--worker-class=uvicorn.workers.UvicornWorker", "--log-file=-", "guppy2.server:app"]
