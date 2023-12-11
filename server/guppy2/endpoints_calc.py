@@ -51,7 +51,7 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
                                                 function_arguments={'layer_args': arguments_list, 'output_rgb': body.rgb, 'unique_values': unique_values},
                                                 chunks=10,
                                                 output_bands=4 if body.rgb else 1,
-                                                dtype=np.uint8 if body.rgb else np.int32 if unique_values else None,
+                                                dtype=np.uint8 if body.rgb else np.float32 if unique_values else None,
                                                 out_nodata=255 if body.rgb else -9999)
     if body.rescale_result:
         process_rescaling(base_path, body, -9999, raster_name, t)
