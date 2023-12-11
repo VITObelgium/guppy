@@ -69,7 +69,15 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
     else:
         return generate_raster_response(os.path.join(base_path, raster_name))
 
+def read_raster_without_nodata_as_array(path:str)->np.ndarray:
+    output = []
+    with rasterio.open(path) as ds:
+        for ji, window in ds.block_windows(1):
+            data = ds.read(1, window=window)
+            data = data[data != ds.nodata]
+            output.append(data)
 
+    return np.concatenate(output)
 
 def process_rescaling(base_path, body, nodata, raster_name, t):
     print('process_rescaling')
@@ -77,16 +85,13 @@ def process_rescaling(base_path, body, nodata, raster_name, t):
     normalize = None
     os.rename(src=os.path.join(base_path, raster_name), dst=os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif')))
     if body.rescale_result.rescale_type != s.AllowedRescaleTypes.provided:
-        with rasterio.open(os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif'))) as ds:
-            input_arr = ds.read(1)
-        input_arr = input_arr[input_arr != nodata]
+        input_arr = read_raster_without_nodata_as_array(os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif')))
+        print(f"Memory size of array: {input_arr.nbytes/1024/1024} Mbytes")
         if body.rescale_result.rescale_type == s.AllowedRescaleTypes.quantile:
             rescale_result_list = [np.quantile(input_arr, b) for b in body.rescale_result.breaks]
             rescale_result_dict = {k: v for k, v in enumerate(rescale_result_list)}
             bins = True
         elif body.rescale_result.rescale_type == s.AllowedRescaleTypes.equal_interval:
-            normalize = input_arr.max()
-            input_arr *= 1.0 / normalize
             rescale_result_list = body.rescale_result.breaks
             rescale_result_dict = {k: v for k, v in enumerate(rescale_result_list)}
             bins = True
