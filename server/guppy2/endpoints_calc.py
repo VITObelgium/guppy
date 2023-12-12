@@ -98,6 +98,7 @@ def process_rescaling(base_path, body, nodata, raster_name, t):
             rescale_result_dict = {k: v for k, v in enumerate(rescale_result_list)}
             bins = True
         elif body.rescale_result.rescale_type == s.AllowedRescaleTypes.equal_interval:
+            normalize = input_arr.max()
             rescale_result_list = body.rescale_result.breaks
             rescale_result_dict = {k: v for k, v in enumerate(rescale_result_list)}
             bins = True
