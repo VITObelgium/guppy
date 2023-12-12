@@ -299,6 +299,7 @@ def process_raster_list_with_function_in_chunks(input_file_list: [str], output_f
         open_da_arrays.append(values_da_arr)  # keep reference of all open dask arrays to close them at the end to free file handles
     r = da.map_overlap(function_to_apply, *input_da_arrays, depth=overlap_cells, boundary='reflect', trim=True,
                        align_arrays=True, dtype=dtype, **function_arguments)
+    input_da_arrays = None
     profile = ds.profile
     profile.update(
         driver='GTiff',

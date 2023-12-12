@@ -6,6 +6,7 @@ import time
 import jenkspy
 import numpy as np
 import rasterio
+from rasterio.enums import Resampling
 import requests
 from osgeo import gdal
 from sqlalchemy.orm import Session
@@ -55,11 +56,13 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
                                                 out_nodata=255 if body.rgb else -9999)
     if body.rescale_result:
         process_rescaling(base_path, body, -9999, raster_name, t)
+
     build_overview_tiles = [2, 4, 8, 16, 32, 64]
-    image = gdal.Open(os.path.join(base_path, raster_name), 1)  # 0 = read-only, 1 = read-write.
-    gdal.SetConfigOption('COMPRESS_OVERVIEW', 'DEFLATE')
-    image.BuildOverviews("NEAREST", build_overview_tiles)
-    del image
+    with rasterio.open(os.path.join(base_path, raster_name), mode='r+', cache=False) as dataset:
+        dataset.profile.update(compress='DEFLATE')
+        dataset.build_overviews(build_overview_tiles, Resampling.nearest)
+        dataset.update_tags(ns='rio_overview', resampling='nearest')
+
     cleanup_files(fixed_path_list, unique_identifier)
     print('raster_calculation 200', time.time() - t)
     insert_into_guppy_db(db, raster_name, os.path.join(base_path, raster_name), body.rgb)
