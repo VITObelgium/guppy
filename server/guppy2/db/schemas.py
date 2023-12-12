@@ -157,6 +157,7 @@ class AllowedRescaleTypes(str, PyEnum):
 class RescaleResult(CamelModel):
     rescale_type: AllowedRescaleTypes
     breaks: Union[list[float], dict]
+    filter_value: Optional[float] = None
 
 
 class RasterCalculationBody(CamelModel):
