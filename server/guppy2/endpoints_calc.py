@@ -90,7 +90,7 @@ def process_rescaling(base_path, body, nodata, raster_name, t):
     os.rename(src=os.path.join(base_path, raster_name), dst=tmp_raster_path)
     if body.rescale_result.rescale_type != s.AllowedRescaleTypes.provided:
         input_arr = read_raster_without_nodata_as_array(tmp_raster_path)
-        if body.rescale_result.filter_value:
+        if body.rescale_result.filter_value is not None:
             input_arr = input_arr[input_arr != body.rescale_result.filter_value]
         # print(f"Memory size of array: {input_arr.nbytes / 1024 / 1024} Mbytes")
         if body.rescale_result.rescale_type == s.AllowedRescaleTypes.quantile:
