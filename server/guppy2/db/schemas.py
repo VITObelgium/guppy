@@ -158,6 +158,7 @@ class RescaleResult(CamelModel):
     rescale_type: AllowedRescaleTypes
     breaks: Union[list[float], dict]
     filter_value: Optional[float] = None
+    clip_positive: Optional[bool] = False
 
 
 class RasterCalculationBody(CamelModel):

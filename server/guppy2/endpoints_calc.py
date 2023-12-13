@@ -92,6 +92,8 @@ def process_rescaling(base_path, body, nodata, raster_name, t):
         input_arr = read_raster_without_nodata_as_array(tmp_raster_path)
         if body.rescale_result.filter_value is not None:
             input_arr = input_arr[input_arr != body.rescale_result.filter_value]
+        if body.rescale_result.clip_positive:
+            input_arr = input_arr[input_arr >= 0]
         # print(f"Memory size of array: {input_arr.nbytes / 1024 / 1024} Mbytes")
         if body.rescale_result.rescale_type == s.AllowedRescaleTypes.quantile:
             rescale_result_list = [np.quantile(input_arr, b) for b in body.rescale_result.breaks]
