@@ -8,7 +8,7 @@ import numpy as np
 import rasterio
 from rasterio.enums import Resampling
 import requests
-from osgeo import gdal
+from guppy2.error import create_error
 from sqlalchemy.orm import Session
 from starlette import status
 from starlette.responses import Response
@@ -19,31 +19,16 @@ from guppy2.raster_calc_utils import create_raster, generate_raster_response, pe
     get_unique_values, align_files
 
 
-def raster_calculation(db: Session, body: s.RasterCalculationBody):
+def raster_calculation(db: Session, body: s.RasterCalculationBody) -> Response:
     print('raster_calculation')
     t = time.time()
     base_path = '/content/tifs/generated'
     unique_identifier = f'{datetime.datetime.now().strftime("%Y-%m-%d")}_{str(random.randint(0, 10000000))}'
     raster_name = f'generated_{unique_identifier}.tif'
     nodata = None
-    first = True
     path_list = []
     arguments_list = []
-    for layer_item in body.layer_list:
-        layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_item.layer_name).first()
-        if layer_model:
-            path = layer_model.file_path
-            path_list.append(path)
-            if os.path.exists(path) and body:
-                with rasterio.open(path) as src:
-                    if nodata is None:
-                        nodata = src.nodata
-            else:
-                print('WARNING: file does not exists', path)
-                return Response(content='layer not found', status_code=status.HTTP_404_NOT_FOUND)
-            arguments_list.append({'nodata': nodata, 'factor': layer_item.factor, 'operation': layer_item.operation, 'operation_data': layer_item.operation_data, 'is_rgb': layer_model.is_rgb})
-        else:
-            print('WARNING: layer_model does not exists', layer_item.layer_name)
+    fill_path_and_argument_lists(arguments_list, body.layer_list, db, nodata, path_list)
     fixed_path_list = align_files(base_path, path_list, unique_identifier)
     unique_values = get_unique_values(arguments_list, fixed_path_list)
     print('perform_operation', time.time() - t, unique_values)
@@ -56,6 +41,25 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
                                                 out_nodata=255 if body.rgb else -9999)
     if body.rescale_result:
         process_rescaling(base_path, body, -9999, raster_name, t)
+
+    if body.layer_list_after_rescale:
+        path_list = []
+        arguments_list = []
+        tmp_raster_path = os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif'))
+        os.rename(src=os.path.join(base_path, raster_name), dst=tmp_raster_path)
+        path_list.append(tmp_raster_path)
+        arguments_list.append({'nodata': -9999, 'factor': 1, 'operation': s.AllowedOperations.add, 'is_rgb': False})
+        fill_path_and_argument_lists(arguments_list, body.layer_list_after_rescale, db, nodata, path_list)
+        fixed_path_list = align_files(base_path, path_list, unique_identifier)
+        unique_values = get_unique_values(arguments_list, fixed_path_list)
+        print('perform_operation', time.time() - t, unique_values)
+        process_raster_list_with_function_in_chunks(fixed_path_list, os.path.join(base_path, raster_name), fixed_path_list[0],
+                                                    function_to_apply=perform_operation,
+                                                    function_arguments={'layer_args': arguments_list, 'output_rgb': body.rgb, 'unique_values': unique_values},
+                                                    chunks=16,
+                                                    output_bands=4 if body.rgb else 1,
+                                                    dtype=np.uint8 if body.rgb else np.float32 if unique_values else None,
+                                                    out_nodata=255 if body.rgb else -9999)
 
     build_overview_tiles = [2, 4, 8, 16, 32, 64]
     with rasterio.open(os.path.join(base_path, raster_name), mode='r+', cache=False) as dataset:
@@ -72,7 +76,26 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody):
     else:
         return generate_raster_response(os.path.join(base_path, raster_name))
 
-def read_raster_without_nodata_as_array(path:str)->np.ndarray:
+
+def fill_path_and_argument_lists(arguments_list, layer_list, db, nodata, path_list):
+    for layer_item in layer_list:
+        layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_item.layer_name).first()
+        if layer_model:
+            path = layer_model.file_path
+            path_list.append(path)
+            if os.path.exists(path):
+                with rasterio.open(path) as src:
+                    if nodata is None:
+                        nodata = src.nodata
+            else:
+                print('WARNING: file does not exists', path)
+                create_error(message='layer not found', code=status.HTTP_404_NOT_FOUND)
+            arguments_list.append({'nodata': nodata, 'factor': layer_item.factor, 'operation': layer_item.operation, 'operation_data': layer_item.operation_data, 'is_rgb': layer_model.is_rgb})
+        else:
+            print('WARNING: layer_model does not exists', layer_item.layer_name)
+
+
+def read_raster_without_nodata_as_array(path: str) -> np.ndarray:
     output = []
     with rasterio.open(path) as ds:
         for ji, window in ds.block_windows(1):
@@ -82,7 +105,8 @@ def read_raster_without_nodata_as_array(path:str)->np.ndarray:
 
     return np.concatenate(output)
 
-def process_rescaling(base_path, body, nodata, raster_name, t):
+
+def process_rescaling(base_path: str, body: s.RasterCalculationBody, nodata: float, raster_name: str, t: float):
     print('process_rescaling')
     bins = False
     normalize = None
@@ -124,7 +148,8 @@ def process_rescaling(base_path, body, nodata, raster_name, t):
                                                 chunks=16, output_bands=4 if body.rgb else 1, dtype=np.uint8 if body.rgb else rasterio.int32 if bins else None, out_nodata=255 if body.rgb else nodata)
     os.remove(tmp_raster_path)
 
-def delete_generated_store(layer_name):
+
+def delete_generated_store(layer_name: str) -> Response:
     print('delete_generated_store')
     username = cfg.geoserver.username
     password = cfg.geoserver.password

@@ -166,4 +166,5 @@ class RasterCalculationBody(CamelModel):
     geoserver: Optional[bool] = False
     rgb: Optional[bool] = False
     rescale_result: Optional[RescaleResult] = None
+    layer_list_after_rescale: Optional[list[CombineLayersList]] = None
     result_style: Optional[str] = None
