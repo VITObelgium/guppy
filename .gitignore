@@ -9,3 +9,5 @@ server/guppy/config.yml
 */config.yml.*
 *config*.yml
 *config*.yaml
+# Ignore all files in the content directory
+server/guppy2/content/*
