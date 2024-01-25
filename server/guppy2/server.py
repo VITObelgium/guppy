@@ -119,7 +119,7 @@ async def upload_file(layerName: str = Form(...), isRgb: bool = Form(False), fil
 
 @api.get("/uploadUi", tags=["data upload"], description="Upload a raster file (GeoTiff or Ascii) to the server.")
 async def read_index():
-    return FileResponse('html/index.html')
+    return FileResponse('guppy2/html/index.html')
 
 
 app.include_router(api)
