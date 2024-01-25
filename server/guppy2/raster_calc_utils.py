@@ -1,29 +1,33 @@
 import itertools
+import logging
 import os
 import time
 from typing import Callable
-from sqlalchemy.orm import Session
+
 import numpy as np
 import rasterio
 import requests
 import rioxarray as xr
 from dask import array as da
 from osgeo import osr, gdal
+from sqlalchemy.orm import Session
 from starlette.responses import StreamingResponse
 
 from guppy2.config import config as cfg
-from guppy2.db import schemas as s
 from guppy2.db import models as m
+from guppy2.db import schemas as s
 from guppy2.endpoint_utils import _decode
 from guppy2.error import create_error
 from guppy2.rasterio_file_streamer import RIOFile
+
+logger = logging.getLogger(__name__)
 
 
 def create_raster(raster_name, style=None):
     t = time.time()
     try:
         geoserver_layer = create_geoserver_layer(raster_name, raster_name.split('.')[0], style)
-        print("done geoserver", time.time() - t)
+        logger.info(f"done geoserver {time.time() - t}")
         return geoserver_layer
     except requests.exceptions.ConnectionError as e:
         create_error(message='geoserver caused error')
@@ -65,10 +69,10 @@ def create_geoserver_layer(data_source, layer_name, sld_name=None):
     response = requests.post(url, json=json_data, auth=auth, headers=headers)
 
     if response.status_code == 201:
-        print("Raster store created successfully.")
+        logger.info("Raster store created successfully.")
     else:
-        print(f"Failed to create raster store. Status code: {response.status_code}")
-        print(response.text)
+        logger.warning(f"Failed to create raster store. Status code: {response.status_code}")
+        logger.info(response.text)
     json_data = {
         "coverage": {
             "description": "Generated tif",
@@ -83,17 +87,17 @@ def create_geoserver_layer(data_source, layer_name, sld_name=None):
     response = requests.post(url, json=json_data, auth=auth, headers=headers)
 
     if response.status_code == 201:
-        print("layer created successfully.")
+        logger.info("layer created successfully.")
     else:
-        print(f"Failed to create layer. Status code: {response.status_code}")
-        print(response.text)
+        logger.warning(f"Failed to create layer. Status code: {response.status_code}")
+        logger.info(response.text)
     if sld_name and len(str(sld_name).strip()) > 0 and str(sld_name).strip() != 'nan':
         url = base_url + f'workspaces/{workspace}/layers/{layer_name}.xml'
         headers = {'content-type': 'text/xml', 'Accept-Charset': 'UTF-8'}
         data = f'<layer><defaultStyle><name>{sld_name}</name></defaultStyle></layer>'
         r = requests.put(url, data=data, headers=headers, auth=auth)
         if not r.ok:
-            print(layer_name, 'set style failed', r)
+            logger.warning(f"Failed to set style. {layer_name}")
     return f"{workspace}:{layer_name}"
 
 
@@ -128,7 +132,7 @@ def perform_operation(*input_arrs, layer_args, output_rgb, unique_values=None):
                     or operation == s.AllowedOperations.add
                     or operation == s.AllowedOperations.subtract):
                 mask_nodata = input_arr != out_nodata  # Compute mask once to reuse it
-                input_arr_masked = np.full_like(input_arr,0)
+                input_arr_masked = np.full_like(input_arr, 0)
                 np.multiply(input_arr, factor, out=input_arr_masked, where=mask_nodata)  # Factor multiplication again, but now with the mask
             if operation == s.AllowedOperations.multiply:
                 np.multiply(output_arr, np.where(mask_nodata, input_arr_masked, 1), out=output_arr, where=(output_arr_nodata) & (input_arr != out_nodata))
@@ -245,19 +249,19 @@ def compare_rasters(raster_path_a: str, raster_path_b: str, check_nodata: bool =
     band_b = b_ds.GetRasterBand(1)
 
     if a_ds.GetGeoTransform() != b_ds.GetGeoTransform():
-        print(f'geotransform not equal: {a_ds.GetGeoTransform()} != {b_ds.GetGeoTransform()}')
+        logger.warning(f'geotransform not equal: {a_ds.GetGeoTransform()} != {b_ds.GetGeoTransform()}')
         return False
     if a_ds.RasterXSize != b_ds.RasterXSize or a_ds.RasterYSize != b_ds.RasterYSize:
-        print(f'size not equal: {a_ds.RasterXSize},{a_ds.RasterYSize} != {b_ds.RasterXSize},{b_ds.RasterYSize} ')
+        logger.warning(f'size not equal: {a_ds.RasterXSize},{a_ds.RasterYSize} != {b_ds.RasterXSize},{b_ds.RasterYSize} ')
         return False
     if check_nodata and band_a.GetNoDataValue() != band_b.GetNoDataValue():
-        print(f'nodata not equal: {band_a.GetNoDataValue()} != {band_b.GetNoDataValue()}')
+        logger.warning(f'nodata not equal: {band_a.GetNoDataValue()} != {band_b.GetNoDataValue()}')
         return False
     if _get_raster_epsg(a_ds) != _get_raster_epsg(b_ds):
-        print(f'epsg not equal: {_get_raster_epsg(a_ds)} != {_get_raster_epsg(b_ds)}')
+        logger.warning(f'epsg not equal: {_get_raster_epsg(a_ds)} != {_get_raster_epsg(b_ds)}')
         return False
     if _get_raster_bounds(a_ds) != _get_raster_bounds(b_ds):
-        print(f'bounds not equal: {_get_raster_bounds(a_ds)} != {_get_raster_bounds(b_ds)}')
+        logger.warning(f'bounds not equal: {_get_raster_bounds(a_ds)} != {_get_raster_bounds(b_ds)}')
         return False
     return True
 
@@ -323,7 +327,7 @@ def process_raster_list_with_function_in_chunks(input_file_list: [str], output_f
     for open_da in open_da_arrays:
         open_da.close()
     input_da_arrays = None
-    print(f"combine_rasters_with_function_in_chunks done, {time.time() - t}")
+    logger.info(f"combine_rasters_with_function_in_chunks done, {time.time() - t}")
 
 
 def warp_raster(input_raster_file: str, output_raster_file: str, resolution: float, output_bounds: [], target_epsg: int, nodata: float, resampling=gdal.GRA_Average,
@@ -388,7 +392,7 @@ def warp_raster(input_raster_file: str, output_raster_file: str, resolution: flo
     kwargs['warpOptions'] = ['NUM_THREADS=ALL_CPUS']
 
     output_raster = gdal.Warp(output_raster_file, input_raster, **kwargs)
-    print("warp done")
+    logger.info("warp done")
 
     return_array = output_raster.ReadAsArray() if as_array else []
     output_raster = None
@@ -420,7 +424,7 @@ def convert_raster_to_likeraster(input_raster_file: str, like_raster_file: str, 
     output_bounds = [x_min, y_min, x_max, y_max]
     target_epsg = _get_raster_epsg(like_ds)
     warp_raster(input_raster_file, output_file, resolution_x, output_bounds, target_epsg, nodata, resampling=resampling, error_threshold=error_threshold, resolution_y=resolution_y)
-    print("done conversion")
+    logger.info("done conversion")
 
 
 def cleanup_files(path_list, unique_identifier):

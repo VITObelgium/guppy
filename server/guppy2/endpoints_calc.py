@@ -1,4 +1,5 @@
 import datetime
+import logging
 import os
 import random
 import time
@@ -6,21 +7,23 @@ import time
 import jenkspy
 import numpy as np
 import rasterio
-from rasterio.enums import Resampling
 import requests
-from guppy2.error import create_error
+from rasterio.enums import Resampling
 from sqlalchemy.orm import Session
 from starlette import status
 from starlette.responses import Response
 
 from guppy2.config import config as cfg
 from guppy2.db import schemas as s, models as m
+from guppy2.error import create_error
 from guppy2.raster_calc_utils import create_raster, generate_raster_response, perform_operation, process_raster_list_with_function_in_chunks, apply_rescale_result, insert_into_guppy_db, cleanup_files, \
     get_unique_values, align_files
 
+logger = logging.getLogger(__name__)
+
 
 def raster_calculation(db: Session, body: s.RasterCalculationBody) -> Response:
-    print('raster_calculation')
+    logger.info('raster_calculation')
     t = time.time()
     base_path = '/content/tifs/generated'
     unique_identifier = f'{datetime.datetime.now().strftime("%Y-%m-%d")}_{str(random.randint(0, 10000000))}'
@@ -31,7 +34,7 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody) -> Response:
     fill_path_and_argument_lists(arguments_list, body.layer_list, db, nodata, path_list)
     fixed_path_list = align_files(base_path, path_list, unique_identifier)
     unique_values = get_unique_values(arguments_list, fixed_path_list)
-    print('perform_operation', time.time() - t, unique_values)
+    logger.info(f'perform_operation {time.time() - t} {unique_values}')
     process_raster_list_with_function_in_chunks(fixed_path_list, os.path.join(base_path, raster_name), fixed_path_list[0],
                                                 function_to_apply=perform_operation,
                                                 function_arguments={'layer_args': arguments_list, 'output_rgb': body.rgb, 'unique_values': unique_values},
@@ -52,7 +55,7 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody) -> Response:
         fill_path_and_argument_lists(arguments_list, body.layer_list_after_rescale, db, nodata, path_list)
         fixed_path_list = align_files(base_path, path_list, unique_identifier)
         unique_values = get_unique_values(arguments_list, fixed_path_list)
-        print('perform_operation', time.time() - t, unique_values)
+        logger.info(f'perform_operation {time.time() - t} {unique_values}')
         process_raster_list_with_function_in_chunks(fixed_path_list, os.path.join(base_path, raster_name), fixed_path_list[0],
                                                     function_to_apply=perform_operation,
                                                     function_arguments={'layer_args': arguments_list, 'output_rgb': body.rgb, 'unique_values': unique_values},
@@ -68,7 +71,7 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody) -> Response:
         dataset.update_tags(ns='rio_overview', resampling='nearest')
 
     cleanup_files(fixed_path_list, unique_identifier)
-    print('raster_calculation 200', time.time() - t)
+    logger.info(f'raster_calculation 200 {time.time() - t}')
     insert_into_guppy_db(db, raster_name, os.path.join(base_path, raster_name), body.rgb)
     if body.geoserver:
         geoserver_layer = create_raster(raster_name, body.result_style)
@@ -88,11 +91,11 @@ def fill_path_and_argument_lists(arguments_list, layer_list, db, nodata, path_li
                     if nodata is None:
                         nodata = src.nodata
             else:
-                print('WARNING: file does not exists', path)
+                logger.info(f'WARNING: file does not exists {path}')
                 create_error(message='layer not found', code=status.HTTP_404_NOT_FOUND)
             arguments_list.append({'nodata': nodata, 'factor': layer_item.factor, 'operation': layer_item.operation, 'operation_data': layer_item.operation_data, 'is_rgb': layer_model.is_rgb})
         else:
-            print('WARNING: layer_model does not exists', layer_item.layer_name)
+            logger.info(f'WARNING: layer_model does not exists {layer_item.layer_name}')
 
 
 def read_raster_without_nodata_as_array(path: str) -> np.ndarray:
@@ -107,7 +110,7 @@ def read_raster_without_nodata_as_array(path: str) -> np.ndarray:
 
 
 def process_rescaling(base_path: str, body: s.RasterCalculationBody, nodata: float, raster_name: str, t: float):
-    print('process_rescaling')
+    logger.info('process_rescaling')
     bins = False
     normalize = None
     tmp_raster_path = os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif'))
@@ -118,7 +121,7 @@ def process_rescaling(base_path: str, body: s.RasterCalculationBody, nodata: flo
             input_arr = input_arr[input_arr != body.rescale_result.filter_value]
         if body.rescale_result.clip_positive:
             input_arr = input_arr[input_arr >= 0]
-        # print(f"Memory size of array: {input_arr.nbytes / 1024 / 1024} Mbytes")
+        # logger.info(f"Memory size of array: {input_arr.nbytes / 1024 / 1024} Mbytes")
         if body.rescale_result.rescale_type == s.AllowedRescaleTypes.quantile:
             rescale_result_list = [np.quantile(input_arr, b) for b in body.rescale_result.breaks]
             rescale_result_dict = {k: v for k, v in enumerate(rescale_result_list)}
@@ -139,8 +142,8 @@ def process_rescaling(base_path: str, body: s.RasterCalculationBody, nodata: flo
         input_arr = None
     else:
         rescale_result_dict = body.rescale_result.breaks
-    print(rescale_result_dict, bins)
-    print('rescale_result', time.time() - t)
+    # print(rescale_result_dict, bins)
+    logger.info(f'rescale_result{time.time() - t}')
     process_raster_list_with_function_in_chunks([tmp_raster_path], os.path.join(base_path, raster_name),
                                                 tmp_raster_path,
                                                 function_to_apply=apply_rescale_result,
@@ -150,7 +153,7 @@ def process_rescaling(base_path: str, body: s.RasterCalculationBody, nodata: flo
 
 
 def delete_generated_store(layer_name: str) -> Response:
-    print('delete_generated_store')
+    logger.info('delete_generated_store')
     username = cfg.geoserver.username
     password = cfg.geoserver.password
     auth = (username, password)
@@ -167,9 +170,9 @@ def delete_generated_store(layer_name: str) -> Response:
     response = requests.delete(url, auth=auth, headers=headers)
 
     if response.status_code == 200:
-        print(f"Raster store {coverage_store} deleted successfully.")
+        logger.info(f"Raster store {coverage_store} deleted successfully.")
         os.remove(os.path.join(base_path, f'{layer_name.split(":")[1]}.tif'))
     else:
-        print(f"Failed to delete raster store {coverage_store}. Status code: {response.status_code}")
-        print(response.text)
+        logger.info(f"Failed to delete raster store {coverage_store}. Status code: {response.status_code}")
+        logger.info(response.text)
     return response

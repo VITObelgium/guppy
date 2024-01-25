@@ -1,7 +1,7 @@
 # coding: utf-8
-from typing import Optional, Union
-from decimal import Decimal
 from enum import Enum as PyEnum
+from typing import Optional, Union
+
 from pydantic import BaseModel
 
 

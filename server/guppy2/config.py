@@ -1,7 +1,10 @@
+import logging
 import os
 from dataclasses import dataclass
 
 import yaml
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -46,15 +49,15 @@ def sanitize_deploy_path(deploy_path: str) -> str:
 
 
 def parse_config_file(config_file: str) -> _Config:
-    print("Parsing '%s'..." % config_file, end='')
+    logger.info(f"Parsing {config_file}...")
     try:
         yml_file = open(config_file, 'r')
     except IOError:
-        print(" not found")
+        logger.info(" not found")
         raise SystemExit("No usable config file found")
     with yml_file:
         yml_data = yaml.load(yml_file, Loader=yaml.SafeLoader)
-    print(" OK")
+    logger.info(" OK")
     if 'path' not in yml_data['deploy']:
         yml_data['deploy']['path'] = default_deploy_path
     yml_data['deploy']['path'] = sanitize_deploy_path(yml_data['deploy']['path'])

@@ -1,5 +1,6 @@
 # coding: utf-8
 
+import logging
 import math
 import os
 import time
@@ -12,18 +13,20 @@ from fastapi import status
 from fastapi.responses import Response, ORJSONResponse
 from joblib import Parallel, delayed
 from pyproj import Transformer
-from rasterio.windows import from_bounds
 from rasterio.features import dataset_features
+from rasterio.windows import from_bounds
 from shapely import wkt
 from shapely.geometry import box, MultiLineString
 from shapely.ops import transform
-from sqlalchemy.orm import Session
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from guppy2.config import config as cfg
 from guppy2.db import models as m
 from guppy2.db import schemas as s
 from guppy2.endpoint_utils import get_overview_factor, create_stats_response, _extract_area_from_dataset, _extract_shape_mask_from_dataset, _decode
+
+logger = logging.getLogger(__name__)
 
 
 def healthcheck(db: Session):
@@ -56,11 +59,12 @@ def get_stats_for_bbox(db: Session, layer_name: str, bbox_left: float, bbox_bott
                         rst = src.read(1, window=window, )
                     if rst.size != 0:
                         response = create_stats_response(rst, np.zeros_like(rst).astype(bool), src.nodata, f'bbox stats. Overview level: {overview_factor}, {overview_bin} scale')
-                        print('get_stats_for_bbox 200', time.time() - t)
+                        logger.info(f'get_stats_for_bbox 200 {time.time() - t}')
                         return response
-        print('get_stats_for_bbox 204', time.time() - t)
+        logger.warning(f'file not found {path} or bbox empty')
+        logger.info(f'get_stats_for_bbox 204 {time.time() - t}')
         return Response(status_code=status.HTTP_204_NO_CONTENT)
-    print('get_stats_for_bbox 404', time.time() - t)
+    logger.info(f'get_stats_for_bbox 404 {time.time() - t}')
     return Response(status_code=status.HTTP_404_NOT_FOUND)
 
 
@@ -88,11 +92,12 @@ def get_data_for_wkt(db: Session, layer_name: str, body: s.GeometryBody):
                             return Response(content=str(e), status_code=status.HTTP_406_NOT_ACCEPTABLE)
                     if rst.size != 0:
                         response = s.DataResponse(type='raw data', data=rst.tolist())
-                        print('get_data_for_wkt 200', time.time() - t)
+                        logger.info(f'get_data_for_wkt 200 {time.time() - t}')
                         return response
-        print('get_data_for_wkt 204', time.time() - t)
+        logger.warning(f'file not found {path}')
+        logger.info(f'get_data_for_wkt 204 {time.time() - t}')
         return Response(status_code=status.HTTP_204_NO_CONTENT)
-    print('get_data_for_wkt 404', time.time() - t)
+    logger.info(f'get_data_for_wkt 404 {time.time() - t}')
     return Response(status_code=status.HTTP_404_NOT_FOUND)
 
 
@@ -120,11 +125,12 @@ def get_stats_for_wkt(db: Session, layer_name: str, body: s.GeometryBody, native
                     if rst.size != 0:
                         response = create_stats_response(rst, shape_mask, src.nodata,
                                                          type=f'stats wkt. Overview level: {overview_factor}, {overview_bin} scale')
-                        print('get_stats_for_wkt 200', time.time() - t)
+                        logger.info(f'get_stats_for_wkt 200 {time.time() - t}')
                         return response
-        print('get_stats_for_wkt 204', time.time() - t)
+        logger.warning(f'file not found {path}')
+        logger.info(f'get_stats_for_wkt 204 {time.time() - t}')
         return Response(status_code=status.HTTP_204_NO_CONTENT)
-    print('get_stats_for_wkt 404', time.time() - t)
+    logger.info(f'get_stats_for_wkt 404 {time.time() - t}')
     return Response(status_code=status.HTTP_404_NOT_FOUND)
 
 
@@ -150,6 +156,7 @@ def get_stats_for_model(layer_model, native, geom, srs):
                                                  type=f'stats wkt. Overview level: {overview_factor}, {overview_bin} scale',
                                                  layer_name=layer_model.layer_name
                                                  )
+    logger.warning(f'file not found {path}')
     return None
 
 
@@ -161,11 +168,11 @@ def get_stats_for_wkt_list(db: Session, body: s.GeometryBodyList, native: bool):
         srs = body.srs if body.srs else "EPSG:4326"
         result = Parallel(n_jobs=-1, prefer='threads')(delayed(get_stats_for_model)(layer_model, native, geom, srs) for layer_model in layer_models)
         if result:
-            print('get_stats_for_wkt 200', time.time() - t)
+            logger.info(f'get_stats_for_wkt_list 200 {time.time() - t}')
             return result
-        print('get_stats_for_wkt 204', time.time() - t)
+        logger.info(f'get_stats_for_wkt_list 204 {time.time() - t}')
         return Response(status_code=status.HTTP_204_NO_CONTENT)
-    print('get_stats_for_wkt 404', time.time() - t)
+    logger.info(f'get_stats_for_wkt_list 404 {time.time() - t}')
     return Response(status_code=status.HTTP_404_NOT_FOUND)
 
 
@@ -190,11 +197,12 @@ def get_line_data_for_wkt(db: Session, layer_name: str, body: s.LineGeometryBody
                             for v in src.sample(coords, indexes=1):
                                 result.append(v[0])
                         response = s.LineDataResponse(type='line data', data=result)
-                        print('get_data_for_wkt 200', time.time() - t)
+                        logger.info(f'get_line_data_for_wkt 200 {time.time() - t}')
                         return response
-        print('get_data_for_wkt 204', time.time() - t)
+        logger.warning(f'file not found {path}')
+        logger.info(f'get_line_data_for_wkt 204 {time.time() - t}')
         return Response(status_code=status.HTTP_204_NO_CONTENT)
-    print('get_data_for_wkt 404', time.time() - t)
+    logger.info(f'get_line_data_for_wkt 404 {time.time() - t}')
     return Response(status_code=status.HTTP_404_NOT_FOUND)
 
 
@@ -211,14 +219,14 @@ def get_line_data_list_for_wkt(db: Session, body: s.LineGeometryListBody):
                 points = [line.interpolate(distance) for distance in distances]
                 coords['1'] = [(point.x, point.y) for point in points]
         if coords:
-            print('get_line_data_list_for_wkt pre sample', time.time() - t)
+            logger.info(f'get_line_data_list_for_wkt pre sample {time.time() - t}')
             result = sample_coordinates_window(coords, layer_models, line.bounds)
             if result:
-                print('get_line_data_list_for_wkt 200', time.time() - t)
+                logger.info(f'get_line_data_list_for_wkt 200 {time.time() - t}')
                 return ORJSONResponse(content=result)
-        print('get_line_data_list_for_wkt 204', time.time() - t)
+        logger.info(f'get_line_data_list_for_wkt 204 {time.time() - t}')
         return Response(status_code=status.HTTP_204_NO_CONTENT)
-    print('get_line_data_list_for_wkt 404', time.time() - t)
+    logger.info(f'get_line_data_list_for_wkt 404 {time.time() - t}')
     return Response(status_code=status.HTTP_404_NOT_FOUND)
 
 
@@ -239,7 +247,7 @@ def get_multi_line_data_list_for_wkt(db: Session, body: s.MultiLineGeometryListB
                     coords_list[line] = [(point.x, point.y) for point in points]
                     epsg_lines.append(line)
         if coords_list:
-            print('get_multi_line_data_list_for_wkt pre sample', time.time() - t)
+            logger.info(f'get_multi_line_data_list_for_wkt pre sample {time.time() - t}')
             result = sample_coordinates_window(coords_list, layer_models, MultiLineString(epsg_lines).bounds, body.round_val)
             start_data = 0
             end_data = body.number_of_points
@@ -252,11 +260,11 @@ def get_multi_line_data_list_for_wkt(db: Session, body: s.MultiLineGeometryListB
                 end_data += body.number_of_points
 
             if result_per_line:
-                print('get_multi_line_data_list_for_wkt 200', time.time() - t)
+                logger.info(f'get_multi_line_data_list_for_wkt 200 {time.time() - t}')
                 return ORJSONResponse(content=result_per_line)
-        print('get_multi_line_data_list_for_wkt 204', time.time() - t)
+        logger.info(f'get_multi_line_data_list_for_wkt 204 {time.time() - t}')
         return Response(status_code=status.HTTP_204_NO_CONTENT)
-    print('get_multi_line_data_list_for_wkt 404', time.time() - t)
+    logger.info(f'get_multi_line_data_list_for_wkt 404 {time.time() - t}')
     return Response(status_code=status.HTTP_404_NOT_FOUND)
 
 
@@ -268,7 +276,7 @@ def sample_coordinates(coords, path, layer_name):
             for v in x:
                 result.append(v[0])
     else:
-        print("sample_coordinates file not found ", path)
+        logger.error(f'sample_coordinates: file not found {path}')
     return s.LineData(layer_name=layer_name, data=result)
 
 
@@ -355,9 +363,10 @@ def get_point_value_from_raster(db: Session, layer_name: str, x: float, y: float
                 transformer = Transformer.from_crs("EPSG:4326", f"EPSG:{target_srs}", always_xy=True)
                 x_, y_ = transformer.transform(x, y)
                 for v in src.sample([(x_, y_)], indexes=1):
-                    print('get_point_value_from_raster 200', time.time() - t)
+                    logger.info(f'get_point_value_from_raster 200 {time.time() - t}')
                     return s.PointResponse(type='point value', layer_name=layer_name, value=None if math.isclose(float(v[0]), nodata) else float(v[0]))
-    print('get_point_value_from_raster 204', time.time() - t)
+        logger.warning(f'file not found {path}')
+    logger.info(f'get_point_value_from_raster 204 {time.time() - t}')
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -365,9 +374,9 @@ def get_layer_mapping(db, layer_name):
     t = time.time()
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
     if layer_model:
-        print('get_layer_mapping 200', time.time() - t)
+        logger.info(f'get_layer_mapping 200 {time.time() - t}')
         return layer_model
-    print('get_layer_mapping 204', time.time() - t)
+    logger.info(f'get_layer_mapping 204 {time.time() - t}')
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -375,9 +384,9 @@ def get_layers_mapping(db, limit=100, offset=0):
     t = time.time()
     layer_model = db.query(m.LayerMetadata).limit(limit).offset(offset).all()
     if layer_model:
-        print('get_layers_mapping 200', time.time() - t)
+        logger.info(f'get_layers_mapping 200 {time.time() - t}')
         return layer_model
-    print('get_layers_mapping 204', time.time() - t)
+    logger.info(f'get_layers_mapping 204 {time.time() - t}')
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -414,11 +423,11 @@ def get_line_object_list_for_wkt(db: Session, layer_name: str, body: s.LineObjec
             result_df = pd.DataFrame(input_file_df)
             result = result_df.to_dict(orient='records')
         if result:
-            print('get_line_object_list_for_wkt 200', time.time() - t)
+            logger.info(f'get_line_object_list_for_wkt 200 {time.time() - t}')
             return ORJSONResponse(result)
-        print('get_line_object_list_for_wkt 204', time.time() - t)
+        logger.info(f'get_line_object_list_for_wkt 204 {time.time() - t}')
         return Response(status_code=status.HTTP_204_NO_CONTENT)
-    print('get_line_object_list_for_wkt 404', time.time() - t)
+    logger.info(f'get_line_object_list_for_wkt 404 {time.time() - t}')
     return Response(status_code=status.HTTP_404_NOT_FOUND)
 
 
@@ -453,11 +462,12 @@ def get_classification_for_wkt(db: Session, layer_name: str, body: s.GeometryBod
                             if v != -999999999999:
                                 result_classes.append(s.ClassificationEntry(value=v, count=c, percentage=c / total_count * 100))
                         response = s.ClassificationResult(type='classification', data=result_classes)
-                        print('classification_for_wkt 200', time.time() - t)
+                        logger.info(f'classification_for_wkt 200 {time.time() - t}')
                         return response
-            print('classification_for_wkt invalid geometry', time.time() - t)
+            logger.info(f'classification_for_wkt 406 invalid geometry {time.time() - t}')
             return Response(content="invalid geometry", status_code=status.HTTP_406_NOT_ACCEPTABLE)
-    print('classification_for_wkt 204', time.time() - t)
+        logger.warning(f'file not found {path}')
+    logger.info(f'classification_for_wkt 204 {time.time() - t}')
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -486,11 +496,15 @@ def get_combine_layers(db: Session, body: s.CombineLayersGeometryBody):
                                 return Response(content=str(e), status_code=status.HTTP_406_NOT_ACCEPTABLE)
                         if rst.size != 0:
                             response = s.DataResponse(type='raw data', data=rst.tolist())
-                            print('get_combine_layers 200', time.time() - t)
+                            logger.info(f'get_combine_layers 200 {time.time() - t}')
                             return response
-            print('get_combine_layers 204', time.time() - t)
+
+                logger.info(f'get_combine_layers 406 invalid geometry {time.time() - t}')
+                return Response(content="invalid geometry", status_code=status.HTTP_406_NOT_ACCEPTABLE)
+            logger.warning(f'file not found {path}')
+            logger.info(f'get_combine_layers 204 {time.time() - t}')
             return Response(status_code=status.HTTP_204_NO_CONTENT)
-    print('get_combine_layers 404', time.time() - t)
+    logger.info(f'get_combine_layers 404 {time.time() - t}')
     return Response(status_code=status.HTTP_404_NOT_FOUND)
 
 
@@ -506,9 +520,9 @@ def get_countour_for_models(db: Session, body: s.CountourBodyList):
     if layer_models:
         result = Parallel(n_jobs=-1, prefer='threads')(delayed(get_layer_contour)(layer) for layer in layer_models)
         if result:
-            print('get_countour_for_models 200', time.time() - t)
+            logger.info(f'get_countour_for_models 200 {time.time() - t}')
             return ORJSONResponse(content=result)
-        print('get_countour_for_models 204', time.time() - t)
+        logger.info(f'get_countour_for_models 204 {time.time() - t}')
         return Response(status_code=status.HTTP_204_NO_CONTENT)
-    print('get_countour_for_models 404', time.time() - t)
+    logger.info(f'get_countour_for_models 404 {time.time() - t}')
     return Response(status_code=status.HTTP_404_NOT_FOUND)

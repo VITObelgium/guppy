@@ -1,6 +1,7 @@
+import math
+
 import numpy as np
 import rasterio
-import math
 from rasterio.mask import mask, raster_geometry_mask
 
 from guppy2.db import schemas as s
