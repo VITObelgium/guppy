@@ -1,7 +1,11 @@
+import logging
+
 from fastapi import HTTPException
 
+logger = logging.getLogger(__name__)
 
-def create_error(message: str, code: int = 400) -> HTTPException:
+
+def create_error(message: str, code: int = 400):
     """
     Args:
         message: A string representing the error message.
@@ -11,4 +15,5 @@ def create_error(message: str, code: int = 400) -> HTTPException:
         HTTPException: An exception indicating an HTTP error with the specified error message and status code.
 
     """
+    logger.error(message)
     raise HTTPException(status_code=code, detail=message)

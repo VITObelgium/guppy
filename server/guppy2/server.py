@@ -1,4 +1,6 @@
 # coding: utf-8
+import logging
+
 import uvicorn
 from fastapi import FastAPI, Depends, APIRouter
 from fastapi.responses import ORJSONResponse
@@ -11,6 +13,9 @@ import guppy2.endpoints_upload as endpoints_upload
 from guppy2.config import config as cfg
 from guppy2.db.db_session import SessionLocal, engine
 from guppy2.db.models import Base
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(docs_url=f"{cfg.deploy.path}/docs", openapi_url=f"{cfg.deploy.path}")
 api = APIRouter(prefix=f"{cfg.deploy.path}")
