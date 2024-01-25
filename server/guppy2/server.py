@@ -2,7 +2,7 @@
 import logging
 
 import uvicorn
-from fastapi import FastAPI, Depends, APIRouter
+from fastapi import FastAPI, Depends, APIRouter, UploadFile, File, Form
 from fastapi.responses import ORJSONResponse
 from sqlalchemy.orm import Session
 
@@ -110,6 +110,11 @@ def delete_generated_store(layer: str):
 @api.get("/healthcheck", description="Check the health status of the service.")
 def healthcheck(db: Session = Depends(get_db)):
     return endpoints.healthcheck(db=db)
+
+
+@api.post("/upload", tags=["data upload"], description="Upload a raster file (GeoTiff or Ascii) to the server.")
+async def upload_file(layerName: str = Form(...), isRgb: bool = Form(False), file: UploadFile = File(...), db: Session = Depends(get_db)):
+    return endpoints_upload.upload_file(layer_name=layerName, file=file, is_rgb=isRgb, db=db)
 
 
 app.include_router(api)

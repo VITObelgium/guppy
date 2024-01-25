@@ -23,4 +23,5 @@ dependencies:
   - dask
   - rioxarray
   - jenkspy
+  - python-multipart
 prefix: /opt/mapbase3/server/conda-env
