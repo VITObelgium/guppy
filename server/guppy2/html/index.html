@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f2f2f2;
+            font-family: Arial, sans-serif;
+        }
+
+        #uploadForm {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 300px;
+        }
+
+        .description {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        input[type=text], input[type=file] {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            display: inline-block;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        input[type=submit] {
+            width: 100%;
+            background-color: #4CAF50;
+            color: white;
+            padding: 14px 20px;
+            margin: 8px 0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        input[type=submit]:hover {
+            background-color: #45a049;
+        }
+    </style>
+    <script>
+        window.onload = function () {
+            var baseUrl = window.location.origin; // Extracts the base URL
+            document.getElementById("uploadForm").action = baseUrl + "/guppy/upload";
+        };
+    </script>
+</head>
+<body>
+
+<div class="description">
+    <p>Please fill in a layer name and select a raster file to upload.</p>
+</div>
+
+<form id="uploadForm" action="/guppy/upload" method="post" enctype="multipart/form-data">
+    <label for="layerName">Layer Name:</label>
+    <input type="text" id="layerName" name="layerName">
+    <label for="file">File:</label>
+    <input type="file" id="file" name="file" accept="image/tiff,image/tif,image/x-tiff,image/x-tif,image/asc">
+    <input type="submit" value="Upload">
+</form>
+
+</body>
+</html>
