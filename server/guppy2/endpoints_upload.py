@@ -91,7 +91,7 @@ def check_disk_space(temp_file_size: int):
         Error: If the disk space usage would exceed 90% after file upload.
 
     """
-    total, used, free = shutil.disk_usage("c:/temp/content")
+    total, used, free = shutil.disk_usage("/content")
     used_percentage = ((used + temp_file_size) / total) * 100
     if used_percentage > 90:
         raise create_error(code=507, message="Upload failed: Disk space usage would exceed 90% after file upload")
@@ -134,8 +134,8 @@ def upload_file(layer_name: str, file: UploadFile, db: Session, is_rgb: bool = F
 
     check_layer_exists(layer_name=f"{sanitized_layer_name}_{sanitized_filename}", db=db)
 
-    tmp_file_location = f"c:/temp/content/tifs/uploaded/{sanitized_layer_name}_{sanitized_filename}_tmp.{ext}"
-    file_location = f"c:/temp/content/tifs/uploaded/{sanitized_layer_name}_{sanitized_filename}.tif"
+    tmp_file_location = f"/content/tifs/uploaded/{sanitized_layer_name}_{sanitized_filename}_tmp.{ext}"
+    file_location = f"/content/tifs/uploaded/{sanitized_layer_name}_{sanitized_filename}.tif"
     if os.path.exists(file_location):
         raise create_error(message=f"Upload failed: File {sanitized_layer_name}_{sanitized_filename}.tif already exists.", code=400)
     if not os.path.exists(os.path.dirname(tmp_file_location)):
