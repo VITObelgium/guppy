@@ -123,7 +123,7 @@ async def read_index():
     return FileResponse('guppy2/html/index.html')
 
 
-@app.get("/tiles/{layer_name}/{z}/{x}/{y}")
+@api.get("/tiles/{layer_name}/{z}/{x}/{y}")
 async def get_tile(layer_name: str, z: int, x: int, y: int, db: Session = Depends(get_db)):
     endpoints_tiles.get_tile(layer_name=layer_name, db=db, z=z, x=x, y=y)
 
