@@ -1,10 +1,11 @@
 import sqlite3
-
+import logging
 from fastapi import HTTPException, Response
 from sqlalchemy.orm import Session
 
 from guppy2.db.models import LayerMetadata
 
+logger = logging.getLogger(__name__)
 
 def get_tile(layer_name: str, db: Session, z: int, x: int, y: int):
     """
@@ -24,12 +25,13 @@ def get_tile(layer_name: str, db: Session, z: int, x: int, y: int):
     """
     # Flip Y coordinate because MBTiles grid is TMS (bottom-left origin)
     y = (1 << z) - 1 - y
+    logger.info(f"Getting tile for layer {layer_name} at zoom {z}, x {x}, y {y}")
     layer = db.query(LayerMetadata).filter_by(layer_name=layer_name).first()
     if not layer:
         raise HTTPException(status_code=404, detail="Layer not found")
     mb_file = layer.file_path
     try:
-        with sqlite3.connect(mb_file) as conn:
+        with sqlite3.connect(mb_file[1:]) as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT tile_data FROM tiles WHERE zoom_level=? AND tile_column=? AND tile_row=?", (z, x, y))
             tile = cursor.fetchone()
