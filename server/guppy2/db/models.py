@@ -15,4 +15,5 @@ class LayerMetadata(Base):
     file_path = Column(String, nullable=False)
     is_rgb = Column(Boolean)
     rgb_factor = Column(Float)
+    is_mbtile = Column(Boolean)
 
