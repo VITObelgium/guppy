@@ -36,7 +36,7 @@ def get_tile(layer_name: str, db: Session, z: int, x: int, y: int):
             cursor.execute("SELECT tile_data FROM tiles WHERE zoom_level=? AND tile_column=? AND tile_row=?", (z, x, y))
             tile = cursor.fetchone()
             if tile:
-                return Response(tile[0], media_type="application/x-protobuf")
+                return Response(bytes(tile[0]), media_type="application/x-protobuf", headers={"Content-Encoding": "gzip"})
             else:
                 raise HTTPException(status_code=404, detail="Tile not found")
     except Exception as e:
