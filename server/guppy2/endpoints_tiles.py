@@ -31,7 +31,7 @@ def get_tile(layer_name: str, db: Session, z: int, x: int, y: int):
         raise HTTPException(status_code=404, detail="Layer not found")
     mb_file = layer.file_path
     try:
-        with sqlite3.connect(mb_file[1:]) as conn:
+        with sqlite3.connect(mb_file) as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT tile_data FROM tiles WHERE zoom_level=? AND tile_column=? AND tile_row=?", (z, x, y))
             tile = cursor.fetchone()
