@@ -2,7 +2,8 @@
 import logging
 
 from fastapi import FastAPI, Depends, APIRouter, UploadFile, File, Form
-from fastapi.responses import ORJSONResponse, FileResponse, Response
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import ORJSONResponse, FileResponse
 from sqlalchemy.orm import Session
 
 import guppy2.db.schemas as s
@@ -18,6 +19,22 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(docs_url=f"{cfg.deploy.path}/docs", openapi_url=f"{cfg.deploy.path}")
 api = APIRouter(prefix=f"{cfg.deploy.path}")
+
+# Add CORS middleware to allow all origins
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
+api.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
 
 
 # Dependency
@@ -121,10 +138,4 @@ async def read_index():
 
 @api.get("/tiles/{layer_name}/{z}/{x}/{y}")
 async def get_tile(layer_name: str, z: int, x: int, y: int, db: Session = Depends(get_db)):
-    tile = endpoints_tiles.get_tile(layer_name=layer_name, db=db, z=z, x=x, y=y)
-    headers = {
-        "Access-Control-Allow-Origin": "*",  # Replace '*' with your specific origin if needed
-        "Access-Control-Allow-Methods": "GET",
-        "Access-Control-Allow-Headers": "Authorization, Content-Type",
-    }
-    return Response(content=tile, headers=headers)
+    return endpoints_tiles.get_tile(layer_name=layer_name, db=db, z=z, x=x, y=y)
