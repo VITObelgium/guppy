@@ -24,7 +24,7 @@ def get_tile(layer_name: str, db: Session, z: int, x: int, y: int):
     """
     # Flip Y coordinate because MBTiles grid is TMS (bottom-left origin)
     y = (1 << z) - 1 - y
-    layer = db.query(LayerMetadata).filter(LayerMetadata.name == layer_name).first()
+    layer = db.query(LayerMetadata).filter_by(layer_name=layer_name).first()
     if not layer:
         raise HTTPException(status_code=404, detail="Layer not found")
     mb_file = layer.file_path
