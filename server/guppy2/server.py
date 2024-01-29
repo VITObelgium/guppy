@@ -1,9 +1,8 @@
 # coding: utf-8
 import logging
 
-import uvicorn
 from fastapi import FastAPI, Depends, APIRouter, UploadFile, File, Form
-from fastapi.responses import ORJSONResponse, FileResponse
+from fastapi.responses import ORJSONResponse, FileResponse, Response
 from sqlalchemy.orm import Session
 
 import guppy2.db.schemas as s
@@ -12,16 +11,13 @@ import guppy2.endpoints_calc as endpoints_calc
 import guppy2.endpoints_tiles as endpoints_tiles
 import guppy2.endpoints_upload as endpoints_upload
 from guppy2.config import config as cfg
-from guppy2.db.db_session import SessionLocal, engine
-from guppy2.db.models import Base
+from guppy2.db.db_session import SessionLocal
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(docs_url=f"{cfg.deploy.path}/docs", openapi_url=f"{cfg.deploy.path}")
 api = APIRouter(prefix=f"{cfg.deploy.path}")
-
-Base.metadata.create_all(bind=engine)
 
 
 # Dependency
@@ -125,9 +121,10 @@ async def read_index():
 
 @api.get("/tiles/{layer_name}/{z}/{x}/{y}")
 async def get_tile(layer_name: str, z: int, x: int, y: int, db: Session = Depends(get_db)):
-    endpoints_tiles.get_tile(layer_name=layer_name, db=db, z=z, x=x, y=y)
-
-
-app.include_router(api)
-if __name__ == '__main__':
-    uvicorn.run("server:app", port=5000, reload=True)
+    tile = endpoints_tiles.get_tile(layer_name=layer_name, db=db, z=z, x=x, y=y)
+    headers = {
+        "Access-Control-Allow-Origin": "*",  # Replace '*' with your specific origin if needed
+        "Access-Control-Allow-Methods": "GET",
+        "Access-Control-Allow-Headers": "Authorization, Content-Type",
+    }
+    return Response(content=tile, headers=headers)
