@@ -1,6 +1,7 @@
 # coding: utf-8
 import logging
 
+import uvicorn
 from fastapi import FastAPI, Depends, APIRouter, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse, FileResponse
@@ -22,13 +23,6 @@ api = APIRouter(prefix=f"{cfg.deploy.path}")
 
 # Add CORS middleware to allow all origins
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
-    allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
-)
-api.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allows all origins
     allow_credentials=True,
@@ -139,3 +133,8 @@ async def read_index():
 @api.get("/tiles/{layer_name}/{z}/{x}/{y}")
 async def get_tile(layer_name: str, z: int, x: int, y: int, db: Session = Depends(get_db)):
     return endpoints_tiles.get_tile(layer_name=layer_name, db=db, z=z, x=x, y=y)
+
+
+app.include_router(api)
+if __name__ == '__main__':
+    uvicorn.run("server:app", port=5000, reload=True)
