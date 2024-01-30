@@ -5,6 +5,7 @@ from functools import lru_cache
 
 import numpy as np
 from fastapi import HTTPException
+from osgeo import gdal
 from rio_tiler.colormap import cmap, InvalidColorMapName
 from rio_tiler.errors import TileOutsideBounds
 from rio_tiler.io import Reader
@@ -101,6 +102,10 @@ def get_tile(file_path: str, z: int, x: int, y: int, style: str = None) -> Respo
             if cog.tile_exists(x, y, z):
                 img = cog.tile(x, y, z)
                 nodata = cog.dataset.nodata
+                if img.dataset_statistics is None:
+                    stats = cog.statisticts()
+                    # generate statistics file for next time
+                    gdal.Info(file_path, computeMinMax=True, stats=True)
         if img:
             colormap = None
             add_mask = True
@@ -115,8 +120,10 @@ def get_tile(file_path: str, z: int, x: int, y: int, style: str = None) -> Respo
                 else:
                     img.array = data_to_rgba(img.data[0], nodata)
                     add_mask = False
-            else:
+            elif img.dataset_statistics:
                 img.rescale(in_range=img.dataset_statistics)
+            else:
+                img.rescale(in_range=[(stats.min, stats.max)])
             content = img.render(img_format="PNG", colormap=colormap, add_mask=add_mask, **img_profiles.get("png"))
             return Response(content, media_type="image/png")
     except TileOutsideBounds:
