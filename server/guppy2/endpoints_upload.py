@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 
+import geopandas as gpd
 import rasterio
 from fastapi import UploadFile
 from osgeo import gdal
@@ -64,7 +65,7 @@ def sanitize_input_str(input: str) -> str:
     Returns:
         Sanitized input string with non-alphanumeric characters removed.
     """
-    sanitized_input = re.sub(r'[^a-zA-Z0-9_]', '', input)
+    sanitized_input = re.sub(r'[^a-zA-Z0-9_-]', '', input)
     return sanitized_input
 
 
@@ -76,7 +77,7 @@ def validate_input_str(input: str) -> bool:
     Returns:
         bool: Returns True if the input string contains only alphanumeric characters and underscores, otherwise False.
     """
-    if re.search(r'[^a-zA-Z0-9_]', input):
+    if re.search(r'[^a-zA-Z0-9_-]', input):
         return False
     return True
 
@@ -116,13 +117,11 @@ def check_layer_exists(layer_name: str, db: Session):
 def upload_file(layer_name: str, file: UploadFile, db: Session, is_rgb: bool = False):
     """
     Args:
-        layer_name: A string representing the name of the layer.
-        file: An instance of the UploadFile class representing the file to be uploaded.
-        db: An instance of the Session class representing the database session.
-        is_rgb: A boolean representing whether the file is an RGB image. Default is False.
-    Raises:
-        HTTPException: If there was an error uploading the file.
-        HTTPException: If there was an error validating the file.
+        layer_name (str): The name of the layer.
+        file (UploadFile): The file to upload.
+        db (Session): The database session.
+        is_rgb (bool, optional): Indicates whether the file is in RGB format.
+
     """
 
     filename_without_extension, ext = os.path.splitext(file.filename)
@@ -134,10 +133,86 @@ def upload_file(layer_name: str, file: UploadFile, db: Session, is_rgb: bool = F
 
     check_layer_exists(layer_name=f"{sanitized_layer_name}_{sanitized_filename}", db=db)
 
-    tmp_file_location = f"/content/tifs/uploaded/{sanitized_layer_name}_{sanitized_filename}_tmp.{ext}"
-    file_location = f"/content/tifs/uploaded/{sanitized_layer_name}_{sanitized_filename}.tif"
-    if os.path.exists(file_location):
-        raise create_error(message=f"Upload failed: File {sanitized_layer_name}_{sanitized_filename}.tif already exists.", code=400)
+    file_location, tmp_file_location = create_location_paths_and_check_if_exists(ext, sanitized_filename, sanitized_layer_name)
+
+    write_input_file_to_disk(file, tmp_file_location)
+
+    is_mbtile = create_preprocessed_layer_file(ext, file_location, sanitized_filename, sanitized_layer_name, tmp_file_location)
+
+    insert_into_layer_metadata(layer_uuid=f"{sanitized_layer_name}_{sanitized_filename}", file_path=file_location, db=db, is_rgb=is_rgb, is_mbtile=is_mbtile)
+
+
+def create_preprocessed_layer_file(ext: str, file_location: str, sanitized_filename: str, sanitized_layer_name: str, tmp_file_location: str) -> bool:
+    """
+    Args:
+        ext (str): The extension of the file.
+        file_location (str): The location of the output file.
+        sanitized_filename (str): The sanitized filename.
+        sanitized_layer_name (str): The sanitized layer name.
+        tmp_file_location (str): The temporary file location.
+
+    Returns:
+        bool: True if the file is converted to mbtiles, False otherwise.
+    """
+    is_mbtile = False
+    if ext.lower() in ['.tif', '.tiff', '.asc']:
+        error_list = validate_raster(file_path=tmp_file_location)
+        if error_list:
+            raise create_error(message=f"Upload failed: {', '.join(error_list)}", code=400)
+        else:
+            save_geotif_tiled_overviews(input_file=tmp_file_location, output_file=file_location, nodata=-9999)
+    else:
+        df = gpd.read_file(tmp_file_location)
+        df['fid'] = df.index
+        df.to_crs(epsg=4326, inplace=True)
+        gpkg_loc = f"/content/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}.gpkg"
+        df.to_file(gpkg_loc, index=False)
+        to_mbtiles(sanitized_layer_name, gpkg_loc, file_location)
+        os.remove(tmp_file_location)
+        os.remove(gpkg_loc)
+        is_mbtile = True
+    return is_mbtile
+
+
+def create_location_paths_and_check_if_exists(ext: str, sanitized_filename: str, sanitized_layer_name: str) -> tuple[str, str]:
+    """
+    Creates file paths for the uploaded file and checks if the file already exists.
+
+    Args:
+        ext (str): The file extension.
+        sanitized_filename (str): The sanitized name of the file.
+        sanitized_layer_name (str): The sanitized name of the layer.
+
+    Returns:
+        tuple: A tuple containing the file location and temporary file location.
+
+    Raises:
+        create_error: If the file already exists.
+
+    """
+    if ext.lower() in ['.tif', '.tiff', '.asc', ]:
+        tmp_file_location = f"/content/tifs/uploaded/{sanitized_layer_name}_{sanitized_filename}_tmp.{ext}"
+        file_location = f"/content/tifs/uploaded/{sanitized_layer_name}_{sanitized_filename}.tif"
+        if os.path.exists(file_location):
+            raise create_error(message=f"Upload failed: File {sanitized_layer_name}_{sanitized_filename}.tif already exists.", code=400)
+    else:
+        tmp_file_location = f"/content/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}{ext}"
+        file_location = f"/content/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}.mbtiles"
+        if os.path.exists(file_location):
+            raise create_error(message=f"Upload failed: File {sanitized_layer_name}_{sanitized_filename}.mbtiles already exists.", code=400)
+    return file_location, tmp_file_location
+
+
+def write_input_file_to_disk(file: UploadFile, tmp_file_location: str):
+    """
+    Args:
+        file: The file object containing the input file to be written to disk.
+        tmp_file_location: The temporary file location where the input file will be written.
+
+    Raises:
+        Exception: If there is an error uploading the file.
+
+    """
     if not os.path.exists(os.path.dirname(tmp_file_location)):
         os.makedirs(os.path.dirname(tmp_file_location))
     try:
@@ -148,12 +223,32 @@ def upload_file(layer_name: str, file: UploadFile, db: Session, is_rgb: bool = F
         raise create_error(message=f"Upload failed: There was an error uploading the file.", code=400)
     finally:
         file.file.close()
-    error_list = validate_raster(file_path=tmp_file_location)
-    if error_list:
-        raise create_error(message=f"Upload failed: {', '.join(error_list)}", code=400)
-    else:
-        save_geotif_tiled_overviews(input_file=tmp_file_location, output_file=file_location, nodata=-9999)
-        insert_into_layer_metadata(layer_uuid=f"{sanitized_layer_name}_{sanitized_filename}", file_path=file_location, db=db, is_rgb=is_rgb)
+
+
+def to_mbtiles(name: str, input_file_path: str, output_file_path: str):
+    """
+    Args:
+        name: A string representing the name of the MBTiles file.
+        input_file_path: A string representing the path to the input file.
+        output_file_path: A string representing the path to save the output MBTiles file.
+    """
+    import subprocess
+
+    cmd = [
+        'ogr2ogr',
+        '-f', 'MBTILES',
+        '-dsco', 'MAX_FEATURES=5000000',
+        '-dsco', 'MAX_SIZE=5000000',
+        '-dsco', 'MINZOOM=0',
+        '-dsco', 'MAXZOOM=17',
+        '-dsco', f'NAME={name}',
+        '-lco', f'NAME={name}',
+        '-preserve_fid',
+        output_file_path,
+        input_file_path
+    ]
+
+    subprocess.run(cmd)
 
 
 def validate_file_input(ext: str, file: UploadFile, filename_without_extension: str, layer_name: str):
@@ -173,7 +268,7 @@ def validate_file_input(ext: str, file: UploadFile, filename_without_extension: 
         raise create_error(message=f"Upload failed: Layer name {layer_name} contains invalid characters.", code=400)
     if not validate_input_str(filename_without_extension):
         raise create_error(message=f"Upload failed: File name {file.filename} contains invalid characters.", code=400)
-    if ext not in ['.tif', '.tiff', '.asc']:
+    if ext.lower() not in ['.tif', '.tiff', '.asc', '.gpkg', '.mbtiles', '.geojson']:
         raise create_error(message=f"Upload failed: File extension {ext} is not supported.", code=400)
     if file.size > 100000000:  # 100mb
         raise create_error(message=f"Upload failed: File size {file.size} is too large.", code=400)
@@ -206,7 +301,7 @@ def save_geotif_tiled_overviews(input_file: str, output_file: str, nodata: int) 
     return output_file
 
 
-def insert_into_layer_metadata(layer_uuid: str, file_path: str, db: Session, is_rgb: bool = False):
+def insert_into_layer_metadata(layer_uuid: str, file_path: str, db: Session, is_rgb: bool = False, is_mbtile: bool = False):
     """
     Inserts a record into the layer_metadata table.
 
@@ -216,7 +311,7 @@ def insert_into_layer_metadata(layer_uuid: str, file_path: str, db: Session, is_
         db: The database connection object.
         is_rgb: Optional. Indicates whether the layer is an RGB layer. Default is False.
     """
-    new_layer = LayerMetadata(layer_name=layer_uuid, file_path=file_path, is_rgb=is_rgb)
+    new_layer = LayerMetadata(layer_name=layer_uuid, file_path=file_path, is_rgb=is_rgb, is_mbtile=is_mbtile)
     db.add(new_layer)
     db.commit()
     logger.info("Record inserted into layer metadata")
