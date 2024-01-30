@@ -24,4 +24,5 @@ dependencies:
   - rioxarray
   - jenkspy
   - python-multipart
+  - rio-tiler
 prefix: /opt/mapbase3/server/conda-env

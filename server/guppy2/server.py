@@ -2,7 +2,7 @@
 import logging
 
 import uvicorn
-from fastapi import FastAPI, Depends, APIRouter, UploadFile, File, Form
+from fastapi import FastAPI, Depends, APIRouter, UploadFile, File, Form, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse, FileResponse
 from sqlalchemy.orm import Session
@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 import guppy2.db.schemas as s
 import guppy2.endpoints as endpoints
 import guppy2.endpoints_calc as endpoints_calc
+import guppy2.endpoints_rio_tiler as endpoints_rio_tiler
 import guppy2.endpoints_tiles as endpoints_tiles
 import guppy2.endpoints_upload as endpoints_upload
 from guppy2.config import config as cfg
@@ -18,7 +19,7 @@ from guppy2.db.db_session import SessionLocal
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(docs_url=f"{cfg.deploy.path}/docs", openapi_url=f"{cfg.deploy.path}")
+app = FastAPI(title="guppy", description="A raster analyzer API", docs_url=f"{cfg.deploy.path}/docs", openapi_url=f"{cfg.deploy.path}")
 api = APIRouter(prefix=f"{cfg.deploy.path}")
 
 # Add CORS middleware to allow all origins
@@ -130,9 +131,23 @@ async def read_index():
     return FileResponse('guppy2/html/index.html')
 
 
-@api.get("/tiles/{layer_name}/{z}/{x}/{y}")
+@api.get("/tiles/vector/{layer_name}/{z}/{x}/{y}")
 async def get_tile(layer_name: str, z: int, x: int, y: int, db: Session = Depends(get_db)):
     return endpoints_tiles.get_tile(layer_name=layer_name, db=db, z=z, x=x, y=y)
+
+
+@api.get(
+    r"/tiles/raster/{layer_name}/{z}/{x}/{y}.png",
+    responses={
+        200: {
+            "content": {"image/png": {}}, "description": "Return an image.",
+        }
+    },
+    response_class=Response,
+    description="Read COG and return a tile",
+)
+async def get_tile(layer_name: str, z: int, x: int, y: int, db: Session = Depends(get_db)):
+    return endpoints_rio_tiler.get_tile(layer_name=layer_name, db=db, z=z, x=x, y=y)
 
 
 app.include_router(api)
