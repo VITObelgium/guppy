@@ -289,13 +289,9 @@ def save_geotif_tiled_overviews(input_file: str, output_file: str, nodata: int) 
     Returns:
         The path to the saved output GeoTIFF file.
     """
-    translate_options = gdal.TranslateOptions(gdal.ParseCommandLine(f"-of Gtiff -co COMPRESS=DEFLATE -co TILED=YES -co BIGTIFF=YES -a_nodata {nodata}"))
+    translate_options = gdal.TranslateOptions(gdal.ParseCommandLine(f"-of COG -co COMPRESS=DEFLATE -co BIGTIFF=YES -a_nodata {nodata}"))
     gdal.Translate(output_file, input_file, options=translate_options)
-    image = gdal.Open(output_file, 1)
-    gdal.SetConfigOption('COMPRESS_OVERVIEW', 'DEFLATE')
-    algo = 'NEAREST'
-    image.BuildOverviews(algo, [2, 4, 8, 16, 32, 64, 128, 256, 512])
-    del image
+    gdal.Info(output_file, computeMinMax=True, stats=True)
     os.remove(input_file)
     logger.info('Done transforming tif')
     return output_file
