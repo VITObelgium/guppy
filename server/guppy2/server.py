@@ -132,7 +132,7 @@ async def read_index():
 
 
 @api.get("/tiles/vector/{layer_name}/{z}/{x}/{y}", tags=["tiles"], description="Generate a vector tile for a specified layer.")
-async def get_tile(layer_name: str, z: int, x: int, y: int, db: Session = Depends(get_db)):
+async def get_vector_tile(layer_name: str, z: int, x: int, y: int, db: Session = Depends(get_db)):
     return endpoints_tiles.get_tile(layer_name=layer_name, db=db, z=z, x=x, y=y)
 
 
@@ -146,7 +146,7 @@ async def get_tile(layer_name: str, z: int, x: int, y: int, db: Session = Depend
     response_class=Response,
     description="Read COG and return a png tile", tags=["tiles"],
 )
-async def get_tile(layer_name: str, z: int, x: int, y: int, style: str = None, db: Session = Depends(get_db)):
+async def get_raster_tile(layer_name: str, z: int, x: int, y: int, style: str = None, db: Session = Depends(get_db)):
     return endpoints_rio_tiler.get_tile_for_layer(layer_name=layer_name, db=db, z=z, x=x, y=y, style=style)
 
 
