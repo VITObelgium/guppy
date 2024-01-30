@@ -108,6 +108,7 @@ def get_tile(file_path: str, z: int, x: int, y: int, style: str = None) -> Respo
                 if style != 'shader_rgba':
                     try:
                         colormap = cmap.get(style)
+                        logger.info(f"Using colormap {style}, {img.dataset_statistics}")
                         img.rescale(in_range=img.dataset_statistics)
                     except InvalidColorMapName:
                         raise HTTPException(status_code=404, detail=f"Invalid colormap name: {style}")
