@@ -146,10 +146,10 @@ async def get_tile(layer_name: str, z: int, x: int, y: int, db: Session = Depend
     response_class=Response,
     description="Read COG and return a tile",
 )
-async def get_tile(layer_name: str, z: int, x: int, y: int, db: Session = Depends(get_db)):
-    return endpoints_rio_tiler.get_tile(layer_name=layer_name, db=db, z=z, x=x, y=y)
+async def get_tile(layer_name: str, z: int, x: int, y: int, style: str = None, db: Session = Depends(get_db)):
+    return endpoints_rio_tiler.get_tile_for_layer(layer_name=layer_name, db=db, z=z, x=x, y=y, style=style)
 
 
 app.include_router(api)
 if __name__ == '__main__':
-    uvicorn.run("server:app", port=5000, reload=True)
+    uvicorn.run("server:app", port=5000, reload=True, workers=50)

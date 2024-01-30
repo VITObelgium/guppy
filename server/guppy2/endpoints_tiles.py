@@ -8,6 +8,7 @@ from fastapi import HTTPException, Response
 from sqlalchemy.orm import Session
 
 from guppy2.db.models import LayerMetadata
+from guppy2.endpoint_utils import validate_layer_and_get_file_path
 
 logger = logging.getLogger(__name__)
 
@@ -74,12 +75,7 @@ def get_tile(layer_name: str, db: Session, z: int, x: int, y: int):
     Returns:
         Response: The tile data as a Response object. The media type is set to "application/x-protobuf" and the content encoding is set to "gzip".
     """
-    layer = db.query(LayerMetadata).filter_by(layer_name=layer_name).first()
-    if not layer:
-        raise HTTPException(status_code=404, detail=f"Layer not found: {layer_name}")
-    mb_file = layer.file_path
-    if not os.path.exists(mb_file):
-        raise HTTPException(status_code=404, detail=f"MBTiles file file not found: {mb_file}")
+    mb_file = validate_layer_and_get_file_path(db, layer_name)
 
     try:
         tile_data = get_tile_data(layer_name, mb_file, z, x, y)

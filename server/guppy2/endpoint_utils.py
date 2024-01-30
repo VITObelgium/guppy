@@ -1,10 +1,14 @@
 import math
+import os
 
 import numpy as np
 import rasterio
+from fastapi import HTTPException
 from rasterio.mask import mask, raster_geometry_mask
+from sqlalchemy.orm import Session
 
 from guppy2.db import schemas as s
+from guppy2.db.models import LayerMetadata
 
 
 def get_overview_factor(bounds, native, path):
@@ -46,6 +50,18 @@ def create_stats_response(rst: np.array, mask_array: np.array, nodata: float, ty
 
 
 def _extract_area_from_dataset(raster_ds, geom, crop=True, all_touched=False, is_rgb=False):
+    """
+    Args:
+        raster_ds: A raster dataset from which to extract the area.
+        geom: The geometry representing the area to be extracted.
+        crop: A boolean indicating whether to crop the extracted area to the exact boundaries of the geometry. Default is True.
+        all_touched: A boolean indicating whether to include pixels that are partially covered by the geometry. Default is False.
+        is_rgb: A boolean indicating whether the raster dataset contains RGB values. Default is False.
+
+    Returns:
+        If is_rgb is True, returns a tuple containing the cropped array and the transform. If is_rgb is False, returns a tuple containing the cropped array (with shape (1, height, width
+    *)) and the transform.
+    """
     crop_arr, crop_transform = mask(raster_ds, geom, crop=crop, all_touched=all_touched)
     if is_rgb:
         return crop_arr, crop_transform
@@ -77,3 +93,24 @@ def _decode(data):
     Utility to decode RGB encoded data
     """
     return np.frombuffer(data.reshape(4, -1).transpose().tobytes(), dtype='<f4').reshape((data[0].shape))
+
+
+def validate_layer_and_get_file_path(db: Session, layer_name: str) -> str:
+    """
+    Args:
+        db: The database session to use for querying the LayerMetadata table.
+        layer_name: The name of the layer to validate and get the file path for.
+
+    Returns:
+        The file path of the specified layer.
+
+    Raises:
+        HTTPException: If the layer cannot be found in the database or if the file path does not exist.
+    """
+    layer = db.query(LayerMetadata).filter_by(layer_name=layer_name).first()
+    if not layer:
+        raise HTTPException(status_code=404, detail=f"Layer not found: {layer_name}")
+    file_path = layer.file_path
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
+    return file_path
