@@ -103,7 +103,7 @@ def get_tile(file_path: str, z: int, x: int, y: int, style: str = None) -> Respo
                 img = cog.tile(x, y, z)
                 nodata = cog.dataset.nodata
                 if img.dataset_statistics is None:
-                    stats = cog.statisticts()
+                    stats = cog.statistics()
                     # generate statistics file for next time
                     gdal.Info(file_path, computeMinMax=True, stats=True)
         if img:
