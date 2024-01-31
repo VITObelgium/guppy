@@ -3,7 +3,8 @@ CREATE TABLE "layer_metadata" (
   "layer_name" varchar UNIQUE NOT NULL,
   "file_path" varchar NOT NULL,
   "is_rgb" boolean NOT NULL,
-  "rgb_factor" float
+  "rgb_factor" float,
+  "is_mbtile" boolean NOT NULL
 );
 
 GRANT ALL ON all tables IN SCHEMA guppy2 TO guppy2;

@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class _Database:
+    type: str
     host: str
     user: str
     passwd: str
@@ -66,6 +67,7 @@ def parse_config_file(config_file: str) -> _Config:
             path=yml_data['deploy']['path'],
         ),
         database=_Database(
+            type=yml_data['database']['type'] if 'type' in yml_data['database'] else 'postgres',
             host=yml_data['database']['host'],
             user=yml_data['database']['user'],
             passwd=yml_data['database']['passwd'],
@@ -116,6 +118,7 @@ if guppy2_env_vars:
                     path=guppy2_env_vars['GUPPY_DEPLOY_PATH'],
                 ),
                 database=_Database(
+                    type=guppy2_env_vars['GUPPY_DATABASE_TYPE'] if 'GUPPY_DATABASE_TYPE' in guppy2_env_vars else 'postgres',
                     host=guppy2_env_vars['GUPPY_DATABASE_HOST'],
                     user=guppy2_env_vars['GUPPY_DATABASE_USER'],
                     passwd=guppy2_env_vars['GUPPY_DATABASE_PASSWD'],
