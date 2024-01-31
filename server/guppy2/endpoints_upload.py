@@ -269,7 +269,7 @@ def validate_file_input(ext: str, file: UploadFile, filename_without_extension: 
         raise create_error(message=f"Upload failed: Layer name {layer_name} contains invalid characters.", code=400)
     if not validate_input_str(filename_without_extension):
         raise create_error(message=f"Upload failed: File name {file.filename} contains invalid characters.", code=400)
-    if ext.lower() not in ['.tif', '.tiff', '.asc', '.gpkg', '.mbtiles', '.geojson']:
+    if ext.lower() not in ['.tif', '.tiff', '.asc', '.gpkg', '.geojson']:
         raise create_error(message=f"Upload failed: File extension {ext} is not supported.", code=400)
     if file.size > 100000000:  # 100mb
         raise create_error(message=f"Upload failed: File size {file.size} is too large.", code=400)
