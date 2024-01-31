@@ -64,14 +64,14 @@
 <body>
 
 <div class="description">
-    <p>Please fill in a layer name and select a raster file to upload.</p>
+    <p>Please fill in a layer prefix and select a raster or vector file to upload.</p>
 </div>
 
 <form id="uploadForm" action="/guppy/upload" method="post" enctype="multipart/form-data">
     <label for="layerName">Layer Prefix:</label>
     <input type="text" id="layerName" name="layerName">
     <label for="file">File:</label>
-    <input type="file" id="file" name="file" accept="image/tiff,image/tif,image/x-tiff,image/x-tif,image/asc">
+    <input type="file" id="file" name="file" accept=".tiff,.tif,.asc,.gpkg,.geojson">
     <input type="submit" value="Upload">
 </form>
 
