@@ -14,11 +14,12 @@ import guppy2.endpoints_rio_tiler as endpoints_rio_tiler
 import guppy2.endpoints_tiles as endpoints_tiles
 import guppy2.endpoints_upload as endpoints_upload
 from guppy2.config import config as cfg
-from guppy2.db.db_session import SessionLocal
+from guppy2.db.db_session import SessionLocal, Base, engine
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+Base.metadata.create_all(bind=engine)
 app = FastAPI(title="guppy", description="A raster analyzer API", docs_url=f"{cfg.deploy.path}/docs", openapi_url=f"{cfg.deploy.path}")
 api = APIRouter(prefix=f"{cfg.deploy.path}")
 

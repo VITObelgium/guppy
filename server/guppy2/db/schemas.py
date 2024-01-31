@@ -21,7 +21,6 @@ class LayerMetadataSchema(CamelModel):
     layer_name: str
     file_path: str
     is_rgb: Optional[bool] = False
-    rgb_factor: Optional[float] = None
     is_mbtile: Optional[bool] = False
 
     class Config:

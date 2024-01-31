@@ -1,10 +1,9 @@
 # coding: utf-8
-from sqlalchemy import Column, Integer, String, text, Boolean, Float
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, Integer, String, text, Boolean
 
+from guppy2.db.db_session import Base
 from ..config import config
 
-Base = declarative_base()
 metadata = Base.metadata
 
 
@@ -15,6 +14,5 @@ class LayerMetadata(Base):
     id = Column(Integer, primary_key=True, server_default=text(f"nextval('{config.database.db}.layer_metadata_seq'::regclass)") if config.database.type == 'postgres' else None)
     layer_name = Column(String, nullable=False, unique=True)
     file_path = Column(String, nullable=False)
-    is_rgb = Column(Boolean)
-    rgb_factor = Column(Float)
-    is_mbtile = Column(Boolean)
+    is_rgb = Column(Boolean, nullable=False, default=False, server_default=text('FALSE'))
+    is_mbtile = Column(Boolean, nullable=False, default=False, server_default=text('FALSE'))
