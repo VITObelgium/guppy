@@ -13,7 +13,7 @@ if config.database.type == 'postgres':
     db_url += config.database.host
     db_url += '/'
     db_url += config.database.db
-    connect_args = None
+    connect_args = {}
 elif config.database.type == 'sqlite':
     db_url = f'sqlite:///{config.database.db}'
     connect_args = {"check_same_thread": False}
