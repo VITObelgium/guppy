@@ -6,12 +6,17 @@ import shutil
 
 import geopandas as gpd
 import rasterio
-from fastapi import UploadFile
+from fastapi import UploadFile, Depends
 from osgeo import gdal
 from sqlalchemy.orm import Session
 
+from guppy2 import endpoints as endpoints
+from guppy2.db import schemas as s
+
 from guppy2.db.models import LayerMetadata
 from guppy2.error import create_error
+from guppy2.server import api
+from guppy2.db.dependencies import get_db
 
 logger = logging.getLogger(__name__)
 

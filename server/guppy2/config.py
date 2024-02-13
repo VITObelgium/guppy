@@ -119,9 +119,9 @@ if guppy2_env_vars:
                 ),
                 database=_Database(
                     type=guppy2_env_vars['GUPPY_DATABASE_TYPE'] if 'GUPPY_DATABASE_TYPE' in guppy2_env_vars else 'postgres',
-                    host=guppy2_env_vars['GUPPY_DATABASE_HOST']if 'GUPPY_DATABASE_HOST' in guppy2_env_vars else '',
-                    user=guppy2_env_vars['GUPPY_DATABASE_USER']if 'GUPPY_DATABASE_USER' in guppy2_env_vars else '',
-                    passwd=guppy2_env_vars['GUPPY_DATABASE_PASSWD']if 'GUPPY_DATABASE_PASSWD' in guppy2_env_vars else '',
+                    host=guppy2_env_vars['GUPPY_DATABASE_HOST'] if 'GUPPY_DATABASE_HOST' in guppy2_env_vars else '',
+                    user=guppy2_env_vars['GUPPY_DATABASE_USER'] if 'GUPPY_DATABASE_USER' in guppy2_env_vars else '',
+                    passwd=guppy2_env_vars['GUPPY_DATABASE_PASSWD'] if 'GUPPY_DATABASE_PASSWD' in guppy2_env_vars else '',
                     db=guppy2_env_vars['GUPPY_DATABASE_DB'],
                 ),
                 guppy=_Guppy(size_limit=int(float(guppy2_env_vars['GUPPY_SIZE_LIMIT'])) if 'GUPPY_SIZE_LIMIT' in guppy2_env_vars else 10000),
