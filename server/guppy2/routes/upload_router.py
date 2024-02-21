@@ -19,4 +19,4 @@ async def upload_file(layerName: str = Form(...), isRgb: bool = Form(False), fil
 
 @router.get("/ui", description="simple UI to upload a  file (GeoTiff or Gpkg) to the server.")
 async def read_index():
-    return FileResponse('/opt/guppy2/server/guppy2/html/index.html')
+    return FileResponse('guppy2/html/index.html')
