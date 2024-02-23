@@ -192,13 +192,13 @@ def create_location_paths_and_check_if_exists(ext: str, sanitized_filename: str,
 
     """
     if ext.lower() in ['.tif', '.tiff', '.asc', ]:
-        tmp_file_location = f"content/tifs/uploaded/{sanitized_layer_name}_{sanitized_filename}_tmp.{ext}"
-        file_location = f"content/tifs/uploaded/{sanitized_layer_name}_{sanitized_filename}.tif"
+        tmp_file_location = f"/content/tifs/uploaded/{sanitized_layer_name}_{sanitized_filename}_tmp.{ext}"
+        file_location = f"/content/tifs/uploaded/{sanitized_layer_name}_{sanitized_filename}.tif"
         if os.path.exists(file_location):
             raise create_error(message=f"Upload failed: File {sanitized_layer_name}_{sanitized_filename}.tif already exists.", code=400)
     else:
-        tmp_file_location = f"content/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}{ext}"
-        file_location = f"content/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}.mbtiles"
+        tmp_file_location = f"/content/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}{ext}"
+        file_location = f"/content/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}.mbtiles"
         if os.path.exists(file_location):
             raise create_error(message=f"Upload failed: File {sanitized_layer_name}_{sanitized_filename}.mbtiles already exists.", code=400)
     return file_location, tmp_file_location
