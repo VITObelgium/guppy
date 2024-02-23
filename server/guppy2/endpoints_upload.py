@@ -162,6 +162,8 @@ def create_preprocessed_layer_file(ext: str, file_location: str, sanitized_filen
             raise create_error(message=f"Upload failed: {', '.join(error_list)}", code=400)
         else:
             save_geotif_tiled_overviews(input_file=tmp_file_location, output_file=file_location, nodata=-9999)
+    elif ext.lower() in ['.mbtiles']:
+        is_mbtile = True
     else:
         df = gpd.read_file(tmp_file_location)
         df['fid'] = df.index
@@ -197,6 +199,11 @@ def create_location_paths_and_check_if_exists(ext: str, sanitized_filename: str,
         file_location = f"/content/tifs/uploaded/{sanitized_layer_name}_{sanitized_filename}.tif"
         if os.path.exists(file_location):
             raise create_error(message=f"Upload failed: File {sanitized_layer_name}_{sanitized_filename}.tif already exists.", code=400)
+    elif ext.lower() in ['.mbtiles']:
+        file_location = f"/content/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}.mbtiles"
+        tmp_file_location = file_location
+        if os.path.exists(file_location):
+            raise create_error(message=f"Upload failed: File {sanitized_layer_name}_{sanitized_filename}.mbtiles already exists.", code=400)
     else:
         tmp_file_location = f"/content/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}{ext}"
         file_location = f"/content/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}.mbtiles"
@@ -270,7 +277,7 @@ def validate_file_input(ext: str, file: UploadFile, filename_without_extension: 
         raise create_error(message=f"Upload failed: Layer name {layer_name} contains invalid characters.", code=400)
     if not validate_input_str(filename_without_extension):
         raise create_error(message=f"Upload failed: File name {file.filename} contains invalid characters.", code=400)
-    if ext.lower() not in ['.tif', '.tiff', '.asc', '.gpkg', '.geojson']:
+    if ext.lower() not in ['.tif', '.tiff', '.asc', '.gpkg', '.geojson', '.mbtiles']:
         raise create_error(message=f"Upload failed: File extension {ext} is not supported.", code=400)
     if file.size > 1000000000:  # 1000mb
         raise create_error(message=f"Upload failed: File size {file.size} is too large.", code=400)
