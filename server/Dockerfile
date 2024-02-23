@@ -26,6 +26,7 @@ USER guppy2
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
+ENV PATH /opt/guppy2/server/conda-env/bin:$PATH
 
 EXPOSE 8080
 CMD ["conda-env/bin/gunicorn", "--bind", "0.0.0.0:8080", "--worker-tmp-dir", "/dev/shm", "--workers=2", "--timeout=300", "--threads=4", "--worker-class=uvicorn.workers.UvicornWorker", "--log-file=-", "guppy2.server:app"]
