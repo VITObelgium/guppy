@@ -43,7 +43,7 @@ def get_tile_data(layer_name: str, mb_file: str, z: int, x: int, y: int) -> Opti
             else:
                 return None
     except Exception as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 def log_cache_info():
@@ -85,4 +85,4 @@ def get_tile(layer_name: str, db: Session, z: int, x: int, y: int):
         else:
             raise HTTPException(status_code=404, detail="Tile not found")
     except Exception as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e))
