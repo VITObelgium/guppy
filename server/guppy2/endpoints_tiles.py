@@ -13,7 +13,6 @@ from guppy2.endpoint_utils import validate_layer_and_get_file_path
 logger = logging.getLogger(__name__)
 
 
-@lru_cache(maxsize=128)
 def get_tile_data(layer_name: str, mb_file: str, z: int, x: int, y: int) -> Optional[bytes]:
     """
     Args:
@@ -79,7 +78,7 @@ def get_tile(layer_name: str, db: Session, z: int, x: int, y: int):
 
     try:
         tile_data = get_tile_data(layer_name, mb_file, z, x, y)
-        log_cache_info()
+        # log_cache_info()
         if tile_data:
             return Response(tile_data, media_type="application/x-protobuf", headers={"Content-Encoding": "gzip"})
         else:
