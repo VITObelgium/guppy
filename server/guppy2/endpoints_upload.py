@@ -170,7 +170,8 @@ def create_preprocessed_layer_file(ext: str, file_location: str, sanitized_filen
         df.to_file(gpkg_loc, index=False)
         to_mbtiles(sanitized_layer_name, gpkg_loc, file_location)
         os.remove(tmp_file_location)
-        os.remove(gpkg_loc)
+        if os.path.exists(gpkg_loc):
+            os.remove(gpkg_loc)
         is_mbtile = True
     return is_mbtile
 
