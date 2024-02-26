@@ -10,6 +10,8 @@ from sqlalchemy.orm import Session
 from guppy2.db import schemas as s
 from guppy2.db.models import LayerMetadata
 
+layer_data_chache = {}
+
 
 def get_overview_factor(bounds, native, path):
     if not native:
@@ -107,10 +109,12 @@ def validate_layer_and_get_file_path(db: Session, layer_name: str) -> str:
     Raises:
         HTTPException: If the layer cannot be found in the database or if the file path does not exist.
     """
-    layer = db.query(LayerMetadata).filter_by(layer_name=layer_name).first()
-    if not layer:
-        raise HTTPException(status_code=404, detail=f"Layer not found: {layer_name}")
-    file_path = layer.file_path
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
-    return file_path
+    if layer_name not in layer_data_chache:
+        layer = db.query(LayerMetadata).filter_by(layer_name=layer_name).first()
+        if not layer:
+            raise HTTPException(status_code=404, detail=f"Layer not found: {layer_name}")
+        file_path = layer.file_path[1:]
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
+        layer_data_chache[layer_name] = file_path
+    return layer_data_chache[layer_name]

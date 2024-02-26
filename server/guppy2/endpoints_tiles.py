@@ -1,5 +1,4 @@
 import logging
-import os
 import sqlite3
 from functools import lru_cache
 from typing import Optional
@@ -7,7 +6,6 @@ from typing import Optional
 from fastapi import HTTPException, Response
 from sqlalchemy.orm import Session
 
-from guppy2.db.models import LayerMetadata
 from guppy2.endpoint_utils import validate_layer_and_get_file_path
 
 logger = logging.getLogger(__name__)
@@ -34,7 +32,8 @@ def get_tile_data(layer_name: str, mb_file: str, z: int, x: int, y: int) -> Opti
     y = (1 << z) - 1 - y
     logger.info(f"Getting tile for layer {layer_name} at zoom {z}, x {x}, y {y}")
     try:
-        with sqlite3.connect(mb_file) as conn:
+        uri = f'file:{mb_file}?mode=ro'
+        with sqlite3.connect(uri, uri=True) as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT tile_data FROM tiles WHERE zoom_level=? AND tile_column=? AND tile_row=?", (z, x, y))
             tile = cursor.fetchone()
