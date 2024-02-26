@@ -113,7 +113,7 @@ def validate_layer_and_get_file_path(db: Session, layer_name: str) -> str:
         layer = db.query(LayerMetadata).filter_by(layer_name=layer_name).first()
         if not layer:
             raise HTTPException(status_code=404, detail=f"Layer not found: {layer_name}")
-        file_path = layer.file_path[1:]
+        file_path = layer.file_path
         if not os.path.exists(file_path):
             raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
         layer_data_chache[layer_name] = file_path
