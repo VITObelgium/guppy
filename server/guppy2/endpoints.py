@@ -135,6 +135,18 @@ def get_stats_for_wkt(db: Session, layer_name: str, body: s.GeometryBody, native
 
 
 def get_stats_for_model(layer_model, native, geom, srs):
+    """
+    Get the statistics for a given model.
+
+    Args:
+        layer_model: The layer model containing the file path.
+        native: The native coordinate system of the model.
+        geom: The geometry for which to extract statistics.
+        srs: The target coordinate system for the geometry.
+
+    Returns:
+        The statistics response if successful, otherwise None.
+    """
     path = layer_model.file_path
     if os.path.exists(path) and geom:
         with rasterio.open(path) as src:
@@ -161,6 +173,16 @@ def get_stats_for_model(layer_model, native, geom, srs):
 
 
 def get_stats_for_wkt_list(db: Session, body: s.GeometryBodyList, native: bool):
+    """
+    Args:
+        db: The database session object.
+        body: An instance of s.GeometryBodyList containing the list of layer names and the geometry in Well-Known Text (WKT) format.
+        native: A boolean indicating whether to use native database functions for calculating statistics.
+
+    Returns:
+        If the layer metadata is found in the database, returns a list of statistics calculated for each layer in the body. If no statistics are found, returns a HTTP 204 response. If the
+    * layer metadata is not found, returns a HTTP 404 response.
+    """
     t = time.time()
     layer_models = db.query(m.LayerMetadata).filter(m.LayerMetadata.layer_name.in_(body.layer_names)).all()
     if layer_models:
