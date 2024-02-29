@@ -21,7 +21,7 @@ async def upload_file(layerName: str = Form(...), isRgb: bool = Form(False), fil
 
 @router.get("/upload/ui", description="simple UI to upload a  file (GeoTiff or Gpkg) to the server.")
 def read_index():
-    return FileResponse('html/index.html')
+    return FileResponse('guppy2/html/index.html')
 
 
 @router.delete("/layer/{layerName}", description="Delete a layer from the server.")
