@@ -42,3 +42,8 @@ def insert_layer(layerName: str, file_path: str, is_rgb: bool, is_mbtile: bool, 
 @router.get("/cache/clear", description="Clear the tile cache.")
 def clear_cache():
     return endpoints_tiles.clear_tile_cache()
+
+
+@router.get("/tilestats", description="Get tile statistics.")
+def get_tile_statistics(layerName: str, db: Session = Depends(get_db)):
+    return endpoints_tiles.get_tile_statistics(db=db, layer_name=layerName)

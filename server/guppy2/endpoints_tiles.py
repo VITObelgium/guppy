@@ -143,3 +143,22 @@ def get_tile(layer_name: str, db: Session, z: int, x: int, y: int):
             create_error(code=404, message="Tile not found")
     except Exception as e:
         create_error(code=404, message=str(e))
+
+
+def get_tile_statistics(db: Session, layer_name: str):
+    """
+    Args:
+        db (Session): The database session object.
+        layer_name (str): The name of the layer to retrieve the tile statistics for.
+
+    Raises:
+        HTTPException: If the layer is not found, or if an internal server error occurs.
+
+    Returns:
+        List[TileStatistics]: A list of TileStatistics objects.
+    """
+    try:
+        stats = db.query(TileStatistics).filter_by(layer_name=layer_name).order_by(TileStatistics.z).order_by(TileStatistics.count).all()
+        return stats
+    except Exception as e:
+        create_error(code=404, message=str(e))
