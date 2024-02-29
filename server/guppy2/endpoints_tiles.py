@@ -58,6 +58,18 @@ def log_cache_info():
     cache_info = get_tile_data.cache_info()
     logger.info(f"Cache hits: {cache_info.hits}, Cache misses: {cache_info.misses}")
 
+def clear_tile_cache():
+    """
+    Clears the tile cache.
+
+    Raises:
+        None
+
+    Returns:
+        None
+    """
+    get_tile_data.cache_clear()
+    logger.info("Tile cache cleared")
 
 def get_tile(layer_name: str, db: Session, z: int, x: int, y: int):
     """

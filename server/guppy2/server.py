@@ -12,7 +12,7 @@ from guppy2.routes.data_router import router as data_router
 from guppy2.routes.general_router import router as general_router
 from guppy2.routes.stats_router import router as stats_router
 from guppy2.routes.tiles_router import router as tiles_router
-from guppy2.routes.upload_router import router as upload_router
+from guppy2.routes.admin_router import router as upload_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
