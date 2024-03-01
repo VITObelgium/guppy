@@ -30,7 +30,7 @@ def save_request_counts():
             with request_counter_lock:
                 counts_to_save = request_counter.copy()
                 request_counter.clear()
-            print(f"Saving request counts.")
+            logger.info(f"Saving request counts.")
             for tile, count in counts_to_save.items():
                 layer_name, z, x, y = tile.split('/')
                 stat = db.query(TileStatistics).filter_by(layer_name=layer_name, x=int(x), y=int(y), z=int(z)).first()
@@ -40,7 +40,7 @@ def save_request_counts():
                     db.add(TileStatistics(layer_name=layer_name, x=x, y=y, z=z, count=count))
             db.commit()
         except Exception as e:
-            print(f"Exception occurred: {e}")
+            logger.error(f"Exception occurred: {e}")
             db.rollback()
         finally:
             db.close()
