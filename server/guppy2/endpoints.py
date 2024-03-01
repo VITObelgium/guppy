@@ -435,12 +435,12 @@ def get_line_object_list_for_wkt(db: Session, layer_name: str, body: s.LineObjec
         if line_points_df is not None:
             result_df = gpd.sjoin_nearest(input_file_df, line_points_df, max_distance=int(body.distance), distance_col='join_dist')
             result_df = result_df.loc[result_df.groupby(['index_right', 'modeleenheid'])['join_dist'].idxmin()]  # keep closest
-            result_df.fillna('', inplace=True)
+            result_df = result_df.astype(object).fillna('')
             result_df = result_df.to_wkt()
             result_df = pd.DataFrame(result_df)
             result = result_df.to_dict(orient='records')
         else:
-            input_file_df.fillna('', inplace=True)
+            input_file_df = input_file_df.astype(object).fillna('')
             input_file_df = input_file_df.to_wkt()
             result_df = pd.DataFrame(input_file_df)
             result = result_df.to_dict(orient='records')
