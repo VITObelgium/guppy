@@ -30,7 +30,8 @@ def save_request_counts():
             with request_counter_lock:
                 counts_to_save = request_counter.copy()
                 request_counter.clear()
-            logger.info(f"Saving request counts.")
+            if counts_to_save:
+                logger.info(f"Saving {len(counts_to_save)} request counts.")
             for tile, count in counts_to_save.items():
                 layer_name, z, x, y = tile.split('/')
                 stat = db.query(TileStatistics).filter_by(layer_name=layer_name, x=int(x), y=int(y), z=int(z)).first()
