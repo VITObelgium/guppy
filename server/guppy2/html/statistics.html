@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tile Statistics</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        form {
+            margin-bottom: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        input[type=text], input[type=checkbox] {
+            margin-bottom: 10px;
+            display: block;
+            width: calc(100% - 22px);
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            text-align: center;
+            display: inline-block;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f0f0f0;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .deleteButton {
+            background-color: #ff4d4d;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .deleteButton:hover {
+            background-color: #cc0000;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tile Statistics</h1>
+    <!-- Input for filtering by Z value -->
+    <div>
+        Filter by Z: <input type="number" id="zFilter" placeholder="Enter Z value">
+        <button onclick="filterByZ()">Filter</button>
+    </div>
+    <div id="tilesList"></div>
+
+    <script>
+        async function loadTiles() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const layerName = urlParams.get('layerName');
+            const response = await fetch(`$deploy_path$/admin/tilestats?layerName=${encodeURIComponent(layerName)}`);
+            if (!response.ok) {
+                document.getElementById('tilesList').innerHTML = 'Failed to load tile statistics.';
+                return;
+            }
+
+            const tiles = await response.json();
+            const container = document.getElementById('tilesList');
+            container.innerHTML = ''; // Clear previous content
+
+            // Create a table structure
+            const table = document.createElement('table');
+            table.innerHTML = `<tr>
+                                    <th>Layer</th>
+                                    <th>X</th>
+                                    <th>Y</th>
+                                    <th>Z</th>
+                                    <th>Count</th>
+                               </tr>`;
+            container.appendChild(table);
+
+            tiles.forEach((tile, index) => {
+                const row = table.insertRow(-1);
+                row.innerHTML = `<td>${tile.layerName}</td>
+                                 <td>${tile.x}</td>
+                                 <td>${tile.y}</td>
+                                 <td>${tile.z}</td>
+                                 <td>${tile.count}</td>`;
+                row.classList.add("tile-row"); // Add class for easy selection
+                row.setAttribute("data-z", tile.z); // Store the z value as a data attribute
+            });
+        }
+
+        function filterByZ() {
+            const zFilter = document.getElementById('zFilter').value;
+            const rows = document.querySelectorAll(".tile-row");
+
+            rows.forEach(row => {
+                if (zFilter === "" || row.getAttribute("data-z") === zFilter) {
+                    row.style.display = ""; // Show rows that match or when filter is cleared
+                } else {
+                    row.style.display = "none"; // Hide rows that don't match the filter
+                }
+            });
+        }
+
+        loadTiles();
+    </script>
+</body>
+</html>

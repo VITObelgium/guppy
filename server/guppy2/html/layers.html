@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Layer Metadata</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        form {
+            margin-bottom: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        input[type=text], input[type=checkbox] {
+            margin-bottom: 10px;
+            display: block;
+            width: calc(100% - 22px);
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            text-align: center;
+            display: inline-block;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f0f0f0;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .deleteButton {
+            background-color: #ff4d4d;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .deleteButton:hover {
+            background-color: #cc0000;
+        }
+    </style>
+</head>
+<body>
+<h1>Layer Metadata</h1>
+<form id="addLayerForm">
+    <input type="text" id="layer_name" name="layer_name" placeholder="Layer Name" required>
+    <input type="text" id="file_path" name="file_path" placeholder="File Path" required>
+    <label>
+        <input type="checkbox" id="is_rgb" name="is_rgb"> Is RGB
+    </label>
+    <label>
+        <input type="checkbox" id="is_mbtile" name="is_mbtile"> Is MBTile
+    </label>
+    <br>
+    <br>
+    <button type="submit">Add Layer</button>
+</form>
+
+<div id="layersList"></div>
+
+<script>
+    document.getElementById('addLayerForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const layerName = document.getElementById('layer_name').value;
+        const filePath = document.getElementById('file_path').value;
+        const isRgb = document.getElementById('is_rgb').checked;
+        const isMbtile = document.getElementById('is_mbtile').checked;
+
+        const response = await fetch('$deploy_path$/admin/layer', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({layerName, filePath, isRgb, isMbtile}),
+        });
+
+        if (response.ok) {
+            console.log('Layer added');
+            location.reload();
+        } else {
+            console.error('Error adding layer');
+        }
+    };
+
+    async function loadLayers() {
+        const response = await fetch('$deploy_path$/layers');
+        const layers = await response.json();
+        const container = document.getElementById('layersList');
+
+        // Clear previous content
+        container.innerHTML = '';
+
+        // Create a table and a header row
+        const table = document.createElement('table');
+        table.innerHTML = `
+            <tr>
+                <th>Name</th>
+                <th>Path</th>
+                <th>Is RGB</th>
+                <th>Is MBTile</th>
+                <th>Actions</th>
+                <th>View Stats</th>
+            </tr>
+        `;
+        container.appendChild(table);
+
+        // Insert rows into the table for each layer
+        layers.forEach(layer => {
+            const row = table.insertRow(-1); // Append row to the end of the table
+            const nameCell = row.insertCell(0);
+            const pathCell = row.insertCell(1);
+            const rgbCell = row.insertCell(2);
+            const mbtileCell = row.insertCell(3);
+            const deleteCell = row.insertCell(4); // Cell for the delete button
+            const statsCell = row.insertCell(5); // Cell for the stats button
+
+            nameCell.textContent = layer.layerName;
+            pathCell.textContent = layer.filePath;
+            rgbCell.textContent = layer.isRgb ? 'Yes' : 'No';
+            mbtileCell.textContent = layer.isMbtile ? 'Yes' : 'No';
+
+            // Create a delete button
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = 'Delete';
+            deleteButton.onclick = async () => {
+                try {
+                    const response = await fetch(`$deploy_path$/admin/layer/${layer.layerName}`, {
+                        method: 'DELETE',
+                    });
+                    if (response.ok) {
+                        // Remove the row from the table if the delete was successful
+                        row.remove();
+                    } else {
+                        console.error('Failed to delete the layer');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            };
+            deleteCell.appendChild(deleteButton);
+            // Create and append the View Stats button
+            const statsButton = document.createElement('button');
+            statsButton.textContent = 'View Stats';
+            statsButton.onclick = function() {
+                window.location.href = `$deploy_path$/admin/stats?layerName=${encodeURIComponent(layer.layerName)}`;
+            };
+            statsCell.appendChild(statsButton);
+        });
+    }
+
+
+    loadLayers();
+</script>
+</body>
+</html>

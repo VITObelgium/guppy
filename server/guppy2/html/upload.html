@@ -57,7 +57,7 @@
     <script>
         window.onload = function () {
             var baseUrl = window.location.origin; // Extracts the base URL
-            document.getElementById("uploadForm").action = baseUrl + "/guppy/upload";
+            document.getElementById("uploadForm").action = baseUrl + "$deploy_path$/upload";
         };
     </script>
 </head>
@@ -67,7 +67,7 @@
     <p>Please fill in a layer prefix and select a raster or vector file to upload.</p>
 </div>
 
-<form id="uploadForm" action="/guppy/upload" method="post" enctype="multipart/form-data">
+<form id="uploadForm" action="$deploy_path$/upload" method="post" enctype="multipart/form-data">
     <label for="layerName">Layer Prefix:</label>
     <input type="text" id="layerName" name="layerName">
     <label for="file">File:</label>

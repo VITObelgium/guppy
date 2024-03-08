@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse
 from guppy2.config import config as cfg
 from guppy2.db.db_session import Base, engine
 from guppy2.endpoints_tiles import save_request_counts
-from guppy2.routes.admin_router import router as upload_router
+from guppy2.routes.admin_router import router as admin_router
 from guppy2.routes.calculation_router import router as calculation_router
 from guppy2.routes.data_router import router as data_router
 from guppy2.routes.general_router import router as general_router
@@ -50,12 +50,12 @@ async def shutdown_event():
 
 @app.get('/favicon.ico', include_in_schema=False)
 async def favicon():
-    return FileResponse('favicon.ico')
+    return FileResponse('guppy2/html/favicon.ico')
 
 
 app.include_router(general_router)
 app.include_router(tiles_router)
-app.include_router(upload_router)
+app.include_router(admin_router)
 app.include_router(data_router)
 app.include_router(stats_router)
 app.include_router(calculation_router)

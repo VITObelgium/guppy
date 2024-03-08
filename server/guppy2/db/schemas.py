@@ -168,3 +168,10 @@ class RasterCalculationBody(CamelModel):
     rescale_result: Optional[RescaleResult] = None
     layer_list_after_rescale: Optional[list[CombineLayersList]] = None
     result_style: Optional[str] = None
+
+
+class LayerMetadataBody(CamelModel):
+    layer_name: str
+    file_path: str
+    is_rgb: Optional[bool] = False
+    is_mbtile: Optional[bool] = False
