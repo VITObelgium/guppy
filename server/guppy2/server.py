@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse
 
 from guppy2.config import config as cfg
 from guppy2.db.db_session import Base, engine
-from guppy2.endpoints_tiles import save_request_counts
+from guppy2.endpoints_tiles import save_request_counts, save_request_counts_timer
 from guppy2.routes.admin_router import router as admin_router
 from guppy2.routes.calculation_router import router as calculation_router
 from guppy2.routes.data_router import router as data_router
@@ -34,7 +34,7 @@ app.add_middleware(
 
 
 def start_background_task():
-    thread = threading.Thread(target=save_request_counts, daemon=True)
+    thread = threading.Thread(target=save_request_counts_timer, daemon=True)
     thread.start()
 
 

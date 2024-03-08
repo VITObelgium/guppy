@@ -21,30 +21,34 @@ request_counter = {}
 request_counter_lock = Lock()
 
 
-def save_request_counts():
+def save_request_counts_timer():
     while True:
         time.sleep(60)  # Update interval, e.g., every hour
-        db = SessionLocal()
-        try:
-            # Perform operations with db session
-            with request_counter_lock:
-                counts_to_save = request_counter.copy()
-                request_counter.clear()
-            if counts_to_save:
-                logger.info(f"Saving {len(counts_to_save)} request counts.")
-            for tile, count in counts_to_save.items():
-                layer_name, z, x, y = tile.split('/')
-                stat = db.query(TileStatistics).filter_by(layer_name=layer_name, x=int(x), y=int(y), z=int(z)).first()
-                if stat:
-                    stat.count += count
-                else:
-                    db.add(TileStatistics(layer_name=layer_name, x=x, y=y, z=z, count=count))
-            db.commit()
-        except Exception as e:
-            logger.error(f"Exception occurred: {e}")
-            db.rollback()
-        finally:
-            db.close()
+        save_request_counts()
+
+
+def save_request_counts():
+    db = SessionLocal()
+    try:
+        # Perform operations with db session
+        with request_counter_lock:
+            counts_to_save = request_counter.copy()
+            request_counter.clear()
+        if counts_to_save:
+            logger.info(f"Saving {len(counts_to_save)} request counts.")
+        for tile, count in counts_to_save.items():
+            layer_name, z, x, y = tile.split('/')
+            stat = db.query(TileStatistics).filter_by(layer_name=layer_name, x=int(x), y=int(y), z=int(z)).first()
+            if stat:
+                stat.count += count
+            else:
+                db.add(TileStatistics(layer_name=layer_name, x=x, y=y, z=z, count=count))
+        db.commit()
+    except Exception as e:
+        logger.error(f"Exception occurred: {e}")
+        db.rollback()
+    finally:
+        db.close()
 
 
 def add_item_to_request_counter(layer_name, z, x, y):
