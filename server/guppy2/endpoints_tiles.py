@@ -150,7 +150,7 @@ def get_tile(layer_name: str, db: Session, z: int, x: int, y: int):
         create_error(code=404, message=str(e))
 
 
-def get_tile_statistics(db: Session, layer_name: str):
+def get_tile_statistics(db: Session, layer_name: str, offset: int = 0, limit: int = 20):
     """
     Args:
         db (Session): The database session object.
@@ -163,7 +163,7 @@ def get_tile_statistics(db: Session, layer_name: str):
         List[TileStatistics]: A list of TileStatistics objects.
     """
     try:
-        stats = db.query(TileStatistics).filter_by(layer_name=layer_name).order_by(TileStatistics.z).order_by(TileStatistics.count).all()
+        stats = db.query(TileStatistics).filter_by(layer_name=layer_name).order_by(TileStatistics.count).offset(offset).limit(limit).all()
         return stats
     except Exception as e:
         create_error(code=404, message=str(e))

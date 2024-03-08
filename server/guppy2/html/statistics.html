@@ -93,12 +93,20 @@
         <button onclick="filterByZ()">Filter</button>
     </div>
     <div id="tilesList"></div>
-
+    <div id="pagination">
+        <button onclick="changePage(-1)">Prev</button>
+        <span id="currentPage">1</span>
+        <button onclick="changePage(1)">Next</button>
+    </div>
     <script>
-        async function loadTiles() {
+        let currentPage = 1;
+        const limit = 20; // Items per page
+        async function loadTiles(page = 1) {
             const urlParams = new URLSearchParams(window.location.search);
             const layerName = urlParams.get('layerName');
-            const response = await fetch(`$deploy_path$/admin/tilestats?layerName=${encodeURIComponent(layerName)}`);
+            const offset = (page - 1) * limit;
+            // Updated URL to include pagination parameters
+            const response = await fetch(`$deploy_path$/admin/tilestats?layerName=${encodeURIComponent(layerName)}&offset=${offset}&limit=${limit}`);
             if (!response.ok) {
                 document.getElementById('tilesList').innerHTML = 'Failed to load tile statistics.';
                 return;
@@ -119,16 +127,22 @@
                                </tr>`;
             container.appendChild(table);
 
-            tiles.forEach((tile, index) => {
+            tiles.forEach((tile) => {
                 const row = table.insertRow(-1);
                 row.innerHTML = `<td>${tile.layerName}</td>
                                  <td>${tile.x}</td>
                                  <td>${tile.y}</td>
                                  <td>${tile.z}</td>
                                  <td>${tile.count}</td>`;
-                row.classList.add("tile-row"); // Add class for easy selection
-                row.setAttribute("data-z", tile.z); // Store the z value as a data attribute
             });
+
+            // Update current page display
+            document.getElementById('currentPage').textContent = page;
+        }
+
+        function changePage(direction) {
+            currentPage += direction;
+            loadTiles(currentPage);
         }
 
         function filterByZ() {
