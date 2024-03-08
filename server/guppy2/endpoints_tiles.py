@@ -163,7 +163,7 @@ def get_tile_statistics(db: Session, layer_name: str, offset: int = 0, limit: in
         List[TileStatistics]: A list of TileStatistics objects.
     """
     try:
-        stats = db.query(TileStatistics).filter_by(layer_name=layer_name).order_by(TileStatistics.count).offset(offset).limit(limit).all()
+        stats = db.query(TileStatistics).filter_by(layer_name=layer_name).order_by(TileStatistics.count.desc()).offset(offset).limit(limit).all()
         return stats
     except Exception as e:
         create_error(code=404, message=str(e))
