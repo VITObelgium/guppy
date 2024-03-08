@@ -7,7 +7,7 @@ from guppy2 import endpoints_tiles as endpoints_tiles
 from guppy2 import endpoints_upload as endpoints_upload
 from guppy2.config import config as cfg
 from guppy2.db.dependencies import get_db
-from guppy2.db.schemas import LayerMetadataBody
+from guppy2.db.schemas import LayerMetadataBody, TileStatisticsSchema
 
 router = APIRouter(
     prefix=f"{cfg.deploy.path}/admin",
@@ -67,6 +67,6 @@ def clear_cache():
     return endpoints_tiles.clear_tile_cache()
 
 
-@router.get("/tilestats", description="Get tile statistics.")
+@router.get("/tilestats", response_model=TileStatisticsSchema, description="Get tile statistics.")
 def get_tile_statistics(layerName: str, db: Session = Depends(get_db)):
     return endpoints_tiles.get_tile_statistics(db=db, layer_name=layerName)

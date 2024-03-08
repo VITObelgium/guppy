@@ -175,3 +175,14 @@ class LayerMetadataBody(CamelModel):
     file_path: str
     is_rgb: Optional[bool] = False
     is_mbtile: Optional[bool] = False
+
+class TileStatisticsSchema(CamelModel):
+    id: int
+    layer_name: str
+    x: int
+    y: int
+    z: int
+    count: int
+
+    class Config:
+        from_attributes = True
