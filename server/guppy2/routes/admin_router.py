@@ -67,6 +67,6 @@ def clear_cache():
     return endpoints_tiles.clear_tile_cache()
 
 
-@router.get("/tilestats", response_model=TileStatisticsSchema, description="Get tile statistics.")
+@router.get("/tilestats", response_model=list[TileStatisticsSchema], description="Get tile statistics.")
 def get_tile_statistics(layerName: str, db: Session = Depends(get_db)):
     return endpoints_tiles.get_tile_statistics(db=db, layer_name=layerName)
