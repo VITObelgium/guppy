@@ -1,5 +1,5 @@
 from fastapi import Form, UploadFile, File, Depends, APIRouter
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from sqlalchemy.orm import Session
 
 from guppy2 import endpoints_admin as endpoints_admin
@@ -70,3 +70,9 @@ def clear_cache():
 @router.get("/tilestats", response_model=list[TileStatisticsSchema], description="Get tile statistics.")
 def get_tile_statistics(layerName: str, offset: int = 0, limit: int = 20, db: Session = Depends(get_db)):
     return endpoints_tiles.get_tile_statistics(db=db, layer_name=layerName, offset=offset, limit=limit)
+
+
+@router.get('/tilestatsgpkg')
+def tiles(layerName: str, db: Session = Depends(get_db)):
+    gpkg_bytes = endpoints_tiles.get_tile_statistics_images(db=db, layer_name=layerName)
+    return Response(gpkg_bytes, media_type="application/geopackage+sqlite3", headers={"Content-Disposition": f"attachment;filename={layerName}_stats.gpkg"})

@@ -145,6 +145,7 @@
                 <th>Is MBTile</th>
                 <th>Actions</th>
                 <th>View Stats</th>
+                <th>Download Stats</th>
             </tr>
         `;
         container.appendChild(table);
@@ -158,6 +159,7 @@
             const mbtileCell = row.insertCell(3);
             const deleteCell = row.insertCell(4); // Cell for the delete button
             const statsCell = row.insertCell(5); // Cell for the stats button
+            const downloadCell = row.insertCell(5); // Cell for the download button
 
             nameCell.textContent = layer.layerName;
             pathCell.textContent = layer.filePath;
@@ -186,10 +188,17 @@
             // Create and append the View Stats button
             const statsButton = document.createElement('button');
             statsButton.textContent = 'View Stats';
-            statsButton.onclick = function() {
+            statsButton.onclick = function () {
                 window.location.href = `$deploy_path$/admin/stats?layerName=${encodeURIComponent(layer.layerName)}`;
             };
             statsCell.appendChild(statsButton);
+            // Create and append the Download Stats button
+            const downloadButton = document.createElement('button');
+            statsButton.textContent = 'Download Stats';
+            statsButton.onclick = function () {
+                window.location.href = `$deploy_path$/admin/tilestatsgpkg?layerName=${encodeURIComponent(layer.layerName)}`;
+            };
+            downloadCell.appendChild(downloadButton);
         });
     }
 

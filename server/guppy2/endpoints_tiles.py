@@ -1,9 +1,16 @@
 import logging
+import math
+import os
 import sqlite3
+import tempfile
+import time
 from functools import lru_cache
+from threading import Lock
 from typing import Optional
 
+import geopandas as gpd
 from fastapi import HTTPException, Response
+from shapely.geometry import box
 from sqlalchemy.orm import Session
 
 from guppy2.db.dependencies import SessionLocal
@@ -12,8 +19,6 @@ from guppy2.endpoint_utils import validate_layer_and_get_file_path
 from guppy2.error import create_error
 
 logger = logging.getLogger(__name__)
-import time
-from threading import Lock
 
 # In-memory request counter, structured by layer_name -> z/x/y -> count
 
@@ -145,7 +150,7 @@ def get_tile(layer_name: str, db: Session, z: int, x: int, y: int):
         if tile_data:
             return Response(tile_data, media_type="application/x-protobuf", headers={"Content-Encoding": "gzip"})
         else:
-            create_error(code=404, message="Tile not found")
+            create_error(code=204, message="Tile not found")
     except Exception as e:
         create_error(code=404, message=str(e))
 
@@ -167,3 +172,45 @@ def get_tile_statistics(db: Session, layer_name: str, offset: int = 0, limit: in
         return stats
     except Exception as e:
         create_error(code=404, message=str(e))
+
+
+def tile2lonlat(x, y, z):
+    """
+    Convert tile coordinates (x, y, z) to the bounding box in longitude and latitude
+    """
+    n = 2.0 ** z
+    lon_left = x / n * 360.0 - 180.0
+    lat_bottom_rad = math.atan(math.sinh(math.pi * (1 - 2 * y / n)))
+    lat_bottom = math.degrees(lat_bottom_rad)
+    lon_right = (x + 1) / n * 360.0 - 180.0
+    lat_top_rad = math.atan(math.sinh(math.pi * (1 - 2 * (y + 1) / n)))
+    lat_top = math.degrees(lat_top_rad)
+    return (lon_left, -lat_bottom, lon_right, -lat_top)
+
+
+def get_tile_statistics_images(db: Session, layer_name: str):
+    tiles_info = db.query(TileStatistics).filter_by(layer_name=layer_name).all()
+    min_z = min([tile.z for tile in tiles_info])
+    max_z = max([tile.z for tile in tiles_info])
+    temp_filepath = tempfile.mktemp(suffix='.gpkg')
+    try:
+        for z in range(min_z, max_z + 1):
+            counts, polygons = [], []
+            for tile in tiles_info:
+                if tile.z != z:
+                    continue
+                flipped_y = (2 ** z - 1) - tile.y
+                bounds = tile2lonlat(tile.x, flipped_y, z)
+                polygon = box(*bounds)
+                polygons.append(polygon)
+                counts.append(tile.count)
+
+            gdf = gpd.GeoDataFrame(data={'count': counts, 'z': z, 'geometry': polygons}, crs='EPSG:4326')
+
+            gdf.to_file(temp_filepath, layer=f'z_{z}', driver='GPKG', append=True)
+        with open(temp_filepath, 'rb') as f:
+            gpkg_bytes = f.read()
+        return gpkg_bytes
+    finally:
+        if os.path.exists(temp_filepath):
+            os.remove(temp_filepath)
