@@ -73,6 +73,6 @@ def get_tile_statistics(layerName: str, offset: int = 0, limit: int = 20, db: Se
 
 
 @router.get('/tilestatsgpkg')
-def tiles(layerName: str, db: Session = Depends(get_db)):
+def get_tilestatsgpkg(layerName: str, db: Session = Depends(get_db)):
     gpkg_bytes = endpoints_tiles.get_tile_statistics_images(db=db, layer_name=layerName)
     return Response(gpkg_bytes, media_type="application/geopackage+sqlite3", headers={"Content-Disposition": f"attachment;filename={layerName}_stats.gpkg"})
