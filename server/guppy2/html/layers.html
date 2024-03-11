@@ -194,8 +194,8 @@
             statsCell.appendChild(statsButton);
             // Create and append the Download Stats button
             const downloadButton = document.createElement('button');
-            statsButton.textContent = 'Download Stats';
-            statsButton.onclick = function () {
+            downloadButton.textContent = 'Download Stats';
+            downloadButton.onclick = function () {
                 window.location.href = `$deploy_path$/admin/tilestatsgpkg?layerName=${encodeURIComponent(layer.layerName)}`;
             };
             downloadCell.appendChild(downloadButton);
