@@ -191,14 +191,18 @@
             statsButton.onclick = function () {
                 window.location.href = `$deploy_path$/admin/stats?layerName=${encodeURIComponent(layer.layerName)}`;
             };
-            statsCell.appendChild(statsButton);
+            if (layer.isMbtile) {
+                statsCell.appendChild(statsButton);
+            }
             // Create and append the Download Stats button
             const downloadButton = document.createElement('button');
             downloadButton.textContent = 'Download Stats';
             downloadButton.onclick = function () {
                 window.location.href = `$deploy_path$/admin/tilestatsgpkg?layerName=${encodeURIComponent(layer.layerName)}`;
             };
-            downloadCell.appendChild(downloadButton);
+            if (layer.isMbtile) {
+                downloadCell.appendChild(downloadButton);
+            }
         });
     }
 
