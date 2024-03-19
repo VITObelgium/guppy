@@ -82,6 +82,11 @@ def get_tile_data(layer_name: str, mb_file: str, z: int, x: int, y: int) -> Opti
 
     """
     # Flip Y coordinate because MBTiles grid is TMS (bottom-left origin)
+    if z > 14:
+        z = 14
+        x = x >> (z - 14)
+        y = y >> (z - 14)
+
     y = (1 << z) - 1 - y
     logger.info(f"Getting tile for layer {layer_name} at zoom {z}, x {x}, y {y}")
     try:
