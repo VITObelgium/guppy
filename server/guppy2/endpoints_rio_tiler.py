@@ -60,14 +60,15 @@ def get_tile_for_layer(layer_name: str, style: str, db: Session, z: int, x: int,
         The tile for the given layer, style, zoom level, and coordinates.
 
     """
+    t = time.time()
     file_path = validate_layer_and_get_file_path(db, layer_name)
 
     result = get_tile(file_path, z, x, y, style)
-    log_cache_info()
+    log_cache_info(t)
     return result
 
 
-def log_cache_info():
+def log_cache_info(t):
     """
     Logs the cache hits and cache misses information.
 
@@ -78,7 +79,7 @@ def log_cache_info():
         None
     """
     cache_info = get_tile.cache_info()
-    logger.info(f"Cache hits: {cache_info.hits}, Cache misses: {cache_info.misses}")
+    logger.info(f"Cache hits: {cache_info.hits}, Cache misses: {cache_info.misses}, Time: {time.time() - t}")
 
 @lru_cache(maxsize=128)
 def get_cached_colormap(name):
@@ -103,30 +104,23 @@ def get_tile(file_path: str, z: int, x: int, y: int, style: str = None) -> Respo
         img = None
         nodata = None
         with Reader(file_path) as cog:
-            logger.info(f"get_tile 01 {time.time() - t}")
             try:
                 img = cog.tile(x, y, z)
                 nodata = cog.dataset.nodata
             except TileOutsideBounds:
                 raise HTTPException(status_code=404, detail=f"Tile out of bounds {z} {x} {y}")
-            logger.info(f"get_tile 03 {time.time() - t}")
             if img.dataset_statistics is None:
                 stats = cog.statistics()['b1']
                 # generate statistics file for next time
                 gdal.Info(file_path, computeMinMax=True, stats=True)
         if img:
-            logger.info(f"get_tile 1 {time.time() - t}")
             colormap = None
             add_mask = True
             if style:
                 if style != 'shader_rgba':
                     try:
-                        logger.info(f"get_tile 2 {time.time() - t}")
                         colormap = get_cached_colormap(style)
-                        logger.info(f"get_tile 3 {time.time() - t}")
-                        logger.info(f"Using colormap {style}, {img.dataset_statistics}")
                         img.rescale(in_range=img.dataset_statistics)
-                        logger.info(f"get_tile 4 {time.time() - t}")
                     except InvalidColorMapName:
                         raise HTTPException(status_code=404, detail=f"Invalid colormap name: {style}")
                 else:
@@ -136,9 +130,7 @@ def get_tile(file_path: str, z: int, x: int, y: int, style: str = None) -> Respo
                 img.rescale(in_range=img.dataset_statistics)
             else:
                 img.rescale(in_range=[(stats.min, stats.max)])
-            logger.info(f"get_tile 11 {time.time() - t}")
             content = img.render(img_format="PNG", colormap=colormap, add_mask=add_mask, **img_profiles.get("png"))
-            logger.info(f"get_tile 12 {time.time() - t}")
             return Response(content, media_type="image/png")
     except TileOutsideBounds:
         raise HTTPException(status_code=404, detail=f"Tile out of bounds {z} {x} {y}")
