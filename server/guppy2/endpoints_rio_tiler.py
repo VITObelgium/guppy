@@ -104,15 +104,16 @@ def get_tile(file_path: str, z: int, x: int, y: int, style: str = None) -> Respo
         nodata = None
         with Reader(file_path) as cog:
             logger.info(f"get_tile 01 {time.time() - t}")
-            if cog.tile_exists(x, y, z):
-                logger.info(f"get_tile 02 {time.time() - t}")
+            try:
                 img = cog.tile(x, y, z)
-                logger.info(f"get_tile 03 {time.time() - t}")
                 nodata = cog.dataset.nodata
-                if img.dataset_statistics is None:
-                    stats = cog.statistics()['b1']
-                    # generate statistics file for next time
-                    gdal.Info(file_path, computeMinMax=True, stats=True)
+            except TileOutsideBounds:
+                raise HTTPException(status_code=404, detail=f"Tile out of bounds {z} {x} {y}")
+            logger.info(f"get_tile 03 {time.time() - t}")
+            if img.dataset_statistics is None:
+                stats = cog.statistics()['b1']
+                # generate statistics file for next time
+                gdal.Info(file_path, computeMinMax=True, stats=True)
         if img:
             logger.info(f"get_tile 1 {time.time() - t}")
             colormap = None
