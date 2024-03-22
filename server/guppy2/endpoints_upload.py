@@ -298,6 +298,29 @@ def save_geotif_tiled_overviews(input_file: str, output_file: str, nodata: int) 
     Returns:
         The path to the saved output GeoTIFF file.
     """
+    with rasterio.open(input_file) as src:
+        target_crs = rasterio.crs.CRS.from_epsg(code=3857)
+        tmp_input_file = None
+        if src.crs != target_crs:
+            transform, width, height = rasterio.warp.calculate_default_transform(src.crs, target_crs, src.width, src.height, *src.bounds)
+            profile = src.profile
+            profile.update(crs=target_crs, transform=transform, width=width, height=height)
+            tmp_input_file = input_file.replace('.tif', '_tmp.tif')
+            with rasterio.open(tmp_input_file, 'w', **profile) as dst:
+                for i in range(1, src.count + 1):
+                    rasterio.warp.reproject(
+                        source=rasterio.band(src, i),
+                        destination=rasterio.band(dst, i),
+                        src_transform=src.transform,
+                        src_crs=src.crs,
+                        dst_transform=transform,
+                        dst_crs=target_crs,
+                        resampling=rasterio.enums.Resampling.nearest
+                    )
+    if tmp_input_file:
+        os.remove(input_file)
+        input_file = tmp_input_file
+
     translate_options = gdal.TranslateOptions(gdal.ParseCommandLine(f"-of COG -co COMPRESS=ZSTD -co BIGTIFF=YES -a_nodata {nodata} -co BLOCKSIZE=256"))
     gdal.Translate(output_file, input_file, options=translate_options)
     gdal.Info(output_file, computeMinMax=True, stats=True)
