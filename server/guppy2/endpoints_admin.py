@@ -14,7 +14,8 @@ def delete_layer_mapping(db: Session, layer_name: str):
     t = time.time()
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
     if layer_model:
-        os.remove(layer_model.file_path)
+        if os.path.exists(layer_model.file_path):
+            os.remove(layer_model.file_path)
         db.delete(layer_model)
         db.commit()
         logger.info(f'delete_layer_mapping 200 {time.time() - t}')
