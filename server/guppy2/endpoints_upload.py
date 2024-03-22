@@ -298,7 +298,7 @@ def save_geotif_tiled_overviews(input_file: str, output_file: str, nodata: int) 
     Returns:
         The path to the saved output GeoTIFF file.
     """
-    translate_options = gdal.TranslateOptions(gdal.ParseCommandLine(f"-of COG -co COMPRESS=DEFLATE -co BIGTIFF=YES -a_nodata {nodata} -co BLOCKSIZE=256"))
+    translate_options = gdal.TranslateOptions(gdal.ParseCommandLine(f"-of COG -co COMPRESS=ZSTD -co BIGTIFF=YES -a_nodata {nodata} -co BLOCKSIZE=256"))
     gdal.Translate(output_file, input_file, options=translate_options)
     gdal.Info(output_file, computeMinMax=True, stats=True)
     os.remove(input_file)
