@@ -2,7 +2,7 @@
 
 import logging
 from functools import lru_cache
-
+import time
 import numpy as np
 from fastapi import HTTPException
 from osgeo import gdal
@@ -80,6 +80,9 @@ def log_cache_info():
     cache_info = get_tile.cache_info()
     logger.info(f"Cache hits: {cache_info.hits}, Cache misses: {cache_info.misses}")
 
+@lru_cache(maxsize=128)
+def get_cached_colormap(name):
+    return cmap.get(name)
 
 @lru_cache(maxsize=128)
 def get_tile(file_path: str, z: int, x: int, y: int, style: str = None) -> Response:
@@ -95,26 +98,34 @@ def get_tile(file_path: str, z: int, x: int, y: int, style: str = None) -> Respo
         A Response object containing the rendered tile image in PNG format, or raises an HTTPException with a status code of 404 and a corresponding detail message.
 
     """
+    t = time.time()
     try:
         img = None
         nodata = None
         with Reader(file_path) as cog:
+            logger.info(f"get_tile 01 {time.time() - t}")
             if cog.tile_exists(x, y, z):
+                logger.info(f"get_tile 02 {time.time() - t}")
                 img = cog.tile(x, y, z)
+                logger.info(f"get_tile 03 {time.time() - t}")
                 nodata = cog.dataset.nodata
                 if img.dataset_statistics is None:
                     stats = cog.statistics()['b1']
                     # generate statistics file for next time
                     gdal.Info(file_path, computeMinMax=True, stats=True)
         if img:
+            logger.info(f"get_tile 1 {time.time() - t}")
             colormap = None
             add_mask = True
             if style:
                 if style != 'shader_rgba':
                     try:
-                        colormap = cmap.get(style)
+                        logger.info(f"get_tile 2 {time.time() - t}")
+                        colormap = get_cached_colormap(style)
+                        logger.info(f"get_tile 3 {time.time() - t}")
                         logger.info(f"Using colormap {style}, {img.dataset_statistics}")
                         img.rescale(in_range=img.dataset_statistics)
+                        logger.info(f"get_tile 4 {time.time() - t}")
                     except InvalidColorMapName:
                         raise HTTPException(status_code=404, detail=f"Invalid colormap name: {style}")
                 else:
@@ -124,7 +135,9 @@ def get_tile(file_path: str, z: int, x: int, y: int, style: str = None) -> Respo
                 img.rescale(in_range=img.dataset_statistics)
             else:
                 img.rescale(in_range=[(stats.min, stats.max)])
+            logger.info(f"get_tile 11 {time.time() - t}")
             content = img.render(img_format="PNG", colormap=colormap, add_mask=add_mask, **img_profiles.get("png"))
+            logger.info(f"get_tile 12 {time.time() - t}")
             return Response(content, media_type="image/png")
     except TileOutsideBounds:
         raise HTTPException(status_code=404, detail=f"Tile out of bounds {z} {x} {y}")
