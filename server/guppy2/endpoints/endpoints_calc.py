@@ -16,7 +16,7 @@ from starlette.responses import Response
 from guppy2.config import config as cfg
 from guppy2.db import schemas as s, models as m
 from guppy2.error import create_error
-from guppy2.raster_calc_utils import create_raster, generate_raster_response, perform_operation, process_raster_list_with_function_in_chunks, apply_rescale_result, insert_into_guppy_db, cleanup_files, \
+from guppy2.endpoints.raster_calc_utils import create_raster, generate_raster_response, perform_operation, process_raster_list_with_function_in_chunks, apply_rescale_result, insert_into_guppy_db, cleanup_files, \
     get_unique_values, align_files
 
 logger = logging.getLogger(__name__)

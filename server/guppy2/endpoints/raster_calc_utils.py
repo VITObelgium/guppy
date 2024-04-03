@@ -18,7 +18,7 @@ from guppy2.db import models as m
 from guppy2.db import schemas as s
 from guppy2.endpoints.endpoint_utils import _decode
 from guppy2.error import create_error
-from guppy2.rasterio_file_streamer import RIOFile
+from guppy2.endpoints.rasterio_file_streamer import RIOFile
 
 logger = logging.getLogger(__name__)
 
