@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from guppy2.db.dependencies import SessionLocal
 from guppy2.db.models import TileStatistics
-from guppy2.endpoint_utils import validate_layer_and_get_file_path
+from guppy2.endpoints.endpoint_utils import validate_layer_and_get_file_path
 from guppy2.error import create_error
 
 logger = logging.getLogger(__name__)
@@ -27,12 +27,27 @@ request_counter_lock = Lock()
 
 
 def save_request_counts_timer():
+    """
+    Saves the request counts periodically at a specific interval.
+
+    This method runs in an infinite loop and sleeps for a specified time interval before saving the request counts.
+    """
     while True:
         time.sleep(60)  # Update interval, e.g., every hour
         save_request_counts()
 
 
 def save_request_counts():
+    """
+    Saves the request counts to the database.
+
+    This method retrieves the request counts from the request_counter dictionary,
+    clears the dictionary, and then saves the counts to the database.
+    Each count is associated with a tile and stored in the TileStatistics table.
+    If a tile already exists in the table, its count is updated.
+    If a tile does not exist, a new TileStatistics entry is created.
+
+    """
     db = SessionLocal()
     try:
         # Perform operations with db session
@@ -57,6 +72,16 @@ def save_request_counts():
 
 
 def add_item_to_request_counter(layer_name, z, x, y):
+    """
+    Adds an item to the request counter.
+
+    Args:
+        layer_name (str): The name of the layer.
+        z (int): The Z coordinate.
+        x (int): The X coordinate.
+        y (int): The Y coordinate.
+
+    """
     key = f"{layer_name}/{z}/{x}/{y}"
     with request_counter_lock:
         if key not in request_counter:
@@ -103,11 +128,6 @@ def log_cache_info():
     """
     Logs the cache hits and cache misses information.
 
-    Raises:
-        None
-
-    Returns:
-        None
     """
     cache_info = get_tile_data.cache_info()
     logger.info(f"Cache hits: {cache_info.hits}, Cache misses: {cache_info.misses}")
@@ -117,11 +137,6 @@ def clear_tile_cache():
     """
     Clears the tile cache.
 
-    Raises:
-        None
-
-    Returns:
-        None
     """
     get_tile_data.cache_clear()
     logger.info("Tile cache cleared")
@@ -158,15 +173,18 @@ def get_tile(layer_name: str, db: Session, z: int, x: int, y: int):
 
 def get_tile_statistics(db: Session, layer_name: str, offset: int = 0, limit: int = 20):
     """
+    Retrieves the statistics for the specified layer.
     Args:
-        db (Session): The database session object.
-        layer_name (str): The name of the layer to retrieve the tile statistics for.
-
-    Raises:
-        HTTPException: If the layer is not found, or if an internal server error occurs.
+        db: The database session to query the statistics from.
+        layer_name: The name of the layer to retrieve the statistics for.
+        offset: The number of statistics to skip from the beginning of the result set. Defaults to 0.
+        limit: The maximum number of statistics to retrieve. Defaults to 20.
 
     Returns:
-        List[TileStatistics]: A list of TileStatistics objects.
+        A list of TileStatistics objects representing the statistics for the specified layer.
+
+    Raises:
+        HTTPException: If an error occurs while querying the database.
     """
     try:
         stats = db.query(TileStatistics).filter_by(layer_name=layer_name).order_by(TileStatistics.count.desc()).offset(offset).limit(limit).all()
@@ -177,7 +195,15 @@ def get_tile_statistics(db: Session, layer_name: str, offset: int = 0, limit: in
 
 def tile2lonlat(x, y, z):
     """
-    Convert tile coordinates (x, y, z) to the bounding box in longitude and latitude
+    Converts tile coordinates to longitude and latitude bounds.
+    Args:
+        x: The x-coordinate of the tile in the tile grid.
+        y: The y-coordinate of the tile in the tile grid.
+        z: The zoom level of the tile.
+
+    Returns:
+        A tuple containing the longitude and latitude bounds of the tile in degrees.
+        The tuple includes the left longitude, bottom latitude, right longitude, and top latitude.
     """
     n = 2.0 ** z
     lon_left = x / n * 360.0 - 180.0
@@ -190,6 +216,16 @@ def tile2lonlat(x, y, z):
 
 
 def get_tile_statistics_images(db: Session, layer_name: str):
+    """
+    Generates a GeoPackage file containing the tile statistics for the specified layer.
+    Args:
+        db: The database session object.
+        layer_name: The name of the layer.
+
+    Returns:
+        The GeoPackage file contents as bytes.
+
+    """
     tiles_info = db.query(TileStatistics).filter_by(layer_name=layer_name).all()
     min_z = min([tile.z for tile in tiles_info])
     max_z = max([tile.z for tile in tiles_info])

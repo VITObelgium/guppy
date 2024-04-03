@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session
 from guppy2.config import config as cfg
 from guppy2.db import models as m
 from guppy2.db import schemas as s
-from guppy2.endpoint_utils import get_overview_factor, create_stats_response, _extract_area_from_dataset, _extract_shape_mask_from_dataset, _decode
+from guppy2.endpoints.endpoint_utils import get_overview_factor, create_stats_response, _extract_area_from_dataset, _extract_shape_mask_from_dataset, _decode
 
 logger = logging.getLogger(__name__)
 

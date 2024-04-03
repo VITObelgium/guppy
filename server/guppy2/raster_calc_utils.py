@@ -16,7 +16,7 @@ from starlette.responses import StreamingResponse
 from guppy2.config import config as cfg
 from guppy2.db import models as m
 from guppy2.db import schemas as s
-from guppy2.endpoint_utils import _decode
+from guppy2.endpoints.endpoint_utils import _decode
 from guppy2.error import create_error
 from guppy2.rasterio_file_streamer import RIOFile
 

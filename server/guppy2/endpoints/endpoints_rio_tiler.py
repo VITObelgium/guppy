@@ -13,7 +13,7 @@ from rio_tiler.profiles import img_profiles
 from sqlalchemy.orm import Session
 from starlette.responses import Response
 
-from guppy2.endpoint_utils import validate_layer_and_get_file_path
+from guppy2.endpoints.endpoint_utils import validate_layer_and_get_file_path
 
 logger = logging.getLogger(__name__)
 
