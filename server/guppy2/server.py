@@ -1,6 +1,7 @@
 # coding: utf-8
 import logging
 import threading
+from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
@@ -9,7 +10,7 @@ from fastapi.responses import FileResponse
 
 from guppy2.config import config as cfg
 from guppy2.db.db_session import Base, engine
-from guppy2.endpoints_tiles import save_request_counts, save_request_counts_timer
+from guppy2.endpoints.endpoints_tiles import save_request_counts, save_request_counts_timer
 from guppy2.routes.admin_router import router as admin_router
 from guppy2.routes.calculation_router import router as calculation_router
 from guppy2.routes.data_router import router as data_router
@@ -21,7 +22,17 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 Base.metadata.create_all(bind=engine)
-app = FastAPI(title="guppy", description="A raster analyzer API", docs_url=f"{cfg.deploy.path}/docs", openapi_url=f"{cfg.deploy.path}")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    start_background_task()
+    yield
+    # save counts in db on shutdown
+    save_request_counts()
+
+
+app = FastAPI(title="guppy", description="A raster analyzer API", docs_url=f"{cfg.deploy.path}/docs", openapi_url=f"{cfg.deploy.path}", lifespan=lifespan)
 
 # Add CORS middleware to allow all origins
 app.add_middleware(
@@ -36,16 +47,6 @@ app.add_middleware(
 def start_background_task():
     thread = threading.Thread(target=save_request_counts_timer, daemon=True)
     thread.start()
-
-
-@app.on_event("startup")
-async def startup_event():
-    start_background_task()
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    save_request_counts()
 
 
 @app.get('/favicon.ico', include_in_schema=False)
