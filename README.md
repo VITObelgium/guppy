@@ -18,9 +18,6 @@ Create a configuration file in `server/guppy2/config.yml` with the following con
 
 ```yaml
 database:
-  host: example-host.vito.be
-  user: johndoe
-  passwd: top-secret-password
   type: sqlite
   db: guppy2.sqlite
 deploy:
@@ -28,8 +25,18 @@ deploy:
 guppy:
   size_limit: 251e+07
 geoserver:
-  username : guppy_api
-  password : K5q-hcSyECx9bNL
+  username : geoserver_account
+  password : geoserver_password
+```
+
+if you prefer a postgresql database change the database section to:
+
+```yaml
+database:
+  host: example-host.vito.be
+  user: johndoe
+  passwd: top-secret-password
+  db: guppy2
 ```
 
 
