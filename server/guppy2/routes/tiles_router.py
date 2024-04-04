@@ -5,8 +5,7 @@ from starlette.responses import Response
 
 from guppy2.config import config as cfg
 from guppy2.db.dependencies import get_db
-from guppy2.endpoints import endpoints_rio_tiler
-from guppy2.endpoints import endpoints_tiles
+from guppy2.endpoints import endpoints_rio_tiler, endpoints_tiles
 
 router = APIRouter(
     prefix=f"{cfg.deploy.path}/tiles",
