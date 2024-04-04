@@ -1,8 +1,8 @@
 from fastapi import Depends, APIRouter
 from sqlalchemy.orm import Session
 
-import guppy2.endpoints.endpoints as endpoints
-import guppy2.endpoints.endpoints_calc as endpoints_calc
+from guppy2.endpoints import endpoints
+from guppy2.endpoints import endpoints_calc
 from guppy2.config import config as cfg
 from guppy2.db import schemas as s
 from guppy2.db.dependencies import get_db
