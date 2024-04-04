@@ -3,7 +3,8 @@ from rio_tiler.colormap import cmap
 from sqlalchemy.orm import Session
 from starlette.responses import Response
 
-from guppy2.endpoints import endpoints_tiles as endpoints_tiles, endpoints_rio_tiler as endpoints_rio_tiler
+import guppy2.endpoints.endpoints_rio_tiler as endpoints_rio_tiler
+import guppy2.endpoints.endpoints_tiles as endpoints_tiles
 from guppy2.config import config as cfg
 from guppy2.db.dependencies import get_db
 

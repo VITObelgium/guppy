@@ -2,7 +2,9 @@ from fastapi import Form, UploadFile, File, Depends, APIRouter
 from fastapi.responses import HTMLResponse, Response
 from sqlalchemy.orm import Session
 
-from guppy2.endpoints import endpoints_admin as endpoints_admin, endpoints_upload as endpoints_upload, endpoints_tiles as endpoints_tiles
+import guppy2.endpoints.endpoints_admin as endpoints_admin
+import guppy2.endpoints.endpoints_upload as endpoints_upload
+import guppy2.endpoints.endpoints_tiles as endpoints_tiles
 from guppy2.config import config as cfg
 from guppy2.db.dependencies import get_db
 from guppy2.db.schemas import LayerMetadataBody, TileStatisticsSchema
