@@ -25,4 +25,5 @@ dependencies:
   - jenkspy
   - python-multipart
   - rio-tiler
+  - prometheus-fastapi-instrumentator
 prefix: /opt/mapbase3/server/conda-env

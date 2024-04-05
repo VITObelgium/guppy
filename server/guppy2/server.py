@@ -7,6 +7,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from guppy2.config import config as cfg
 from guppy2.db.db_session import Base, engine
@@ -56,10 +57,14 @@ async def favicon():
 
 app.include_router(general_router)
 app.include_router(tiles_router)
-app.include_router(admin_router)
 app.include_router(data_router)
 app.include_router(stats_router)
 app.include_router(calculation_router)
 
+instrumentator = Instrumentator()
+instrumentator.instrument(app)
+instrumentator.expose(admin_router, endpoint="/metrics")
+app.include_router(admin_router)
+
 if __name__ == '__main__':
-    uvicorn.run("server:app", port=5000, workers=1)
+    uvicorn.run(app, port=5000)
