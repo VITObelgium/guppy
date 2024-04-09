@@ -12,11 +12,11 @@ router = APIRouter(
 )
 
 
-@router.post("/contours", response_model=list[s.CountourBodyResponse], tags=["contour"], description="Get countour result for specified models.")
+@router.post("/contours", response_model=list[s.CountourBodyResponse], description="Get countour result for specified models.")
 def get_countour_for_models(body: s.CountourBodyList, db: Session = Depends(get_db)):
     return endpoints.get_countour_for_models(db=db, body=body)
 
 
-@router.post("/calculate", tags=["calculation"], description="Perform calculation on raster data.")
+@router.post("/calculate", description="Perform calculation on raster data.")
 def raster_calculation(body: s.RasterCalculationBody, db: Session = Depends(get_db)):
     return endpoints_calc.raster_calculation(db=db, body=body)
