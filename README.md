@@ -15,6 +15,17 @@ conda env create --file environment.yml
 ### Define configuration
 
 Create a configuration file in `server/guppy2/config.yml` with the following content. Adjust for your specific setup.
+minimal yaml:
+
+```yaml
+database:
+  type: sqlite
+  db: guppy2.sqlite
+deploy:
+  path: guppy
+```
+
+full yaml:
 
 ```yaml
 database:
@@ -25,8 +36,8 @@ deploy:
 guppy:
   size_limit: 251e+07
 geoserver:
-  username : geoserver_account
-  password : geoserver_password
+  username: geoserver_account
+  password: geoserver_password
 ```
 
 if you prefer a postgresql database change the database section to:
@@ -38,7 +49,6 @@ database:
   passwd: top-secret-password
   db: guppy2
 ```
-
 
 ### Start server
 

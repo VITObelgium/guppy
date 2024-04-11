@@ -68,13 +68,14 @@ def parse_config_file(config_file: str) -> _Config:
         ),
         database=_Database(
             type=yml_data['database']['type'] if 'type' in yml_data['database'] else 'postgres',
-            host=yml_data['database']['host'],
-            user=yml_data['database']['user'],
-            passwd=yml_data['database']['passwd'],
+            host=yml_data['database']['host'] if 'host' in yml_data['database'] else '',
+            user=yml_data['database']['user'] if 'user' in yml_data['database'] else '',
+            passwd=yml_data['database']['passwd'] if 'passwd' in yml_data['database'] else '',
             db=yml_data['database']['db'],
         ),
-        guppy=_Guppy(size_limit=int(float(yml_data['guppy']['size_limit'])) if 'guppy' in yml_data else 10000),
-        geoserver=_Geoserver(username=yml_data['geoserver']['username'], password=yml_data['geoserver']['password'])
+        guppy=_Guppy(size_limit=int(float(yml_data['guppy']['size_limit'])) if 'guppy' in yml_data and 'size_limit' in yml_data['guppy'] else 10000),
+        geoserver=_Geoserver(username=yml_data['geoserver']['username'] if 'geoserver' in yml_data and 'username' in yml_data['geoserver'] else '',
+                             password=yml_data['geoserver']['password'] if 'geoserver' in yml_data and 'password' in yml_data['geoserver'] else '')
     )
 
 
