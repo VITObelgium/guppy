@@ -11,14 +11,15 @@ import rioxarray as xr
 from dask import array as da
 from osgeo import osr, gdal
 from sqlalchemy.orm import Session
+from starlette import status
 from starlette.responses import StreamingResponse
 
 from guppy2.config import config as cfg
 from guppy2.db import models as m
 from guppy2.db import schemas as s
 from guppy2.endpoints.endpoint_utils import _decode
-from guppy2.error import create_error
 from guppy2.endpoints.rasterio_file_streamer import RIOFile
+from guppy2.error import create_error
 
 logger = logging.getLogger(__name__)
 
@@ -459,3 +460,32 @@ def align_files(base_path, path_list, unique_identifier):
         else:
             fixed_path_list.append(file)
     return fixed_path_list
+
+
+def fill_path_and_argument_lists(arguments_list, layer_list, db, nodata, path_list):
+    for layer_item in layer_list:
+        layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_item.layer_name).first()
+        if layer_model:
+            path = layer_model.file_path
+            path_list.append(path)
+            if os.path.exists(path):
+                with rasterio.open(path) as src:
+                    if nodata is None:
+                        nodata = src.nodata
+            else:
+                logger.info(f'WARNING: file does not exists {path}')
+                create_error(message='layer not found', code=status.HTTP_404_NOT_FOUND)
+            arguments_list.append({'nodata': nodata, 'factor': layer_item.factor, 'operation': layer_item.operation, 'operation_data': layer_item.operation_data, 'is_rgb': layer_model.is_rgb})
+        else:
+            logger.info(f'WARNING: layer_model does not exists {layer_item.layer_name}')
+
+
+def read_raster_without_nodata_as_array(path: str) -> np.ndarray:
+    output = []
+    with rasterio.open(path) as ds:
+        for ji, window in ds.block_windows(1):
+            data = ds.read(1, window=window)
+            data = data[data != ds.nodata]
+            output.append(data)
+
+    return np.concatenate(output)

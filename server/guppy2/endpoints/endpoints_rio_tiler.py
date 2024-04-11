@@ -1,9 +1,9 @@
 """rio-tiler tile server."""
 
 import logging
-from functools import lru_cache
 import time
-import numpy as np
+from functools import lru_cache
+
 from fastapi import HTTPException
 from osgeo import gdal
 from rio_tiler.colormap import cmap, InvalidColorMapName
@@ -14,36 +14,9 @@ from sqlalchemy.orm import Session
 from starlette.responses import Response
 
 from guppy2.endpoints.endpoint_utils import validate_layer_and_get_file_path
+from guppy2.endpoints.tile_utils import data_to_rgba
 
 logger = logging.getLogger(__name__)
-
-
-def data_to_rgba(data: np.ndarray, nodata):
-    """
-    Converts a 2D numpy array to an RGBA masked array.
-    Encodes the float bytes into the rgba channels of the ouput array.
-
-    Args:
-        data (np.ndarray): The input 2D numpy array.
-        nodata: The value representing no data.
-
-    Returns:
-        np.ma.MaskedArray: The converted RGBA masked array.
-    """
-    data = data.astype(np.float32)
-    if np.isnan(nodata):
-        data = np.where(np.isnan(data), -9999, data)
-        nodata = -9999
-    rows, cols = data.shape
-    rgb = np.frombuffer(data.astype('<f4').tobytes(), dtype=np.uint8).reshape(-1, 4).transpose().reshape(4, rows, cols).copy()
-
-    rgb[3] = np.where(data == nodata, 255, rgb[3])
-    rgb[2] = np.where(data == nodata, 255, rgb[2])
-    rgb[1] = np.where(data == nodata, 255, rgb[1])
-    rgb[0] = np.where(data == nodata, 255, rgb[0])
-    m = np.zeros((4, 256, 256), dtype="bool")
-
-    return np.ma.MaskedArray(rgb)
 
 
 def get_tile_for_layer(layer_name: str, style: str, db: Session, z: int, x: int, y: int) -> Response:
@@ -81,9 +54,11 @@ def log_cache_info(t):
     cache_info = get_tile.cache_info()
     logger.info(f"Cache hits: {cache_info.hits}, Cache misses: {cache_info.misses}, Time: {time.time() - t}")
 
+
 @lru_cache(maxsize=128)
 def get_cached_colormap(name):
     return cmap.get(name)
+
 
 @lru_cache(maxsize=128)
 def get_tile(file_path: str, z: int, x: int, y: int, style: str = None) -> Response:

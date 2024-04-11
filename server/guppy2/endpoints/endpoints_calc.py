@@ -14,10 +14,10 @@ from starlette import status
 from starlette.responses import Response
 
 from guppy2.config import config as cfg
-from guppy2.db import schemas as s, models as m
-from guppy2.error import create_error
-from guppy2.endpoints.raster_calc_utils import create_raster, generate_raster_response, perform_operation, process_raster_list_with_function_in_chunks, apply_rescale_result, insert_into_guppy_db, cleanup_files, \
-    get_unique_values, align_files
+from guppy2.db import schemas as s
+from guppy2.endpoints.raster_calc_utils import create_raster, generate_raster_response, perform_operation, process_raster_list_with_function_in_chunks, apply_rescale_result, insert_into_guppy_db, \
+    cleanup_files, \
+    get_unique_values, align_files, fill_path_and_argument_lists, read_raster_without_nodata_as_array
 
 logger = logging.getLogger(__name__)
 
@@ -78,35 +78,6 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody) -> Response:
         return Response(content=geoserver_layer, status_code=status.HTTP_201_CREATED)
     else:
         return generate_raster_response(os.path.join(base_path, raster_name))
-
-
-def fill_path_and_argument_lists(arguments_list, layer_list, db, nodata, path_list):
-    for layer_item in layer_list:
-        layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_item.layer_name).first()
-        if layer_model:
-            path = layer_model.file_path
-            path_list.append(path)
-            if os.path.exists(path):
-                with rasterio.open(path) as src:
-                    if nodata is None:
-                        nodata = src.nodata
-            else:
-                logger.info(f'WARNING: file does not exists {path}')
-                create_error(message='layer not found', code=status.HTTP_404_NOT_FOUND)
-            arguments_list.append({'nodata': nodata, 'factor': layer_item.factor, 'operation': layer_item.operation, 'operation_data': layer_item.operation_data, 'is_rgb': layer_model.is_rgb})
-        else:
-            logger.info(f'WARNING: layer_model does not exists {layer_item.layer_name}')
-
-
-def read_raster_without_nodata_as_array(path: str) -> np.ndarray:
-    output = []
-    with rasterio.open(path) as ds:
-        for ji, window in ds.block_windows(1):
-            data = ds.read(1, window=window)
-            data = data[data != ds.nodata]
-            output.append(data)
-
-    return np.concatenate(output)
 
 
 def process_rescaling(base_path: str, body: s.RasterCalculationBody, nodata: float, raster_name: str, t: float):
