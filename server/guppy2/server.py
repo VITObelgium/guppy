@@ -27,6 +27,12 @@ Base.metadata.create_all(bind=engine)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """
+    Executes a context manager for the lifespan of the FastAPI application. This method is used to capture and save request counts in the database when the application is shutdown.
+    Args:
+        app: Instance of FastAPI application.
+
+    """
     start_background_task()
     yield
     # save counts in db on shutdown
@@ -46,6 +52,14 @@ app.add_middleware(
 
 
 def start_background_task():
+    """
+    Starts a background task that runs the save_request_counts_timer function in a separate thread.
+
+    This method creates a new thread and starts it with the save_request_counts_timer function as the target.
+    The thread is set as a daemon thread, which means it will automatically stop when the main thread exits.
+
+    :return: None
+    """
     thread = threading.Thread(target=save_request_counts_timer, daemon=True)
     thread.start()
 

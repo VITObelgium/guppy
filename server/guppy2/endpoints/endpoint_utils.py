@@ -119,6 +119,7 @@ def _extract_shape_mask_from_dataset(raster_ds, geom, crop=True, all_touched=Fal
 
 def get_overview(res_x: float, res_y: float, overviews: [int], bounds: (float,)):
     """
+    Determine the overview level and the corresponding value from the overview levels list based on the resolution and bounds.
     Args:
         res_x (float): The resolution of the x-axis.
         res_y (float): The resolution of the y-axis.
@@ -144,7 +145,14 @@ def get_overview(res_x: float, res_y: float, overviews: [int], bounds: (float,))
 
 def _decode(data):
     """
-    Utility to decode RGB encoded data
+    Decodes the given data array from rgba to values.
+
+    Args:
+        data (ndarray): An array containing the data to decode.
+
+    Returns:
+        ndarray: A decoded array.
+
     """
     return np.frombuffer(data.reshape(4, -1).transpose().tobytes(), dtype='<f4').reshape((data[0].shape))
 
