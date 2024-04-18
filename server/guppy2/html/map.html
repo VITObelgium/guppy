@@ -83,8 +83,6 @@
         }
 
         .maplibregl-map {
-            font-family: ${theme.typography.fontFamily};
-
             &.mouse-add > .maplibregl-canvas-container {
                 cursor: crosshair;
             }
@@ -232,7 +230,17 @@
                                     type: isMbtile ? 'fill' : 'raster',
                                     source: layerId,
                                     'source-layer': layerId.split('_')[0],
-                                    paint: isMbtile ? {'fill-color': '#088', 'fill-opacity': 0.5} : {'raster-opacity': 0.5}
+                                    paint: isMbtile ? {
+                                        'fill-color': [
+                                            'match',
+                                            ['get', 'TYPE'], // Get the value of TYPE from the feature properties
+                                            1, '#FF0000', // Red if TYPE is 1
+                                            2, '#00FF00', // Green if TYPE is 2
+                                            3, '#0000FF', // Blue if TYPE is 3
+                                            '#000000' // Default color (black) if TYPE is not 1, 2, or 3
+                                        ],
+                                        'fill-opacity': 0.5
+                                    } : {'raster-opacity': 0.5}
                                 });
                             } else {
                                 map.removeLayer(layerId);
