@@ -11,19 +11,23 @@
 
     <style>
         body {
+            font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
             display: flex; /* Using flexbox layout */
             flex-direction: row; /* Elements align horizontally */
             height: 100vh; /* Full viewport height */
+            background-color: #f4f4f4;
         }
 
         #sidebar {
             width: 400px; /* Fixed width for the sidebar */
-            background: #f8f9fa;
+            background: #fff;
             overflow: auto;
-            padding: 10px;
+            padding: 20px;
             height: 100vh; /* Full viewport height */
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-right: 1px solid #ddd;
         }
 
         #main {
@@ -45,15 +49,20 @@
         }
 
         .layer {
-            padding: 8px;
-            border-bottom: 1px solid #ccc;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
             display: flex;
             align-items: center;
+            background-color: white;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .layer-group h3 {
             padding-left: 10px;
             color: #333;
+            margin-top: 20px;
         }
 
         .layer label {
