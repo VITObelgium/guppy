@@ -127,7 +127,16 @@
                     polygon: true,
                     line_string: true,
                     trash: true
-                }
+                }, styles: MapboxDraw.lib.theme.map(style => {
+                    return {
+                        ...style,
+                        paint: {
+                            ...style.paint,
+                            'line-opacity': 1, // Ensure the line is not transparent
+                            'line-width': 4, // make line thicker
+                        }
+                    };
+                })
             });
             map.addControl(draw, 'top-left');
             map.on('draw.create', removeFeaturesAndUpdateArea);
