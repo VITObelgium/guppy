@@ -57,6 +57,15 @@ def log_cache_info(t):
 
 @lru_cache(maxsize=128)
 def get_cached_colormap(name):
+    """
+    Function to enable lru caching of colormaps.
+    Args:
+        name: The name of the colormap to retrieve.
+
+    Returns:
+        The cached colormap associated with the specified name.
+
+    """
     return cmap.get(name)
 
 
@@ -83,7 +92,7 @@ def get_tile(file_path: str, z: int, x: int, y: int, style: str = None) -> Respo
                 img = cog.tile(x, y, z)
                 nodata = cog.dataset.nodata
             except TileOutsideBounds:
-                raise HTTPException(status_code=404, detail=f"Tile out of bounds {z} {x} {y}")
+                raise HTTPException(status_code=204, detail=f"Tile out of bounds {z} {x} {y}")
             if img.dataset_statistics is None:
                 stats = cog.statistics()['b1']
                 # generate statistics file for next time
@@ -108,4 +117,4 @@ def get_tile(file_path: str, z: int, x: int, y: int, style: str = None) -> Respo
             content = img.render(img_format="PNG", colormap=colormap, add_mask=add_mask, **img_profiles.get("png"))
             return Response(content, media_type="image/png")
     except TileOutsideBounds:
-        raise HTTPException(status_code=404, detail=f"Tile out of bounds {z} {x} {y}")
+        raise HTTPException(status_code=204, detail=f"Tile out of bounds {z} {x} {y}")

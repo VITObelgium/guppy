@@ -87,17 +87,17 @@ def get_tile(layer_name: str, db: Session, z: int, x: int, y: int):
         Response: The tile data as a Response object. The media type is set to "application/x-protobuf" and the content encoding is set to "gzip".
     """
     mb_file = validate_layer_and_get_file_path(db, layer_name)
-
+    tile_data = None
     try:
         add_item_to_request_counter(layer_name, z, x, y)
         tile_data = get_tile_data(layer_name, mb_file, z, x, y)
         log_cache_info()
-        if tile_data:
-            return Response(tile_data, media_type="application/x-protobuf", headers={"Content-Encoding": "gzip"})
-        else:
-            create_error(code=204, message="Tile not found")
     except Exception as e:
         create_error(code=404, message=str(e))
+    if tile_data:
+        return Response(tile_data, media_type="application/x-protobuf", headers={"Content-Encoding": "gzip"})
+    else:
+        create_error(code=204, message="Tile not found")
 
 
 def get_tile_statistics(db: Session, layer_name: str, offset: int = 0, limit: int = 20):

@@ -35,18 +35,18 @@ class PointResponse(CamelModel):
 
 class StatsResponse(CamelModel):
     type: str
-    layer_name: Optional[str]
-    min: Optional[float]
-    max: Optional[float]
-    sum: Optional[float]
-    mean: Optional[float]
-    count_total: Optional[int]
-    count_no_data: Optional[int]
+    layer_name: Optional[str] = None
+    min: Optional[float] = None
+    max: Optional[float] = None
+    sum: Optional[float] = None
+    mean: Optional[float] = None
+    count_total: Optional[int] = None
+    count_no_data: Optional[int] = None
     count_data: int
-    q02: Optional[float]
-    q05: Optional[float]
-    q95: Optional[float]
-    q98: Optional[float]
+    q02: Optional[float] = None
+    q05: Optional[float] = None
+    q95: Optional[float] = None
+    q98: Optional[float] = None
 
 
 class ClassificationEntry(CamelModel):
@@ -107,7 +107,7 @@ class MultiLineGeometryListBody(CamelModel):
     geometry: list[str]
     number_of_points: int
     layer_names: list[str]
-    round_val: Optional[int]
+    round_val: Optional[int] = None
 
 
 class LineObjectGeometryBody(CamelModel):
@@ -175,6 +175,7 @@ class LayerMetadataBody(CamelModel):
     file_path: str
     is_rgb: Optional[bool] = False
     is_mbtile: Optional[bool] = False
+
 
 class TileStatisticsSchema(CamelModel):
     id: int
