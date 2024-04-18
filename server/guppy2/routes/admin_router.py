@@ -79,7 +79,7 @@ def get_tilestatsgpkg(layerName: str, db: Session = Depends(get_db)):
 
 @router.get("/map", description="map")
 async def read_index():
-    with open('html/map.html', 'r', encoding='utf-8') as file:
+    with open('guppy2/html/map.html', 'r', encoding='utf-8') as file:
         file_content = file.read()
 
     file_content = file_content.replace('$deploy_path$', cfg.deploy.path)
