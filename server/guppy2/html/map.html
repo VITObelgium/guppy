@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>Map with Toggleable Layers</title>
+    <script src="https://unpkg.com/maplibre-gl/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl/dist/maplibre-gl.css" rel="stylesheet"/>
+    <script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.js'></script>
+    <link rel='stylesheet' href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.css' type='text/css'/>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex; /* Using flexbox layout */
+            flex-direction: row; /* Elements align horizontally */
+            height: 100vh; /* Full viewport height */
+        }
+
+        #sidebar {
+            width: 400px; /* Fixed width for the sidebar */
+            background: #f8f9fa;
+            overflow: auto;
+            padding: 10px;
+            height: 100vh; /* Full viewport height */
+        }
+
+        #main {
+            flex-grow: 1; /* Takes up remaining horizontal space */
+            display: flex;
+            flex-direction: column; /* Stack children vertically */
+            height: 100vh; /* Full viewport height */
+        }
+
+        #map {
+            flex-grow: 1; /* Allows the map to grow and fill available vertical space */
+        }
+
+        #bottom-pane {
+            width: 100%; /* Full width of its container */
+            height: 200px; /* Fixed height for the bottom pane */
+            background: #fff;
+            border-top: 1px solid #ccc;
+        }
+
+        .layer {
+            padding: 8px;
+            border-bottom: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+        }
+
+        .layer-group h3 {
+            padding-left: 10px;
+            color: #333;
+        }
+
+        .layer label {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        .layer input[type="checkbox"] {
+            margin-right: 10px;
+        }
+
+        .maplibregl-ctrl-group button.active,
+        .maplibregl-ctrl-group button:focus {
+            border: 2px solid green !important;
+            box-shadow: 0 0 2px green;
+        }
+    </style>
+</head>
+<body>
+<div id="sidebar">
+    <div id="mbtile-layers" class="layer-group">
+        <h3>MBTiles Layers</h3>
+    </div>
+    <div id="raster-layers" class="layer-group">
+        <h3>Raster Layers</h3>
+    </div>
+</div>
+<div id="main">
+    <div id="map"></div>
+    <div id="bottom-pane"></div>
+</div>
+<script>
+    MapboxDraw.constants.classes.CONTROL_BASE = "maplibregl-ctrl";
+    MapboxDraw.constants.classes.CONTROL_PREFIX = "maplibregl-ctrl-";
+    MapboxDraw.constants.classes.CONTROL_GROUP = "maplibregl-ctrl-group";
+
+    async function fetchLayers() {
+        const response = await fetch(`$deploy_path$/layers`);
+        return response.json();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+            const map = new maplibregl.Map({
+                container: 'map',
+                style: {
+                    version: 8,
+                    sources: {
+                        'osm': {
+                            type: 'raster',
+                            tiles: ['https://a.tile.openstreetmap.org/{z}/{x}/{y}.png'],
+                            tileSize: 256,
+                            attribution: '© OpenStreetMap contributors'
+                        }
+                    },
+                    layers: [{
+                        id: 'osm-layer',
+                        type: 'raster',
+                        source: 'osm'
+                    }]
+                },
+                center: [4, 50],
+                zoom: 6
+            });
+
+            var draw = new MapboxDraw({
+                displayControlsDefault: false,
+                controls: {
+                    point: true,
+                    polygon: true,
+                    line_string: true,
+                    trash: true
+                }
+            });
+            map.addControl(draw, 'top-left');
+            map.on('draw.create', removeFeaturesAndUpdateArea);
+            map.on('draw.update', removeFeaturesAndUpdateArea);
+
+
+            function updateArea(e) {
+                var data = draw.getAll();
+                if (data.features.length > 0) {
+                    var feature = data.features[0];
+                    if (feature.geometry.type === 'LineString') {
+                        var wkt_line = `LINESTRING (${feature.geometry.coordinates.map(coord => `${coord[0]} ${coord[1]}`).join(", ")})`;
+                        getLineValues(wkt_line);
+                    }
+                    if (feature.geometry.type === 'Polygon') {
+                        var wkt_poly = `POLYGON (${feature.geometry.coordinates.map(ring => `(${ring.map(coord => `${coord[0]} ${coord[1]}`).join(", ")})`).join(", ")})`;
+                        getPolygonValues(wkt_poly);
+                    }
+                    if (feature.geometry.type === 'Point') {
+                        const lngLat = {lng: feature.geometry.coordinates[0], lat: feature.geometry.coordinates[1]}
+                        getPointValue(lngLat);
+                        draw.delete(feature.id);
+                    }
+                }
+            }
+
+            function removeFeaturesAndUpdateArea(e) {
+                var data = draw.getAll();
+                if (data.features.length > 0) {
+                    // delete all previous features except the last one to only show graph of newly drawn feature
+                    for (var i = 0; i < data.features.length - 1; i++) {
+                        draw.delete(data.features[i].id);
+                    }
+                    updateArea(e);
+                }
+            }
+
+
+            var layerIds = [];
+            map.on('load', function () {
+                fetchLayers().then(layers => {
+                    const mbtileSidebar = document.getElementById('mbtile-layers');
+                    const rasterSidebar = document.getElementById('raster-layers');
+
+                    layers.forEach(layer => {
+                        const layerId = layer.layerName;
+                        const isMbtile = layer.isMbtile;
+                        const div = document.createElement('div');
+                        div.className = 'layer';
+                        const label = document.createElement('label');
+                        const input = document.createElement('input');
+                        input.type = 'checkbox';
+                        input.checked = false;
+                        input.onchange = function () {
+                            if (this.checked) {
+                                map.addLayer({
+                                    id: layerId,
+                                    type: isMbtile ? 'fill' : 'raster',
+                                    source: layerId,
+                                    'source-layer': layerId.split('_')[0],
+                                    paint: isMbtile ? {'fill-color': '#088', 'fill-opacity': 0.5} : {'raster-opacity': 0.5}
+                                });
+                            } else {
+                                map.removeLayer(layerId);
+                            }
+                            updateArea();
+                        };
+                        label.appendChild(input);
+                        label.appendChild(document.createTextNode(` ${layerId}`));
+                        div.appendChild(label);
+
+                        // Append to the correct group based on the isMbtile flag
+                        if (isMbtile) {
+                            mbtileSidebar.appendChild(div);
+                            map.addSource(layerId, {
+                                type: 'vector',
+                                tiles: [`${window.location.origin}$deploy_path$/tiles/vector/${layerId}/{z}/{x}/{y}`],
+                                tileSize: 512
+                            });
+                            map.on('click', layerId, (e) => mbtileClickHandler(layerId, e));
+                        } else {
+                            rasterSidebar.appendChild(div);
+                            map.addSource(layerId, {
+                                type: 'raster',
+                                tiles: [`${window.location.origin}$deploy_path$/tiles/raster/${layerId}/{z}/{x}/{y}.png?style=jet`],
+                                tileSize: 256
+                            });
+                            layerIds.push(layerId);
+                        }
+                    });
+
+                });
+            });
+
+
+            async function getPointValue(lngLat) {
+                let description = '';
+                for (const layerId of layerIds) {
+                    if (map.getLayer(layerId)) {
+                        const url = `${window.location.origin}$deploy_path$/layers/${layerId}/point?x=${lngLat.lng}&y=${lngLat.lat}`;
+                        try {
+                            const response = await fetch(url);
+                            if (response.ok) {
+                                const data = await response.json();
+                                description += `${data.layerName} value: ${data.value} <br/>`;
+                            } else {
+                                console.error('Failed to fetch point data', response.status);
+                            }
+                        } catch (error) {
+                            console.error('Error fetching data:', error);
+                        }
+                    }
+                }
+                new maplibregl.Popup()
+                    .setLngLat(lngLat)
+                    .setHTML(description)
+                    .addTo(map);
+            }
+
+            function mbtileClickHandler(layerId, e) {
+                const features = map.queryRenderedFeatures(e.point, {layers: [layerId]});
+                if (features.length) {
+                    const feature = features[0];
+                    const description = Object.keys(feature.properties)
+                        .map(key => `${key}: ${feature.properties[key]}`)
+                        .join('<br/>');
+                    new maplibregl.Popup()
+                        .setLngLat(e.lngLat)
+                        .setHTML(description)
+                        .addTo(map);
+                }
+            }
+
+            function getRandomColor() {
+                const r = Math.floor(Math.random() * 256);
+                const g = Math.floor(Math.random() * 256);
+                const b = Math.floor(Math.random() * 256);
+                return `rgb(${r}, ${g}, ${b})`;
+            }
+
+            async function getLineValues(wkt) {
+                const body = {
+                    geometry: wkt,
+                    numberOfPoints: 400,
+                    srs: 'EPSG:4326'
+                };
+                let labels = [];
+                let datasets = [];
+
+                for (const layerId of layerIds) {
+                    if (map.getLayer(layerId)) {
+                        try {
+                            const response = await fetch(`${window.location.origin}$deploy_path$/layers/${layerId}/line_data`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(body)
+                            });
+
+                            if (!response.ok) throw new Error('Network response was not ok.');
+
+                            const result = await response.json();
+
+                            if (result && result.data && result.data.length > 0) {
+                                labels = [...Array(result.data.length).keys()];
+                                datasets.push({
+                                    label: layerId,
+                                    data: result.data,
+                                    fill: false,
+                                    borderColor: getRandomColor(), // now using random color function
+                                    tension: 0.1
+                                });
+                            }
+                        } catch (error) {
+                            console.error('Failed to fetch:', error);
+                        }
+                    }
+                }
+
+
+                const canvas = document.createElement('canvas');
+                canvas.width = document.getElementById('bottom-pane').clientWidth;
+                canvas.height = document.getElementById('bottom-pane').clientHeight;
+                document.getElementById('bottom-pane').innerHTML = ''; // Clear previous content
+                document.getElementById('bottom-pane').appendChild(canvas);
+                const ctx = canvas.getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: datasets
+                    },
+                    options: {
+                        elements: {
+                            point: {
+                                radius: 0
+                            }
+                        },
+                        interaction: {
+                            intersect: false,
+                            mode: 'index',
+                        },
+                    }
+                });
+            }
+
+            async function getPolygonValues(wkt) {
+                const body = {
+                    geometry: wkt,
+                    numberOfPoints: 100,
+                    srs: 'EPSG:4326'
+                };
+                let labels = ['mean', 'min', 'max'];
+                let datasets = [];
+
+                for (const layerId of layerIds) {
+                    if (map.getLayer(layerId)) {
+                        try {
+                            const response = await fetch(`${window.location.origin}$deploy_path$/layers/${layerId}/stats`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(body)
+                            });
+
+                            if (!response.ok) throw new Error('Network response was not ok.');
+
+                            const result = await response.json();
+                            if (result && result.mean) {
+                                datasets.push({
+                                    label: layerId,
+                                    data: [result.mean, result.min, result.max],
+                                    backgroundColor: getRandomColor(), // now using random color function
+                                    borderColor: getRandomColor(), // now using random color function
+                                    borderWidth: 1
+                                });
+                            }
+                        } catch (error) {
+                            console.error('Failed to fetch:', error);
+                        }
+                    }
+                }
+
+
+                const canvas = document.createElement('canvas');
+                canvas.width = document.getElementById('bottom-pane').clientWidth;
+                canvas.height = document.getElementById('bottom-pane').clientHeight;
+                document.getElementById('bottom-pane').innerHTML = ''; // Clear previous content
+                document.getElementById('bottom-pane').appendChild(canvas);
+                const ctx = canvas.getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: datasets
+                    }, options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Mean Value'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+        }
+    )
+    ;
+
+
+</script>
+</body>
+</html>

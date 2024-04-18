@@ -74,3 +74,13 @@ def get_tile_statistics(layerName: str, offset: int = 0, limit: int = 20, db: Se
 def get_tilestatsgpkg(layerName: str, db: Session = Depends(get_db)):
     gpkg_bytes = endpoints_tiles.get_tile_statistics_images(db=db, layer_name=layerName)
     return Response(gpkg_bytes, media_type="application/geopackage+sqlite3", headers={"Content-Disposition": f"attachment;filename={layerName}_stats.gpkg"})
+
+
+
+@router.get("/map", description="map")
+async def read_index():
+    with open('html/map.html', 'r', encoding='utf-8') as file:
+        file_content = file.read()
+
+    file_content = file_content.replace('$deploy_path$', cfg.deploy.path)
+    return HTMLResponse(content=file_content)
