@@ -81,6 +81,22 @@
             border: 2px solid green !important;
             box-shadow: 0 0 2px green;
         }
+
+        .maplibregl-map {
+            font-family: ${theme.typography.fontFamily};
+
+            &.mouse-add > .maplibregl-canvas-container {
+                cursor: crosshair;
+            }
+
+            &.mouse-pointer > .maplibregl-canvas-container {
+                cursor: pointer;
+            }
+
+            &.mouse-move > .maplibregl-canvas-container {
+                cursor: move;
+            }
+        }
     </style>
 </head>
 <body>
