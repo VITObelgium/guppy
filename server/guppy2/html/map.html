@@ -213,6 +213,15 @@
                                 map.removeLayer(layerId);
                             }
                             updateArea();
+
+                            // move all layers that have id like "gl-draw*" to the top
+                            const layers = map.getStyle().layers;
+                            layers.forEach(layer => {
+                                if (layer.id.startsWith('gl-draw')) {
+                                    map.moveLayer(layer.id);
+                                }
+                            });
+
                         };
                         label.appendChild(input);
                         label.appendChild(document.createTextNode(` ${layerId}`));
