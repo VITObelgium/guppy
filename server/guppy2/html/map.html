@@ -128,14 +128,24 @@
                     line_string: true,
                     trash: true
                 }, styles: MapboxDraw.lib.theme.map(style => {
-                    return {
-                        ...style,
-                        paint: {
-                            ...style.paint,
-                            'line-opacity': 1, // Ensure the line is not transparent
-                            'line-width': 4, // make line thicker
-                        }
-                    };
+                    if (style.type === 'line') {
+                        return {
+                            ...style,
+                            paint: {
+                                ...style.paint,
+                                'line-width': 4, // make line thicker
+                            }
+                        };
+                    } else if (style.type === 'fill') {
+                        return {
+                            ...style,
+                            paint: {
+                                ...style.paint,
+                                'fill-opacity': 0.3, // make polygon semi-transparent
+                            }
+                        };
+                    }
+                    return style;
                 })
             });
             map.addControl(draw, 'top-left');
