@@ -140,6 +140,7 @@
         table.innerHTML = `
             <tr>
                 <th>Name</th>
+                <th>Label</th>
                 <th>Path</th>
                 <th>Is RGB</th>
                 <th>Is MBTile</th>
@@ -154,14 +155,16 @@
         layers.forEach(layer => {
             const row = table.insertRow(-1); // Append row to the end of the table
             const nameCell = row.insertCell(0);
-            const pathCell = row.insertCell(1);
-            const rgbCell = row.insertCell(2);
-            const mbtileCell = row.insertCell(3);
-            const deleteCell = row.insertCell(4); // Cell for the delete button
-            const statsCell = row.insertCell(5); // Cell for the stats button
-            const downloadCell = row.insertCell(6); // Cell for the download button
+            const labelCell = row.insertCell(1);
+            const pathCell = row.insertCell(2);
+            const rgbCell = row.insertCell(3);
+            const mbtileCell = row.insertCell(4);
+            const deleteCell = row.insertCell(5); // Cell for the delete button
+            const statsCell = row.insertCell(6); // Cell for the stats button
+            const downloadCell = row.insertCell(7); // Cell for the download button
 
             nameCell.textContent = layer.layerName;
+            labelCell.textContent = layer.effectiveLabel;
             pathCell.textContent = layer.filePath;
             rgbCell.textContent = layer.isRgb ? 'Yes' : 'No';
             mbtileCell.textContent = layer.isMbtile ? 'Yes' : 'No';
