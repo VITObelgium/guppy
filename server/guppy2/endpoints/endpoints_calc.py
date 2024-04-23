@@ -79,8 +79,9 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody) -> Response:
     if body.geoserver:
         geoserver_layer = create_raster(raster_name, body.result_style)
         return Response(content=geoserver_layer, status_code=status.HTTP_201_CREATED)
-    else:
+    if body.file_response:
         return generate_raster_response(os.path.join(base_path, raster_name))
+    return Response(content=raster_name, status_code=status.HTTP_201_CREATED)
 
 
 def process_rescaling(base_path: str, body: s.RasterCalculationBody, nodata: float, raster_name: str, t: float):
