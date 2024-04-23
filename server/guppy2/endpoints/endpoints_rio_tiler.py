@@ -104,7 +104,10 @@ def get_tile(file_path: str, z: int, x: int, y: int, style: str = None) -> Respo
                 if style != 'shader_rgba':
                     try:
                         colormap = get_cached_colormap(style)
-                        img.rescale(in_range=img.dataset_statistics)
+                        if img.dataset_statistics:
+                            img.rescale(in_range=img.dataset_statistics)
+                        else:
+                            img.rescale(in_range=[(stats.min, stats.max)])
                     except InvalidColorMapName:
                         raise HTTPException(status_code=404, detail=f"Invalid colormap name: {style}")
                 else:
