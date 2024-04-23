@@ -11,6 +11,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from guppy2.config import config as cfg
 from guppy2.db.db_session import Base, engine
+from guppy2.db.db_sync import keep_db_tables_in_sync
 from guppy2.endpoints.tile_utils import save_request_counts_timer, save_request_counts
 from guppy2.routes.admin_router import router as admin_router
 from guppy2.routes.calculation_router import router as calculation_router
@@ -23,6 +24,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 Base.metadata.create_all(bind=engine)
+
+keep_db_tables_in_sync()
 
 
 @asynccontextmanager
