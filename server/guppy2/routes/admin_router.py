@@ -14,8 +14,8 @@ router = APIRouter(
 
 
 @router.post("/upload", description="Upload a file (GeoTiff or Gpkg) to the server.")
-async def upload_file(layerName: str = Form(...), isRgb: bool = Form(False), file: UploadFile = File(...), db: Session = Depends(get_db)):
-    return endpoints_upload.upload_file(layer_name=layerName, file=file, is_rgb=isRgb, db=db)
+async def upload_file(layerName: str = Form(...), layerLabel: str = Form(...), isRgb: bool = Form(False), file: UploadFile = File(...), db: Session = Depends(get_db)):
+    return endpoints_upload.upload_file(layer_name=layerName, label=layerLabel, file=file, is_rgb=isRgb, db=db)
 
 
 @router.get("/upload/ui", description="simple UI to upload a  file (GeoTiff or Gpkg) to the server.")
@@ -52,12 +52,12 @@ def delete_layer(layerName: str, db: Session = Depends(get_db)):
 
 @router.put("/layer/{layerName}", description="Update a layer on the server.")
 def update_layer(body: LayerMetadataBody, db: Session = Depends(get_db)):
-    return endpoints_admin.update_layer_mapping(db=db, layer_name=body.layer_name, file_path=body.file_path, is_rgb=body.is_rgb, is_mbtile=body.is_mbtile)
+    return endpoints_admin.update_layer_mapping(db=db, layer_name=body.layer_name, label=body.label, file_path=body.file_path, is_rgb=body.is_rgb, is_mbtile=body.is_mbtile)
 
 
 @router.post("/layer", description="Insert a layer on the server.")
 def insert_layer(body: LayerMetadataBody, db: Session = Depends(get_db)):
-    return endpoints_admin.insert_layer_mapping(db=db, layer_name=body.layer_name, file_path=body.file_path, is_rgb=body.is_rgb, is_mbtile=body.is_mbtile)
+    return endpoints_admin.insert_layer_mapping(db=db, layer_name=body.layer_name, label=body.label, file_path=body.file_path, is_rgb=body.is_rgb, is_mbtile=body.is_mbtile)
 
 
 @router.get("/cache/clear", description="Clear the tile cache.")
@@ -74,7 +74,6 @@ def get_tile_statistics(layerName: str, offset: int = 0, limit: int = 20, db: Se
 def get_tilestatsgpkg(layerName: str, db: Session = Depends(get_db)):
     gpkg_bytes = endpoints_tiles.get_tile_statistics_images(db=db, layer_name=layerName)
     return Response(gpkg_bytes, media_type="application/geopackage+sqlite3", headers={"Content-Disposition": f"attachment;filename={layerName}_stats.gpkg"})
-
 
 
 @router.get("/map", description="map")
