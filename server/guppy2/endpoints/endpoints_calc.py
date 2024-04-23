@@ -8,6 +8,7 @@ import jenkspy
 import numpy as np
 import rasterio
 import requests
+from osgeo import gdal
 from rasterio.enums import Resampling
 from sqlalchemy.orm import Session
 from starlette import status
@@ -65,10 +66,12 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody) -> Response:
                                                     out_nodata=255 if body.rgb else -9999)
 
     build_overview_tiles = [2, 4, 8, 16, 32, 64]
-    with rasterio.open(os.path.join(base_path, raster_name), mode='r+', cache=False) as dataset:
+    with rasterio.open(os.path.join(base_path, raster_name), mode='r+') as dataset:
         dataset.profile.update(compress='DEFLATE')
         dataset.build_overviews(build_overview_tiles, Resampling.nearest)
         dataset.update_tags(ns='rio_overview', resampling='nearest')
+    # add statistics file
+    gdal.Info(os.path.join(base_path, raster_name), computeMinMax=True, stats=True)
 
     cleanup_files(fixed_path_list, unique_identifier)
     logger.info(f'raster_calculation 200 {time.time() - t}')
