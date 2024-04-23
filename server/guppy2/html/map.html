@@ -227,6 +227,10 @@
                     <option value="add">Add</option>
                     <option value="subtract">Subtract</option>
                     <option value="multiply">Multiply</option>
+                    <option value="invert_boolean_mask">Invert Boolean Mask</option>
+                    <option value="boolean_mask">Boolean Mask</option>
+                    <option value="unique_product">Unique Product</option>
+                    <option value="clip">Clip</option>
                 </select>
 
                 <label for="factor">Factor</label>
@@ -432,6 +436,7 @@
                     resultStyle: null,
                     resultLabel: labelInput.value || "Calculated Layer",
                 };
+                calculateLayerButton.setAttribute("disabled", "disabled");
 
                 try {
                     const response = await fetch(`${window.location.origin}$deploy_path$/layers/calculate`, {
@@ -450,6 +455,8 @@
                 } catch (error) {
                     console.error("Error during calculation:", error);
                     alert("An error occurred. Please try again.");
+                } finally {
+                    calculateLayerButton.removeAttribute("disabled");
                 }
 
                 layerModal.style.display = "none"; // Hide the modal after calculation
@@ -518,6 +525,7 @@
                             } else {
                                 map.removeLayer(layerId);
                             }
+                            updateArea();
                         };
 
                         label.appendChild(input);
