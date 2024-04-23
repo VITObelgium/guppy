@@ -89,6 +89,7 @@
 <h1>Layer Metadata</h1>
 <form id="addLayerForm">
     <input type="text" id="layer_name" name="layer_name" placeholder="Layer Name" required>
+    <input type="text" id="label" name="label" placeholder="Layer Label" required>
     <input type="text" id="file_path" name="file_path" placeholder="File Path" required>
     <label>
         <input type="checkbox" id="is_rgb" name="is_rgb"> Is RGB
@@ -107,6 +108,7 @@
     document.getElementById('addLayerForm').onsubmit = async (e) => {
         e.preventDefault();
         const layerName = document.getElementById('layer_name').value;
+        const label = document.getElementById('label').value;
         const filePath = document.getElementById('file_path').value;
         const isRgb = document.getElementById('is_rgb').checked;
         const isMbtile = document.getElementById('is_mbtile').checked;
@@ -116,7 +118,7 @@
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({layerName, filePath, isRgb, isMbtile}),
+            body: JSON.stringify({layerName, label, filePath, isRgb, isMbtile}),
         });
 
         if (response.ok) {
