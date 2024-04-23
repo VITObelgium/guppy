@@ -75,7 +75,10 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody) -> Response:
 
     cleanup_files(fixed_path_list, unique_identifier)
     logger.info(f'raster_calculation 200 {time.time() - t}')
-    insert_into_guppy_db(db, raster_name, os.path.join(base_path, raster_name), body.rgb)
+    layer_label = raster_name
+    if body.result_label:
+        layer_label = body.result_label
+    insert_into_guppy_db(db, raster_name, layer_label, os.path.join(base_path, raster_name), body.rgb)
     if body.geoserver:
         geoserver_layer = create_raster(raster_name, body.result_style)
         return Response(content=geoserver_layer, status_code=status.HTTP_201_CREATED)

@@ -2,7 +2,7 @@
 from enum import Enum as PyEnum
 from typing import Optional, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field
 
 
 def to_camel(s):
@@ -19,9 +19,15 @@ class CamelModel(BaseModel):
 class LayerMetadataSchema(CamelModel):
     id: int
     layer_name: str
+    label: Optional[str] = None
     file_path: str
     is_rgb: Optional[bool] = False
     is_mbtile: Optional[bool] = False
+
+    @computed_field
+    @property
+    def effective_label(self) -> str:
+        return self.label if self.label is not None else self.layer_name
 
     class Config:
         from_attributes = True
@@ -169,10 +175,12 @@ class RasterCalculationBody(CamelModel):
     rescale_result: Optional[RescaleResult] = None
     layer_list_after_rescale: Optional[list[CombineLayersList]] = None
     result_style: Optional[str] = None
+    result_label: Optional[str] = None
 
 
 class LayerMetadataBody(CamelModel):
     layer_name: str
+    label: str
     file_path: str
     is_rgb: Optional[bool] = False
     is_mbtile: Optional[bool] = False

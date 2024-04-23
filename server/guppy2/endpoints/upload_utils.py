@@ -299,7 +299,7 @@ def save_geotif_tiled_overviews(input_file: str, output_file: str, nodata: int) 
     return output_file
 
 
-def insert_into_layer_metadata(layer_uuid: str, file_path: str, db: Session, is_rgb: bool = False, is_mbtile: bool = False):
+def insert_into_layer_metadata(layer_uuid: str,label:str,  file_path: str, db: Session, is_rgb: bool = False, is_mbtile: bool = False):
     """
     Inserts a record into the layer_metadata table.
 
@@ -309,7 +309,7 @@ def insert_into_layer_metadata(layer_uuid: str, file_path: str, db: Session, is_
         db: The database connection object.
         is_rgb: Optional. Indicates whether the layer is an RGB layer. Default is False.
     """
-    new_layer = LayerMetadata(layer_name=layer_uuid, file_path=file_path, is_rgb=is_rgb, is_mbtile=is_mbtile)
+    new_layer = LayerMetadata(layer_name=layer_uuid, label = label, file_path=file_path, is_rgb=is_rgb, is_mbtile=is_mbtile)
     db.add(new_layer)
     db.commit()
     logger.info("Record inserted into layer metadata")

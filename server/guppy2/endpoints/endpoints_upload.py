@@ -11,10 +11,11 @@ from guppy2.endpoints.upload_utils import sanitize_input_str, check_layer_exists
 logger = logging.getLogger(__name__)
 
 
-def upload_file(layer_name: str, file: UploadFile, db: Session, is_rgb: bool = False):
+def upload_file(layer_name: str, label: str, file: UploadFile, db: Session, is_rgb: bool = False):
     """
     Args:
         layer_name (str): The name of the layer.
+        label (str): The label of the layer.
         file (UploadFile): The file to upload.
         db (Session): The database session.
         is_rgb (bool, optional): Indicates whether the file is in RGB format.
@@ -36,5 +37,5 @@ def upload_file(layer_name: str, file: UploadFile, db: Session, is_rgb: bool = F
 
     is_mbtile = create_preprocessed_layer_file(ext, file_location, sanitized_filename, sanitized_layer_name, tmp_file_location)
 
-    insert_into_layer_metadata(layer_uuid=f"{sanitized_layer_name}_{sanitized_filename}", file_path=file_location, db=db, is_rgb=is_rgb, is_mbtile=is_mbtile)
-    return f"Upload successful: Layer {sanitized_layer_name}_{sanitized_filename} uploaded."
+    insert_into_layer_metadata(layer_uuid=f"{sanitized_layer_name}_{sanitized_filename}", label=label, file_path=file_location, db=db, is_rgb=is_rgb, is_mbtile=is_mbtile)
+    return f"Upload successful: Layer {sanitized_layer_name}_{sanitized_filename} uploaded with label {label}."

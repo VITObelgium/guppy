@@ -35,7 +35,7 @@ def delete_layer_mapping(db: Session, layer_name: str):
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-def update_layer_mapping(db: Session, layer_name: str, file_path: str, is_rgb: bool, is_mbtile: bool):
+def update_layer_mapping(db: Session, layer_name: str, label: str, file_path: str, is_rgb: bool, is_mbtile: bool):
     """
     Updates the mapping of a layer in the database.
 
@@ -53,6 +53,7 @@ def update_layer_mapping(db: Session, layer_name: str, file_path: str, is_rgb: b
     t = time.time()
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
     if layer_model:
+        layer_model.label = label
         layer_model.file_path = file_path
         layer_model.is_rgb = is_rgb
         layer_model.is_mbtile = is_mbtile
@@ -63,7 +64,7 @@ def update_layer_mapping(db: Session, layer_name: str, file_path: str, is_rgb: b
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-def insert_layer_mapping(db: Session, layer_name: str, file_path: str, is_rgb: bool, is_mbtile: bool):
+def insert_layer_mapping(db: Session, layer_name: str, label: str, file_path: str, is_rgb: bool, is_mbtile: bool):
     """
     Inserts a layer mapping into the database.
 
@@ -79,7 +80,7 @@ def insert_layer_mapping(db: Session, layer_name: str, file_path: str, is_rgb: b
 
     """
     t = time.time()
-    layer_model = m.LayerMetadata(layer_name=layer_name, file_path=file_path, is_rgb=is_rgb, is_mbtile=is_mbtile)
+    layer_model = m.LayerMetadata(layer_name=layer_name, label=label, file_path=file_path, is_rgb=is_rgb, is_mbtile=is_mbtile)
     db.add(layer_model)
     db.commit()
     logger.info(f'insert_layer_mapping 201 {time.time() - t}')

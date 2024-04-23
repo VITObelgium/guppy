@@ -34,9 +34,9 @@ def create_raster(raster_name, style=None):
         create_error(message='geoserver caused error')
 
 
-def insert_into_guppy_db(db: Session, filename, file_path, is_rgb):
+def insert_into_guppy_db(db: Session, filename, label, file_path, is_rgb):
     layer_name = filename.split('.')[0]
-    new_layer = m.LayerMetadata(layer_name=f"generated:{layer_name}", file_path=file_path, is_rgb=is_rgb)
+    new_layer = m.LayerMetadata(layer_name=f"generated:{layer_name}", label=label, file_path=file_path, is_rgb=is_rgb)
     db.add(new_layer)
     db.commit()
 
