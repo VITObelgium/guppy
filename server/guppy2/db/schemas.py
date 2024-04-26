@@ -27,7 +27,7 @@ class LayerMetadataSchema(CamelModel):
     @computed_field
     @property
     def effective_label(self) -> str:
-        return self.label if self.label is not None else self.layer_name
+        return self.label if self.label is not None and self.label else self.layer_name
 
     class Config:
         from_attributes = True
