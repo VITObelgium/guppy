@@ -12,7 +12,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from guppy2.config import config as cfg
 from guppy2.db.db_session import Base, engine
 from guppy2.db.db_sync import keep_db_tables_in_sync
-from guppy2.endpoints.tile_utils import save_request_counts_timer, save_request_counts
+from guppy2.endpoints.tile_utils import save_request_counts, save_request_counts_timer
 from guppy2.routes.admin_router import router as admin_router
 from guppy2.routes.calculation_router import router as calculation_router
 from guppy2.routes.data_router import router as data_router
@@ -42,7 +42,13 @@ async def lifespan(app: FastAPI):
     save_request_counts()
 
 
-app = FastAPI(title="guppy", description="A raster analyzer API", docs_url=f"{cfg.deploy.path}/docs", openapi_url=f"{cfg.deploy.path}", lifespan=lifespan)
+app = FastAPI(
+    title="guppy",
+    description="A raster analyzer API",
+    docs_url=f"{cfg.deploy.path}/docs",
+    openapi_url=f"{cfg.deploy.path}",
+    lifespan=lifespan,
+)
 
 # Add CORS middleware to allow all origins
 app.add_middleware(
@@ -67,9 +73,9 @@ def start_background_task():
     thread.start()
 
 
-@app.get('/favicon.ico', include_in_schema=False)
+@app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
-    return FileResponse('guppy2/html/favicon.ico')
+    return FileResponse("guppy2/html/favicon.ico")
 
 
 app.include_router(general_router)
@@ -83,5 +89,5 @@ instrumentator.instrument(app)
 instrumentator.expose(admin_router, endpoint="/metrics")
 app.include_router(admin_router)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     uvicorn.run(app, port=5000)
