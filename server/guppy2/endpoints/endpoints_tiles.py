@@ -158,3 +158,53 @@ def get_tile_statistics_images(db: Session, layer_name: str):
     finally:
         if os.path.exists(temp_filepath):
             os.remove(temp_filepath)
+
+
+def search_tile(layer_name: str, field_name: str, search_string: str, zoom_level: int, db: Session):
+    """Searches for a tile in a given layer based on search criteria.
+
+    Args:
+        layer_name (str): The name of the layer.
+        field_name (str): The field name to search for in the tile.
+        search_string (str): The search string to match in the fieldName.
+        zoom_level (int): The zoom level of the tile.
+        db (Session): The session object used for database operations.
+
+    Returns:
+        Response: A Response object with the matching tile data in JSON format, or an error response.
+
+    Raises:
+        HTTPException: If there is an error in the tile search process.
+    """
+    mb_file = validate_layer_and_get_file_path(db, layer_name)
+    try:
+        df = read_cached_mbtile_as_df(mb_file, zoom_level)
+        if df is not None and not df.empty:
+            if field_name not in df.columns:
+                create_error(code=400, message=f"Field {field_name} not found in the tile")
+            df[field_name] = df[field_name].astype(str)
+            df = df[df[field_name].str.contains(search_string, case=False, na=False)].copy()
+        if not df.empty:
+            return Response(df.head(10).to_json(), media_type="application/json")
+        else:
+            create_error(code=204, message="Tile not found")
+    except Exception as e:
+        create_error(code=404, message=str(e))
+
+
+@lru_cache(maxsize=128)
+def read_cached_mbtile_as_df(mb_file, zoomLevel):
+    """
+    Reads a mbtile file and returns its content as a GeoDataFrame.
+    uses lru cache to store the GeoDataFrame for future use.
+
+    Args:
+        mb_file (str): Path to the mbtile file.
+        zoomLevel (int): The desired zoom level to read from the mbtile file.
+
+    Returns:
+        GeoDataFrame: The mbtile content as a GeoDataFrame.
+
+    """
+    df = gpd.read_file(mb_file, engine="pyogrio", read_geometry=False, ZOOM_LEVEL=zoomLevel)
+    return df
