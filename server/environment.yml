@@ -18,6 +18,7 @@ dependencies:
   - pyproj
   - joblib
   - geopandas
+  - pyogrio
   - orjson
   - dask
   - rioxarray
