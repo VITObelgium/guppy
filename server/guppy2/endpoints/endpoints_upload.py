@@ -50,7 +50,8 @@ def generate_sqlite_file(layer_name, db):
         sqlite_file = mb_file.replace(".mbtiles", ".sqlite")
         df = gpd.read_file(mb_file, engine="pyogrio")
         if 'bounds' not in df.columns:
-            df['bounds'] = df.geometry.envelope
+            bounds_df = df.bounds
+            df['bounds'] = bounds_df.apply(lambda row: f"{round(row['minx'], 8)}, {round(row['miny'], 8)}, {round(row['maxx'], 8)}, {round(row['maxy'], 8)}", axis=1)
         df.drop(columns=['geometry'], inplace=True)
         df.to_file(sqlite_file, index=False)
         return f"Generated sqlite file for layer {layer_name}."
