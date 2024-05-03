@@ -4,6 +4,7 @@ import os
 
 import geopandas as gpd
 from fastapi import UploadFile
+from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from guppy2.endpoints.endpoint_utils import validate_layer_and_get_file_path
@@ -53,6 +54,6 @@ def generate_sqlite_file(layer_name, db):
             bounds_df = df.bounds
             df['bounds'] = bounds_df.apply(lambda row: f"{round(row['minx'], 8)}, {round(row['miny'], 8)}, {round(row['maxx'], 8)}, {round(row['maxy'], 8)}", axis=1)
         df.drop(columns=['geometry'], inplace=True)
-        df.to_file(sqlite_file, index=False)
+        df.to_sql('tiles', con=create_engine(f'sqlite:///{sqlite_file}'), if_exists='replace', index=False)
         return f"Generated sqlite file for layer {layer_name}."
     create_error(code=404, message=f"Layer {layer_name} not found.")
