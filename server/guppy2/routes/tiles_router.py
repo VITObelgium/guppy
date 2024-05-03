@@ -28,5 +28,5 @@ async def get_raster_tile(layer_name: str, z: int, x: int, y: int,
 
 
 @router.post("/vector/{layer_name}/search", description="Search for a vector tile for a specified layer.")
-async def search_vector_tile(layer_name: str, params: QueryParams, db: Session = Depends(get_db)):
-    return endpoints_tiles.search_tile(layer_name=layer_name, params=params, db=db)
+async def search_vector_tile(layer_name: str, params: QueryParams, limit: int = 100, offset: int = 0, db: Session = Depends(get_db)):
+    return endpoints_tiles.search_tile(layer_name=layer_name, params=params, limit=limit, offset=offset, db=db)

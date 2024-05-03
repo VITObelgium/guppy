@@ -162,7 +162,7 @@ def get_tile_statistics_images(db: Session, layer_name: str):
             os.remove(temp_filepath)
 
 
-def search_tile(layer_name: str, params: QueryParams, db: Session):
+def search_tile(layer_name: str, params: QueryParams, limit: int, offset: int, db: Session):
     mb_file = validate_layer_and_get_file_path(db, layer_name)
     mb_file = mb_file.replace(".mbtiles", ".sqlite")
     if not os.path.exists(mb_file):
@@ -171,10 +171,11 @@ def search_tile(layer_name: str, params: QueryParams, db: Session):
         uri = f'file:{mb_file}?mode=ro'
         with sqlite3.connect(uri, uri=True) as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM ? WHERE ?", (layer_name, params.cql_filter))
+            cursor.execute(f"SELECT * FROM tiles WHERE {params.cql_filter} LIMIT ? OFFSET ?", (limit, offset))
             data = cursor.fetchall()
             # Fetch all rows as a list of dicts
-            rows = [dict(row) for row in data]
+            columns = [description[0] for description in cursor.description]
+            rows = [dict(zip(columns, row)) for row in data]
             if rows:
                 return rows
             create_error(code=204, message="No data found for the specified query.")

@@ -46,6 +46,7 @@ def upload_file(layer_name: str, label: str, file: UploadFile, db: Session, is_r
 
 
 def generate_sqlite_file(layer_name, db):
+    logger.info(f"Generating sqlite file for layer {layer_name}")
     mb_file = validate_layer_and_get_file_path(db, layer_name)
     if os.path.exists(mb_file):
         sqlite_file = mb_file.replace(".mbtiles", ".sqlite")
