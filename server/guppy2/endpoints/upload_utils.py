@@ -139,9 +139,13 @@ def create_preprocessed_layer_file(ext: str, file_location: str, sanitized_filen
         df['fid'] = df.index
         df.to_crs(epsg=4326, inplace=True)
         gpkg_loc = f"/content/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}.gpkg"
+        if 'bounds' not in df.columns:
+            df['bounds'] = df.geometry.envelope
         df.to_file(gpkg_loc, index=False)
         to_mbtiles(sanitized_layer_name, gpkg_loc, file_location)
         os.remove(tmp_file_location)
+        df.drop(columns=['geometry'], inplace=True)
+        df.to_file(file_location.replace('.mbtiles', '.sqlite'), index=False)
         if os.path.exists(gpkg_loc):
             os.remove(gpkg_loc)
         is_mbtile = True
@@ -299,7 +303,7 @@ def save_geotif_tiled_overviews(input_file: str, output_file: str, nodata: int) 
     return output_file
 
 
-def insert_into_layer_metadata(layer_uuid: str,label:str,  file_path: str, db: Session, is_rgb: bool = False, is_mbtile: bool = False):
+def insert_into_layer_metadata(layer_uuid: str, label: str, file_path: str, db: Session, is_rgb: bool = False, is_mbtile: bool = False):
     """
     Inserts a record into the layer_metadata table.
 
@@ -309,7 +313,7 @@ def insert_into_layer_metadata(layer_uuid: str,label:str,  file_path: str, db: S
         db: The database connection object.
         is_rgb: Optional. Indicates whether the layer is an RGB layer. Default is False.
     """
-    new_layer = LayerMetadata(layer_name=layer_uuid, label = label, file_path=file_path, is_rgb=is_rgb, is_mbtile=is_mbtile)
+    new_layer = LayerMetadata(layer_name=layer_uuid, label=label, file_path=file_path, is_rgb=is_rgb, is_mbtile=is_mbtile)
     db.add(new_layer)
     db.commit()
     logger.info("Record inserted into layer metadata")

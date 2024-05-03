@@ -196,3 +196,7 @@ class TileStatisticsSchema(CamelModel):
 
     class Config:
         from_attributes = True
+
+
+class QueryParams(CamelModel):
+    cql_filter: str

@@ -14,8 +14,13 @@ router = APIRouter(
 
 
 @router.post("/upload", description="Upload a file (GeoTiff or Gpkg) to the server.")
-async def upload_file(layerName: str = Form(...), layerLabel: str = Form(...), isRgb: bool = Form(False), file: UploadFile = File(...), db: Session = Depends(get_db)):
+def upload_file(layerName: str = Form(...), layerLabel: str = Form(...), isRgb: bool = Form(False), file: UploadFile = File(...), db: Session = Depends(get_db)):
     return endpoints_upload.upload_file(layer_name=layerName, label=layerLabel, file=file, is_rgb=isRgb, db=db)
+
+
+@router.get("/{layer_name}/generate_db", description="Generate sqlite file for a mbtiles layer")
+def upload_file(layer_name: str, db: Session = Depends(get_db)):
+    return endpoints_upload.generate_sqlite_file(layer_name=layer_name, db=db)
 
 
 @router.get("/upload/ui", description="simple UI to upload a  file (GeoTiff or Gpkg) to the server.")
@@ -28,7 +33,7 @@ def read_index():
 
 
 @router.get("/layers", description="layers")
-async def read_index():
+def read_index():
     with open('guppy2/html/layers.html', 'r', encoding='utf-8') as file:
         file_content = file.read()
 
@@ -77,7 +82,7 @@ def get_tilestatsgpkg(layerName: str, db: Session = Depends(get_db)):
 
 
 @router.get("/map", description="map")
-async def read_index():
+def read_index():
     with open('guppy2/html/map.html', 'r', encoding='utf-8') as file:
         file_content = file.read()
 
