@@ -26,4 +26,5 @@ dependencies:
   - python-multipart
   - rio-tiler
   - prometheus-fastapi-instrumentator
+  - pygeofilter
 prefix: /opt/mapbase3/server/conda-env

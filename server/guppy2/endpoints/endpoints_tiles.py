@@ -1,6 +1,5 @@
 import logging
 import os
-import re
 import sqlite3
 import tempfile
 from functools import lru_cache
@@ -8,6 +7,8 @@ from typing import Optional
 
 import geopandas as gpd
 from fastapi import HTTPException, Response
+from pygeofilter.backends.sql import to_sql_where
+from pygeofilter.parsers.ecql import parse
 from shapely.geometry import box
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -15,7 +16,7 @@ from sqlalchemy.orm import Session
 from guppy2.db.models import TileStatistics
 from guppy2.db.schemas import QueryParams
 from guppy2.endpoints.endpoint_utils import validate_layer_and_get_file_path
-from guppy2.endpoints.tile_utils import tile2lonlat, add_item_to_request_counter
+from guppy2.endpoints.tile_utils import tile2lonlat, add_item_to_request_counter, get_field_mapping, FUNCTION_MAP
 from guppy2.error import create_error
 
 logger = logging.getLogger(__name__)
@@ -163,27 +164,19 @@ def get_tile_statistics_images(db: Session, layer_name: str):
             os.remove(temp_filepath)
 
 
-def sanitize_cql_filter(filter_string):
-    # Whitelist pattern: only allows conditions with alphanumerics and underscore for column names,
-    # and numeric or quoted text values. Only allows =,<,>,<=,>=, 'AND', 'OR'.
-    pattern = re.compile(r"^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*(=|<|>|<=|>=)\s*('[^']*'|[0-9]+)(\s+(AND|OR)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*(=|<|>|<=|>=)\s*('[^']*'|[0-9]+))*\s*$")
-    if not pattern.match(filter_string):
-        create_error("Filter contains invalid characters or structure", code=400)
-    return filter_string
-
-
 def search_tile(layer_name: str, params: QueryParams, limit: int, offset: int, db: Session):
-    cql_filter = sanitize_cql_filter(params.cql_filter)
-
     mb_file = validate_layer_and_get_file_path(db, layer_name)
-    mb_file = mb_file.replace(".mbtiles", ".sqlite")
+    filters = parse(params.cql_filter)
+    sqlite_file = mb_file.replace(".mbtiles", ".sqlite")
     if not os.path.exists(mb_file):
         create_error(code=404, message=f"Sqlite file not found for layer {layer_name}")
     try:
-        uri = f'file:{mb_file}?mode=ro'
+        uri = f'file:{sqlite_file}?mode=ro'
         with sqlite3.connect(uri, uri=True) as conn:
             cursor = conn.cursor()
-            cursor.execute(f"SELECT * FROM tiles WHERE {cql_filter} LIMIT ? OFFSET ?", (limit, offset))
+            field_mapping = get_field_mapping(conn)
+            where = to_sql_where(filters, field_mapping, FUNCTION_MAP)
+            cursor.execute(f"SELECT * FROM tiles WHERE {where} LIMIT ? OFFSET ?", (limit, offset))
             data = cursor.fetchall()
             # Fetch all rows as a list of dicts
             columns = [description[0] for description in cursor.description]

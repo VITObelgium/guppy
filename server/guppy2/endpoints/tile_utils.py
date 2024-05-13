@@ -127,3 +127,40 @@ def data_to_rgba(data: np.ndarray, nodata):
     m = np.zeros((4, 256, 256), dtype="bool")
 
     return np.ma.MaskedArray(rgb)
+
+
+FUNCTION_MAP = {
+    'strToLower': 'LOWER',  # Converts a string to lower case
+    'strToUpper': 'UPPER',  # Converts a string to upper case
+    'date': 'DATE',  # Extracts the date part of a datetime
+    'now': 'CURRENT_TIMESTAMP',  # Returns the current date and time
+    'substring': 'SUBSTR',  # Extracts a substring from a string (parameters: string, start, length)
+    'concat': '||',  # SQL concatenation operator for strings
+    'length': 'LENGTH',  # Returns the length of a string
+    'mathAbs': 'ABS',  # Returns the absolute value of a number
+    'mathRound': 'ROUND',  # Rounds a number to the nearest integer
+    'add': '+',  # Addition operator for numbers
+    'subtract': '-',  # Subtraction operator for numbers
+    'multiply': '*',  # Multiplication operator for numbers
+    'divide': '/',  # Division operator for numbers
+    # Geospatial functions (if using SpatiaLite extension or similar)
+    'within': 'ST_Within',  # Checks if geometry A is within geometry B
+    'intersects': 'ST_Intersects',  # Checks if geometry A intersects geometry B
+    'distance': 'ST_Distance',  # Computes distance between two geometries
+}
+
+
+def get_field_mapping(conn):
+    """
+    Args:
+        conn: The connection object that represents the connection to the database.
+
+    Returns:
+        A dictionary containing the field mapping.
+        The keys of the dictionary are the column names in the 'tiles' table, and the values are also the column names.
+        This mapping provides a simple one-to-one mapping of column names to column names.
+    """
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA table_info(tiles)")
+    columns = cursor.fetchall()
+    return {col[1]: col[1] for col in columns}  # Simple mapping of name to name
