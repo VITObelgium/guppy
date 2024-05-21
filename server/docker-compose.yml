@@ -1,0 +1,19 @@
+services:
+  guppy:
+    build: .
+    platform: linux/amd64
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/guppy/healthcheck"]
+    environment:
+      GUPPY_DEPLOY_PATH: /guppy
+      GUPPY_DATABASE_TYPE: sqlite
+      GUPPY_CONTENT_PATH : /opt/guppy2/server/data
+      GUPPY_DATABASE_DB: /opt/guppy2/server/data/guppydb.sqlite
+    volumes:
+      - guppy-data:/opt/guppy2/server/data
+
+volumes:
+  guppy-data:
+    driver: local

@@ -1,5 +1,16 @@
 # Guppy server
 
+## Quickstart
+
+Assuming Docker and docker-compose are installed on your system, you can start the Guppy server with the following commands:
+
+```bash
+cd server
+docker-compose up 
+```
+
+Then go access the demo UI https://github.com/VITObelgium/guppy/tree/develop?tab=readme-ov-file#access-the-ui or interact with the API at http://localhost:8080/guppy/docs
+
 ## Installation
 
 ### Conda environment
