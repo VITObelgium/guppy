@@ -12,7 +12,10 @@ conda env create --file environment.yml
 
 ## Usage
 
-### Define configuration
+### Configuration
+
+
+#### Configuration file: `config.yml`
 
 Create a configuration file in the directory `server` named `config.yml` with the following content. Adjust for your specific setup.
 minimal yaml:
@@ -50,6 +53,30 @@ database:
   passwd: top-secret-password
   db: guppy2
 ```
+
+#### Configuration via environment variables
+
+Alternatively, you can set the configuration via environment variables.
+These variables will override the values in the configuration file.
+
+The following environment variables are available:
+
+| Environment variable | Description |
+| --- | --- |
+| GUPPY_CONFIG_FILE | Path to the configuration file |
+| GUPPY_DEPLOY_PATH | Path to deploy the Guppy server |
+| GUPPY_SIZE_LIMIT | Maximum size of uploaded files in bytes |
+| GUPPY_DATABASE_TYPE | Database type (sqlite, postgres) |
+| GUPPY_DATABASE_HOST | Database host |
+| GUPPY_DATABASE_DB | Database name |
+| GUPPY_DATABASE_USER | Database user |
+| GUPPY_DATABASE_PASSWD | Database password |
+| GUPPY_DATABASE_PASSWD_FILE | Path to a file containing the database password |
+| GUPPY_GEOSERVER_USER | GeoServer account username |
+| GUPPY_GEOSERVER_PASSWD | GeoServer account password |
+| GUPPY_GEOSERVER_PASSWD_FILE | Path to a file containing the password for the GeoServer account |
+
+_NOTE: `GUPPY_AUTH_*` related environment variables are implemented for VITO use only at this moment._
 
 ### Start server
 
