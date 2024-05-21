@@ -19,6 +19,7 @@ class _Database:
 @dataclass(frozen=True)
 class _Deploy:
     path: str
+    content: str
 
 
 @dataclass(frozen=True)
@@ -41,6 +42,7 @@ class _Config:
 
 
 default_deploy_path: str = '/api'
+default_content_path: str = '/content'
 
 
 def sanitize_deploy_path(deploy_path: str) -> str:
@@ -61,10 +63,13 @@ def parse_config_file(config_file: str) -> _Config:
     logger.info(" OK")
     if 'path' not in yml_data['deploy']:
         yml_data['deploy']['path'] = default_deploy_path
+    if 'content' not in yml_data['deploy']:
+        yml_data['deploy']['content'] = default_content_path
     yml_data['deploy']['path'] = sanitize_deploy_path(yml_data['deploy']['path'])
     return _Config(
         deploy=_Deploy(
             path=yml_data['deploy']['path'],
+            content=yml_data['deploy']['content']
         ),
         database=_Database(
             type=yml_data['database']['type'] if 'type' in yml_data['database'] else 'postgres',
@@ -112,11 +117,14 @@ if guppy2_env_vars:
                 raise SystemExit("Password file '%s' not found!" % guppy2_env_vars['GUPPY_AUTH_PUBLIC_KEY_FILE'])
         if 'GUPPY_DEPLOY_PATH' not in guppy2_env_vars:
             guppy2_env_vars['GUPPY_DEPLOY_PATH'] = default_deploy_path
+        if 'GUPPY_CONTENT_PATH' not in guppy2_env_vars:
+            guppy2_env_vars['GUPPY_CONTENT_PATH'] = default_content_path
         guppy2_env_vars['GUPPY_DEPLOY_PATH'] = sanitize_deploy_path(guppy2_env_vars['GUPPY_DEPLOY_PATH'])
         try:
             config = _Config(
                 deploy=_Deploy(
                     path=guppy2_env_vars['GUPPY_DEPLOY_PATH'],
+                    content=guppy2_env_vars['GUPPY_CONTENT_PATH'],
                 ),
                 database=_Database(
                     type=guppy2_env_vars['GUPPY_DATABASE_TYPE'] if 'GUPPY_DATABASE_TYPE' in guppy2_env_vars else 'sqlite',
