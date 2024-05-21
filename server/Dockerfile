@@ -8,19 +8,23 @@ RUN conda env update --prefix /opt/guppy2/server/conda-env --file environment.ym
 FROM debian:bullseye-slim
 
 RUN  echo "**** install packages ****" \
-  && apt-get update \
-  && DEBIAN_FRONTEND=noninteractive \
-     apt-get install -y \
-       curl \
-  && rm -rf /var/lib/apt/lists/* \
-  && echo
+	&& apt-get update \
+	&& DEBIAN_FRONTEND=noninteractive \
+	apt-get install -y \
+	curl \
+	&& rm -rf /var/lib/apt/lists/* \
+	&& echo
 
 RUN groupadd --system guppy2 && \
-    useradd --system -g guppy2 guppy2
+	useradd --system -g guppy2 guppy2
 
 WORKDIR /opt/guppy2/server
 COPY --from=conda-env /opt/guppy2/server/conda-env conda-env
 COPY guppy2 guppy2
+
+RUN mkdir -p /opt/guppy2/server/data
+RUN chmod 775 /opt/guppy2/server/data
+RUN chown -R guppy2:guppy2 /opt/guppy2/server/data
 
 USER guppy2
 
