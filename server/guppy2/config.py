@@ -119,7 +119,7 @@ if guppy2_env_vars:
                     path=guppy2_env_vars['GUPPY_DEPLOY_PATH'],
                 ),
                 database=_Database(
-                    type=guppy2_env_vars['GUPPY_DATABASE_TYPE'] if 'GUPPY_DATABASE_TYPE' in guppy2_env_vars else 'postgres',
+                    type=guppy2_env_vars['GUPPY_DATABASE_TYPE'] if 'GUPPY_DATABASE_TYPE' in guppy2_env_vars else 'sqlite',
                     host=guppy2_env_vars['GUPPY_DATABASE_HOST'] if 'GUPPY_DATABASE_HOST' in guppy2_env_vars else '',
                     user=guppy2_env_vars['GUPPY_DATABASE_USER'] if 'GUPPY_DATABASE_USER' in guppy2_env_vars else '',
                     passwd=guppy2_env_vars['GUPPY_DATABASE_PASSWD'] if 'GUPPY_DATABASE_PASSWD' in guppy2_env_vars else '',
