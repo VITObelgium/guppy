@@ -9,7 +9,7 @@ from fastapi import UploadFile
 from osgeo import gdal
 from sqlalchemy.orm import Session
 
-import guppy2.config as cfg
+from guppy2.config import config as cfg
 from guppy2.db.models import LayerMetadata
 from guppy2.error import create_error
 
