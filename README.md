@@ -1,4 +1,4 @@
-# Guppy server
+<img src=".github/splash.png" alt="Guppy" />
 
 ## Quickstart
 
