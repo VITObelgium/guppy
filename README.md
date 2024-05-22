@@ -107,12 +107,12 @@ cd server
 PYTHONPATH=. python guppy/server.py
 ```
 
-Your empty Guppy server is availlable at http://127.0.0.1:5000/guppy/docs
+Your empty Guppy server is available at http://127.0.0.1:5000/guppy/docs
 
 Run the server with reload option to automatically restart the server when changes are made to the code.
 
 ```bash
-python -m uvicorn guppy.server:app --reload --port 8000 --host 0.0.0.0
+python -m uvicorn guppy.server:app --reload --port 5000 --host 0.0.0.0
 ```
  
 ## Access the UI
@@ -121,12 +121,12 @@ The Guppy API is the core of the application, some UI is implemented on top of t
 
 The pages already provided as examples are:
 
-| Page | URL |
-| --- | --- |
-| Upload layer | http://localhost:8000/guppy/admin/upload/ui |
-| Layer metadata | http://localhost:8000/guppy/admin/layers |
-| Tile statistics | http://localhost:8000/guppy/admin/stats |
-| Layers on a map | http://localhost:8000/guppy/admin/stats |
+| Page            | URL                                         |
+|-----------------|---------------------------------------------|
+| Upload layer    | http://localhost:5000/guppy/admin/upload/ui |
+| Layer metadata  | http://localhost:5000/guppy/admin/layers    |
+| Tile statistics | http://localhost:5000/guppy/admin/stats     |
+| Layers viewer   | http://localhost:5000/guppy/admin/map       |
 
 
 
