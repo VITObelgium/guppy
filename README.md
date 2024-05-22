@@ -13,6 +13,9 @@ Then go access the demo UI https://github.com/VITObelgium/guppy/tree/develop?tab
 
 ## Installation
 
+In stead of using the docker-compose file, you can also run the Guppy server locally.
+This allows you to run the server in a development environment and to make changes to the code.
+
 ### Conda environment
 
 Ensure miniconda is installed on your system. If not, download and install it from [here](https://docs.conda.io/en/latest/miniconda.html).
