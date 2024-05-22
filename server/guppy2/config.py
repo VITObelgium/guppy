@@ -97,24 +97,12 @@ if guppy2_env_vars:
                     guppy2_env_vars['GUPPY_DATABASE_PASSWD'] = f.readline().strip()
             except IOError:
                 raise SystemExit("Password file '%s' not found!" % guppy2_env_vars['GUPPY_DATABASE_PASSWD_FILE'])
-        if 'GUPPY_AUTH_PASSWD_FILE' in guppy2_env_vars:
-            try:
-                with open(guppy2_env_vars['GUPPY_AUTH_PASSWD_FILE']) as f:
-                    guppy2_env_vars['GUPPY_AUTH_PASSWD'] = f.readline().strip()
-            except IOError:
-                raise SystemExit("Password file '%s' not found!" % guppy2_env_vars['GUPPY_AUTH_PASSWD_FILE'])
         if 'GUPPY_GEOSERVER_PASSWD_FILE' in guppy2_env_vars:
             try:
                 with open(guppy2_env_vars['GUPPY_GEOSERVER_PASSWD_FILE']) as f:
                     guppy2_env_vars['GUPPY_GEOSERVER_PASSWD'] = f.readline().strip()
             except IOError:
                 raise SystemExit("Password file '%s' not found!" % guppy2_env_vars['GUPPY_GEOSERVER_PASSWD_FILE'])
-        if 'GUPPY_AUTH_PUBLIC_KEY_FILE' in guppy2_env_vars:
-            try:
-                with open(guppy2_env_vars['GUPPY_AUTH_PUBLIC_KEY_FILE']) as f:
-                    guppy2_env_vars['GUPPY_AUTH_PUBLIC_KEY'] = f.readline().strip()
-            except IOError:
-                raise SystemExit("Password file '%s' not found!" % guppy2_env_vars['GUPPY_AUTH_PUBLIC_KEY_FILE'])
         if 'GUPPY_DEPLOY_PATH' not in guppy2_env_vars:
             guppy2_env_vars['GUPPY_DEPLOY_PATH'] = default_deploy_path
         if 'GUPPY_CONTENT_PATH' not in guppy2_env_vars:
