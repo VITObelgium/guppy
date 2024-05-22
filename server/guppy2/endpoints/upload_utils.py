@@ -92,7 +92,7 @@ def check_disk_space(temp_file_size: int):
         Error: If the disk space usage would exceed 90% after file upload.
 
     """
-    total, used, free = shutil.disk_usage(f"{cfg.deploy.path}")
+    total, used, free = shutil.disk_usage(f"{cfg.deploy.content}")
     used_percentage = ((used + temp_file_size) / total) * 100
     if used_percentage > 90:
         raise create_error(code=403, message="Upload failed: Disk space usage would exceed 90% after file upload")
@@ -139,7 +139,7 @@ def create_preprocessed_layer_file(ext: str, file_location: str, sanitized_filen
         df = gpd.read_file(tmp_file_location)
         df['fid'] = df.index
         df.to_crs(epsg=4326, inplace=True)
-        gpkg_loc = f"{cfg.deploy.path}/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}.gpkg"
+        gpkg_loc = f"{cfg.deploy.content}/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}.gpkg"
         if 'bounds' not in df.columns:
             df['bounds'] = df.geometry.envelope
         df.to_file(gpkg_loc, index=False)
@@ -170,18 +170,18 @@ def create_location_paths_and_check_if_exists(ext: str, sanitized_filename: str,
 
     """
     if ext.lower() in ['.tif', '.tiff', '.asc', ]:
-        tmp_file_location = f"{cfg.deploy.path}/tifs/uploaded/{sanitized_layer_name}_{sanitized_filename}_tmp.{ext}"
-        file_location = f"{cfg.deploy.path}/tifs/uploaded/{sanitized_layer_name}_{sanitized_filename}.tif"
+        tmp_file_location = f"{cfg.deploy.content}/tifs/uploaded/{sanitized_layer_name}_{sanitized_filename}_tmp.{ext}"
+        file_location = f"{cfg.deploy.content}/tifs/uploaded/{sanitized_layer_name}_{sanitized_filename}.tif"
         if os.path.exists(file_location):
             raise create_error(message=f"Upload failed: File {sanitized_layer_name}_{sanitized_filename}.tif already exists.", code=400)
     elif ext.lower() in ['.mbtiles']:
-        file_location = f"{cfg.deploy.path}/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}.mbtiles"
+        file_location = f"{cfg.deploy.content}/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}.mbtiles"
         tmp_file_location = file_location
         if os.path.exists(file_location):
             raise create_error(message=f"Upload failed: File {sanitized_layer_name}_{sanitized_filename}.mbtiles already exists.", code=400)
     else:
-        tmp_file_location = f"{cfg.deploy.path}/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}{ext}"
-        file_location = f"{cfg.deploy.path}/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}.mbtiles"
+        tmp_file_location = f"{cfg.deploy.content}/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}{ext}"
+        file_location = f"{cfg.deploy.content}/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}.mbtiles"
         if os.path.exists(file_location):
             raise create_error(message=f"Upload failed: File {sanitized_layer_name}_{sanitized_filename}.mbtiles already exists.", code=400)
     return file_location, tmp_file_location

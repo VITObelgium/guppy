@@ -58,7 +58,7 @@ def create_geoserver_layer(data_source, layer_name, sld_name=None):
             },
             "type": "GeoTIFF",
             "enabled": True,
-            "url": rf'file://{cfg.deploy.path}/tifs/generated/' + data_source  # Provide the path to the raster data source here
+            "url": rf'file://{cfg.deploy.content}/tifs/generated/' + data_source  # Provide the path to the raster data source here
         },
     }
 

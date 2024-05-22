@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 def raster_calculation(db: Session, body: s.RasterCalculationBody) -> Response:
     logger.info('raster_calculation')
     t = time.time()
-    base_path = f'{cfg.deploy.path}/tifs/generated'
+    base_path = f'{cfg.deploy.content}/tifs/generated'
     unique_identifier = f'{datetime.datetime.now().strftime("%Y-%m-%d")}_{str(random.randint(0, 10000000))}'
     raster_name = f'generated_{unique_identifier}.tif'
     nodata = None
@@ -138,7 +138,7 @@ def delete_generated_store(layer_name: str) -> Response:
 
     workspace = "generated"
     coverage_store = layer_name.split(":")[0]
-    base_path = f'{cfg.deploy.path}/tifs/generated'
+    base_path = f'{cfg.deploy.content}/tifs/generated'
 
     base_url = "http://geoserver:8080/geoserver/rest/"
     # base_url = "https://guppy2.marvintest.vito.be/geoserver/rest/"
