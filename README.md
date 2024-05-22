@@ -1,4 +1,4 @@
-<img src=".github/splash.png" alt="Guppy" />
+<img src=".github/splash.png" alt="Guppy, A Python web API for easy geospatial analysis of raster data" />
 
 ## Quickstart
 
