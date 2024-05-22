@@ -41,6 +41,7 @@ database:
   db: guppy.sqlite
 deploy:
   path: guppy
+  content: /content
 ```
 
 full yaml:
@@ -51,6 +52,7 @@ database:
   db: guppy.sqlite
 deploy:
   path: guppy
+  content: /content
 guppy:
   size_limit: 251e+07
 geoserver:
@@ -75,23 +77,23 @@ These variables will override the values in the configuration file.
 
 The following environment variables are available:
 
-| Environment variable | Description |
-| --- | --- |
-| GUPPY_CONFIG_FILE | Path to the configuration file |
-| GUPPY_DEPLOY_PATH | Path to deploy the Guppy server |
-| GUPPY_SIZE_LIMIT | Maximum size of uploaded files in bytes |
-| GUPPY_DATABASE_TYPE | Database type (sqlite, postgres) |
-| GUPPY_DATABASE_HOST | Database host |
-| GUPPY_DATABASE_DB | Database name |
-| GUPPY_DATABASE_USER | Database user |
-| GUPPY_DATABASE_PASSWD | Database password |
-| GUPPY_DATABASE_PASSWD_FILE | Path to a file containing the database password |
-| GUPPY_GEOSERVER_USER | GeoServer account username |
-| GUPPY_GEOSERVER_PASSWD | GeoServer account password |
+| Environment variable        | Description                                                      |
+|-----------------------------|------------------------------------------------------------------|
+| GUPPY_CONFIG_FILE           | Path to the configuration file                                   |
+| **GUPPY_DEPLOY_PATH**       | Path to deploy the Guppy server. default: guppy                  |
+| **GUPPY_DEPLOY_CONTENT**    | Path of the content directory. default: /content                 |
+| GUPPY_SIZE_LIMIT            | Maximum size of uploaded files in bytes                          |
+| GUPPY_DATABASE_TYPE         | Database type (sqlite, postgres) default: sqlite                 |
+| GUPPY_DATABASE_HOST         | Database host                                                    |
+| **GUPPY_DATABASE_DB**       | Database name OR path to Sqlite file.                            |
+| GUPPY_DATABASE_USER         | Database user                                                    |
+| GUPPY_DATABASE_PASSWD       | Database password                                                |
+| GUPPY_DATABASE_PASSWD_FILE  | Path to a file containing the database password                  |
+| GUPPY_GEOSERVER_USER        | GeoServer account username                                       |
+| GUPPY_GEOSERVER_PASSWD      | GeoServer account password                                       |
 | GUPPY_GEOSERVER_PASSWD_FILE | Path to a file containing the password for the GeoServer account |
 
-_NOTE: `GUPPY_AUTH_*` related environment variables are implemented for VITO use only at this moment._
-
+bold items are mandatory for correct working of the server.
 ### Start server
 
 ```bash
