@@ -13,7 +13,7 @@ Then go access the demo UI https://github.com/VITObelgium/guppy/tree/develop?tab
 
 ## Installation
 
-In stead of using the docker-compose file, you can also run the Guppy server locally.
+Instead of using the docker-compose file, you can also run the Guppy server locally.
 This allows you to run the server in a development environment and to make changes to the code.
 
 ### Conda environment
@@ -54,7 +54,7 @@ deploy:
   path: guppy
   content: /content
 guppy:
-  size_limit: 251e+07
+  size_limit: 2510000000
 geoserver:
   username: geoserver_account
   password: geoserver_password
@@ -82,7 +82,7 @@ The following environment variables are available:
 | GUPPY_CONFIG_FILE           | Path to the configuration file                                   |
 | **GUPPY_DEPLOY_PATH**       | Path to deploy the Guppy server. default: guppy                  |
 | **GUPPY_DEPLOY_CONTENT**    | Path of the content directory. default: /content                 |
-| GUPPY_SIZE_LIMIT            | Maximum size of uploaded files in bytes                          |
+| GUPPY_SIZE_LIMIT            | Maximum input area size in m² for stats/data calls               |
 | GUPPY_DATABASE_TYPE         | Database type (sqlite, postgres) default: sqlite                 |
 | GUPPY_DATABASE_HOST         | Database host                                                    |
 | **GUPPY_DATABASE_DB**       | Database name OR path to Sqlite file.                            |
