@@ -2,10 +2,10 @@ from fastapi import Depends, APIRouter
 from fastapi.responses import ORJSONResponse
 from sqlalchemy.orm import Session
 
-from guppy2.endpoints import endpoints
-from guppy2.config import config as cfg
-from guppy2.db import schemas as s
-from guppy2.db.dependencies import get_db
+from guppy.endpoints import endpoints
+from guppy.config import config as cfg
+from guppy.db import schemas as s
+from guppy.db.dependencies import get_db
 
 router = APIRouter(
     prefix=f"{cfg.deploy.path}/layers",

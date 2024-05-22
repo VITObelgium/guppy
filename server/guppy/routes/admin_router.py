@@ -2,10 +2,10 @@ from fastapi import Form, UploadFile, File, Depends, APIRouter
 from fastapi.responses import HTMLResponse, Response
 from sqlalchemy.orm import Session
 
-from guppy2.config import config as cfg
-from guppy2.db.dependencies import get_db
-from guppy2.db.schemas import LayerMetadataBody, TileStatisticsSchema
-from guppy2.endpoints import endpoints_admin, endpoints_upload, endpoints_tiles
+from guppy.config import config as cfg
+from guppy.db.dependencies import get_db
+from guppy.db.schemas import LayerMetadataBody, TileStatisticsSchema
+from guppy.endpoints import endpoints_admin, endpoints_upload, endpoints_tiles
 
 router = APIRouter(
     prefix=f"{cfg.deploy.path}/admin",
@@ -25,7 +25,7 @@ def upload_file(layer_name: str, db: Session = Depends(get_db)):
 
 @router.get("/upload/ui", description="simple UI to upload a  file (GeoTiff or Gpkg) to the server.")
 def read_index():
-    with open('guppy2/html/upload.html', 'r', encoding='utf-8') as file:
+    with open(f'{cfg.deploy.path}/html/upload.html', 'r', encoding='utf-8') as file:
         file_content = file.read()
 
     file_content = file_content.replace('$deploy_path$', cfg.deploy.path)
@@ -34,7 +34,7 @@ def read_index():
 
 @router.get("/layers", description="layers")
 def read_index():
-    with open('guppy2/html/layers.html', 'r', encoding='utf-8') as file:
+    with open(f'{cfg.deploy.path}/html/layers.html', 'r', encoding='utf-8') as file:
         file_content = file.read()
 
     file_content = file_content.replace('$deploy_path$', cfg.deploy.path)
@@ -43,7 +43,7 @@ def read_index():
 
 @router.get("/stats", description="stats")
 def read_index():
-    with open('guppy2/html/statistics.html', 'r', encoding='utf-8') as file:
+    with open(f'{cfg.deploy.path}/html/statistics.html', 'r', encoding='utf-8') as file:
         file_content = file.read()
 
     file_content = file_content.replace('$deploy_path$', cfg.deploy.path)
@@ -83,7 +83,7 @@ def get_tilestatsgpkg(layerName: str, db: Session = Depends(get_db)):
 
 @router.get("/map", description="map")
 def read_index():
-    with open('guppy2/html/map.html', 'r', encoding='utf-8') as file:
+    with open(f'{cfg.deploy.path}/html/map.html', 'r', encoding='utf-8') as file:
         file_content = file.read()
 
     file_content = file_content.replace('$deploy_path$', cfg.deploy.path)

@@ -13,11 +13,11 @@ from shapely.geometry import box
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from guppy2.db.models import TileStatistics
-from guppy2.db.schemas import QueryParams
-from guppy2.endpoints.endpoint_utils import validate_layer_and_get_file_path
-from guppy2.endpoints.tile_utils import tile2lonlat, add_item_to_request_counter, get_field_mapping, FUNCTION_MAP
-from guppy2.error import create_error
+from guppy.db.models import TileStatistics
+from guppy.db.schemas import QueryParams
+from guppy.endpoints.endpoint_utils import validate_layer_and_get_file_path
+from guppy.endpoints.tile_utils import tile2lonlat, add_item_to_request_counter, get_field_mapping, FUNCTION_MAP
+from guppy.error import create_error
 
 logger = logging.getLogger(__name__)
 

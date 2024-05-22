@@ -14,12 +14,12 @@ from sqlalchemy.orm import Session
 from starlette import status
 from starlette.responses import StreamingResponse
 
-from guppy2.config import config as cfg
-from guppy2.db import models as m
-from guppy2.db import schemas as s
-from guppy2.endpoints.endpoint_utils import _decode
-from guppy2.endpoints.rasterio_file_streamer import RIOFile
-from guppy2.error import create_error
+from guppy.config import config as cfg
+from guppy.db import models as m
+from guppy.db import schemas as s
+from guppy.endpoints.endpoint_utils import _decode
+from guppy.endpoints.rasterio_file_streamer import RIOFile
+from guppy.error import create_error
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +63,6 @@ def create_geoserver_layer(data_source, layer_name, sld_name=None):
     }
 
     base_url = "http://geoserver:8080/geoserver/rest/"
-    # base_url = "https://guppy2.marvintest.vito.be/geoserver/rest/"
     headers = {"Content-Type": "application/json"}
     url = f"{base_url}workspaces/{workspace}/coveragestores"
 

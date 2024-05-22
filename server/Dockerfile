@@ -2,7 +2,7 @@ FROM continuumio/miniconda3 as conda-env
 
 WORKDIR /opt/guppy2/server
 COPY environment.yml environment.yml
-RUN conda env update --prefix /opt/guppy2/server/conda-env --file environment.yml
+RUN conda env update --prefix /opt/guppy/server/conda-env --file environment.yml
 
 
 FROM debian:bullseye-slim
@@ -15,16 +15,16 @@ RUN  echo "**** install packages ****" \
 	&& rm -rf /var/lib/apt/lists/* \
 	&& echo
 
-RUN groupadd --system guppy2 && \
-	useradd --system -g guppy2 guppy2
+RUN groupadd --system guppy && \
+	useradd --system -g guppy guppy
 
 WORKDIR /opt/guppy2/server
 COPY --from=conda-env /opt/guppy2/server/conda-env conda-env
-COPY guppy2 guppy2
+COPY guppy guppy2
 
-RUN mkdir -p /opt/guppy2/server/data
-RUN chmod 775 /opt/guppy2/server/data
-RUN chown -R guppy2:guppy2 /opt/guppy2/server/data
+RUN mkdir -p /opt/guppy/server/data
+RUN chmod 775 /opt/guppy/server/data
+RUN chown -R guppy:guppy /opt/guppy/server/data
 
 USER guppy2
 

@@ -9,16 +9,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from guppy2.config import config as cfg
-from guppy2.db.db_session import Base, engine
-from guppy2.db.db_sync import keep_db_tables_in_sync
-from guppy2.endpoints.tile_utils import save_request_counts, save_request_counts_timer
-from guppy2.routes.admin_router import router as admin_router
-from guppy2.routes.calculation_router import router as calculation_router
-from guppy2.routes.data_router import router as data_router
-from guppy2.routes.general_router import router as general_router
-from guppy2.routes.stats_router import router as stats_router
-from guppy2.routes.tiles_router import router as tiles_router
+from guppy.config import config as cfg
+from guppy.db.db_session import Base, engine
+from guppy.db.db_sync import keep_db_tables_in_sync
+from guppy.endpoints.tile_utils import save_request_counts, save_request_counts_timer
+from guppy.routes.admin_router import router as admin_router
+from guppy.routes.calculation_router import router as calculation_router
+from guppy.routes.data_router import router as data_router
+from guppy.routes.general_router import router as general_router
+from guppy.routes.stats_router import router as stats_router
+from guppy.routes.tiles_router import router as tiles_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -75,7 +75,7 @@ def start_background_task():
 
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
-    return FileResponse("guppy2/html/favicon.ico")
+    return FileResponse("guppy/html/favicon.ico")
 
 
 app.include_router(general_router)

@@ -86,63 +86,51 @@ def parse_config_file(config_file: str) -> _Config:
 
 config: _Config = None
 # The docker way to configure containers is by using environment variables
-guppy2_env_vars = {k: v for k, v in os.environ.items() if k.startswith('GUPPY_')}
-if guppy2_env_vars:
-    if 'GUPPY_CONFIG_FILE' in guppy2_env_vars:
-        config = parse_config_file(guppy2_env_vars['GUPPY_CONFIG_FILE'])
+guppy_env_vars = {k: v for k, v in os.environ.items() if k.startswith('GUPPY_')}
+if guppy_env_vars:
+    if 'GUPPY_CONFIG_FILE' in guppy_env_vars:
+        config = parse_config_file(guppy_env_vars['GUPPY_CONFIG_FILE'])
     else:
-        if 'GUPPY_DATABASE_PASSWD_FILE' in guppy2_env_vars:
+        if 'GUPPY_DATABASE_PASSWD_FILE' in guppy_env_vars:
             try:
-                with open(guppy2_env_vars['GUPPY_DATABASE_PASSWD_FILE']) as f:
-                    guppy2_env_vars['GUPPY_DATABASE_PASSWD'] = f.readline().strip()
+                with open(guppy_env_vars['GUPPY_DATABASE_PASSWD_FILE']) as f:
+                    guppy_env_vars['GUPPY_DATABASE_PASSWD'] = f.readline().strip()
             except IOError:
-                raise SystemExit("Password file '%s' not found!" % guppy2_env_vars['GUPPY_DATABASE_PASSWD_FILE'])
-        if 'GUPPY_AUTH_PASSWD_FILE' in guppy2_env_vars:
+                raise SystemExit("Password file '%s' not found!" % guppy_env_vars['GUPPY_DATABASE_PASSWD_FILE'])
+        if 'GUPPY_GEOSERVER_PASSWD_FILE' in guppy_env_vars:
             try:
-                with open(guppy2_env_vars['GUPPY_AUTH_PASSWD_FILE']) as f:
-                    guppy2_env_vars['GUPPY_AUTH_PASSWD'] = f.readline().strip()
+                with open(guppy_env_vars['GUPPY_GEOSERVER_PASSWD_FILE']) as f:
+                    guppy_env_vars['GUPPY_GEOSERVER_PASSWD'] = f.readline().strip()
             except IOError:
-                raise SystemExit("Password file '%s' not found!" % guppy2_env_vars['GUPPY_AUTH_PASSWD_FILE'])
-        if 'GUPPY_GEOSERVER_PASSWD_FILE' in guppy2_env_vars:
-            try:
-                with open(guppy2_env_vars['GUPPY_GEOSERVER_PASSWD_FILE']) as f:
-                    guppy2_env_vars['GUPPY_GEOSERVER_PASSWD'] = f.readline().strip()
-            except IOError:
-                raise SystemExit("Password file '%s' not found!" % guppy2_env_vars['GUPPY_GEOSERVER_PASSWD_FILE'])
-        if 'GUPPY_AUTH_PUBLIC_KEY_FILE' in guppy2_env_vars:
-            try:
-                with open(guppy2_env_vars['GUPPY_AUTH_PUBLIC_KEY_FILE']) as f:
-                    guppy2_env_vars['GUPPY_AUTH_PUBLIC_KEY'] = f.readline().strip()
-            except IOError:
-                raise SystemExit("Password file '%s' not found!" % guppy2_env_vars['GUPPY_AUTH_PUBLIC_KEY_FILE'])
-        if 'GUPPY_DEPLOY_PATH' not in guppy2_env_vars:
-            guppy2_env_vars['GUPPY_DEPLOY_PATH'] = default_deploy_path
-        if 'GUPPY_CONTENT_PATH' not in guppy2_env_vars:
-            guppy2_env_vars['GUPPY_CONTENT_PATH'] = default_content_path
-        guppy2_env_vars['GUPPY_DEPLOY_PATH'] = sanitize_deploy_path(guppy2_env_vars['GUPPY_DEPLOY_PATH'])
+                raise SystemExit("Password file '%s' not found!" % guppy_env_vars['GUPPY_GEOSERVER_PASSWD_FILE'])
+        if 'GUPPY_DEPLOY_PATH' not in guppy_env_vars:
+            guppy_env_vars['GUPPY_DEPLOY_PATH'] = default_deploy_path
+        if 'GUPPY_CONTENT_PATH' not in guppy_env_vars:
+            guppy_env_vars['GUPPY_CONTENT_PATH'] = default_content_path
+        guppy_env_vars['GUPPY_DEPLOY_PATH'] = sanitize_deploy_path(guppy_env_vars['GUPPY_DEPLOY_PATH'])
         try:
             config = _Config(
                 deploy=_Deploy(
-                    path=guppy2_env_vars['GUPPY_DEPLOY_PATH'],
-                    content=guppy2_env_vars['GUPPY_CONTENT_PATH'],
+                    path=guppy_env_vars['GUPPY_DEPLOY_PATH'],
+                    content=guppy_env_vars['GUPPY_CONTENT_PATH'],
                 ),
                 database=_Database(
-                    type=guppy2_env_vars['GUPPY_DATABASE_TYPE'] if 'GUPPY_DATABASE_TYPE' in guppy2_env_vars else 'sqlite',
-                    host=guppy2_env_vars['GUPPY_DATABASE_HOST'] if 'GUPPY_DATABASE_HOST' in guppy2_env_vars else '',
-                    user=guppy2_env_vars['GUPPY_DATABASE_USER'] if 'GUPPY_DATABASE_USER' in guppy2_env_vars else '',
-                    passwd=guppy2_env_vars['GUPPY_DATABASE_PASSWD'] if 'GUPPY_DATABASE_PASSWD' in guppy2_env_vars else '',
-                    db=guppy2_env_vars['GUPPY_DATABASE_DB'],
+                    type=guppy_env_vars['GUPPY_DATABASE_TYPE'] if 'GUPPY_DATABASE_TYPE' in guppy_env_vars else 'sqlite',
+                    host=guppy_env_vars['GUPPY_DATABASE_HOST'] if 'GUPPY_DATABASE_HOST' in guppy_env_vars else '',
+                    user=guppy_env_vars['GUPPY_DATABASE_USER'] if 'GUPPY_DATABASE_USER' in guppy_env_vars else '',
+                    passwd=guppy_env_vars['GUPPY_DATABASE_PASSWD'] if 'GUPPY_DATABASE_PASSWD' in guppy_env_vars else '',
+                    db=guppy_env_vars['GUPPY_DATABASE_DB'],
                 ),
-                guppy=_Guppy(size_limit=int(float(guppy2_env_vars['GUPPY_SIZE_LIMIT'])) if 'GUPPY_SIZE_LIMIT' in guppy2_env_vars else 10000),
-                geoserver=_Geoserver(username=guppy2_env_vars['GUPPY_GEOSERVER_USER'] if 'GUPPY_GEOSERVER_USER' in guppy2_env_vars else '',
-                                     password=guppy2_env_vars['GUPPY_GEOSERVER_PASSWD'] if 'GUPPY_GEOSERVER_PASSWD' in guppy2_env_vars else '')
+                guppy=_Guppy(size_limit=int(float(guppy_env_vars['GUPPY_SIZE_LIMIT'])) if 'GUPPY_SIZE_LIMIT' in guppy_env_vars else 10000),
+                geoserver=_Geoserver(username=guppy_env_vars['GUPPY_GEOSERVER_USER'] if 'GUPPY_GEOSERVER_USER' in guppy_env_vars else '',
+                                     password=guppy_env_vars['GUPPY_GEOSERVER_PASSWD'] if 'GUPPY_GEOSERVER_PASSWD' in guppy_env_vars else '')
             )
         except KeyError as key_error:
             raise SystemExit("Environment variable '%s' not found!" % key_error)
 else:
     # No environment variables declared, read marvin config file
     try:
-        config = parse_config_file("/etc/marvin/guppy2.yml")
+        config = parse_config_file("/etc/marvin/guppy.yml")
     except SystemExit:
         # Marvin config file not found, running in dev, read local config file
         config = parse_config_file("config.yml")

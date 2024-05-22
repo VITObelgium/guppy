@@ -38,7 +38,7 @@ minimal yaml:
 # ./server/config.yml
 database:
   type: sqlite
-  db: guppy2.sqlite
+  db: guppy.sqlite
 deploy:
   path: guppy
 ```
@@ -48,7 +48,7 @@ full yaml:
 ```yaml
 database:
   type: sqlite
-  db: guppy2.sqlite
+  db: guppy.sqlite
 deploy:
   path: guppy
 guppy:
@@ -65,7 +65,7 @@ database:
   host: example-host.vito.be
   user: johndoe
   passwd: top-secret-password
-  db: guppy2
+  db: guppy
 ```
 
 #### Configuration via environment variables
@@ -96,13 +96,13 @@ _NOTE: `GUPPY_AUTH_*` related environment variables are implemented for VITO use
 
 ```bash
 # activate conda environment
-conda activate guppy2
+conda activate guppy
 
 # change directory to 'server'
 cd server
 
 # start server using defaults
-PYTHONPATH=. python guppy2/server.py
+PYTHONPATH=. python guppy/server.py
 ```
 
 Your empty Guppy server is availlable at http://127.0.0.1:5000/guppy/docs
@@ -110,7 +110,7 @@ Your empty Guppy server is availlable at http://127.0.0.1:5000/guppy/docs
 Run the server with reload option to automatically restart the server when changes are made to the code.
 
 ```bash
-python -m uvicorn guppy2.server:app --reload --port 8000 --host 0.0.0.0
+python -m uvicorn guppy.server:app --reload --port 8000 --host 0.0.0.0
 ```
  
 ## Access the UI

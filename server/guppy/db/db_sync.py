@@ -1,10 +1,10 @@
 import logging
 
-from guppy2.db.models import LayerMetadata, TileStatistics
+from guppy.db.models import LayerMetadata, TileStatistics
 
 logger = logging.getLogger(__name__)
 from sqlalchemy import MetaData, text
-from guppy2.db.db_session import engine
+from guppy.db.db_session import engine
 
 
 def keep_db_tables_in_sync():

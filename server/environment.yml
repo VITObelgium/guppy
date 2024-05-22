@@ -1,4 +1,4 @@
-name: guppy2
+name: guppy
 channels:
   - conda-forge
   - anaconda

@@ -1,7 +1,7 @@
 # coding: utf-8
 from sqlalchemy import Column, Integer, String, text, Boolean
 
-from guppy2.db.db_session import Base
+from guppy.db.db_session import Base
 from ..config import config
 
 metadata = Base.metadata
