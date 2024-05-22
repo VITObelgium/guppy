@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-from guppy2.config import config
+from guppy.config import config
 
 if config.database.type == 'postgres':
     db_url = 'postgresql+psycopg2://'

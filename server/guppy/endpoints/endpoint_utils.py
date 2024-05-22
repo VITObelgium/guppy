@@ -9,8 +9,8 @@ from rasterio.mask import mask, raster_geometry_mask
 from rasterio.windows import from_bounds
 from sqlalchemy.orm import Session
 
-from guppy2.db import schemas as s
-from guppy2.db.models import LayerMetadata
+from guppy.db import schemas as s
+from guppy.db.models import LayerMetadata
 
 logger = logging.getLogger(__name__)
 layer_data_chache = {}

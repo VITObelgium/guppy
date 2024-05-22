@@ -1,4 +1,4 @@
-from guppy2.db.db_session import SessionLocal
+from guppy.db.db_session import SessionLocal
 
 
 def get_db():

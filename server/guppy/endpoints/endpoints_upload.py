@@ -7,10 +7,10 @@ from fastapi import UploadFile
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from guppy2.endpoints.endpoint_utils import validate_layer_and_get_file_path
-from guppy2.endpoints.upload_utils import sanitize_input_str, check_layer_exists, create_preprocessed_layer_file, create_location_paths_and_check_if_exists, write_input_file_to_disk, \
+from guppy.endpoints.endpoint_utils import validate_layer_and_get_file_path
+from guppy.endpoints.upload_utils import sanitize_input_str, check_layer_exists, create_preprocessed_layer_file, create_location_paths_and_check_if_exists, write_input_file_to_disk, \
     validate_file_input, insert_into_layer_metadata
-from guppy2.error import create_error
+from guppy.error import create_error
 
 logger = logging.getLogger(__name__)
 

@@ -14,9 +14,9 @@ from sqlalchemy.orm import Session
 from starlette import status
 from starlette.responses import Response
 
-from guppy2.config import config as cfg
-from guppy2.db import schemas as s
-from guppy2.endpoints.raster_calc_utils import create_raster, generate_raster_response, perform_operation, process_raster_list_with_function_in_chunks, apply_rescale_result, insert_into_guppy_db, \
+from guppy.config import config as cfg
+from guppy.db import schemas as s
+from guppy.endpoints.raster_calc_utils import create_raster, generate_raster_response, perform_operation, process_raster_list_with_function_in_chunks, apply_rescale_result, insert_into_guppy_db, \
     cleanup_files, \
     get_unique_values, align_files, fill_path_and_argument_lists, read_raster_without_nodata_as_array
 
@@ -141,7 +141,6 @@ def delete_generated_store(layer_name: str) -> Response:
     base_path = f'{cfg.deploy.content}/tifs/generated'
 
     base_url = "http://geoserver:8080/geoserver/rest/"
-    # base_url = "https://guppy2.marvintest.vito.be/geoserver/rest/"
     headers = {"Content-Type": "application/json"}
     url = f"{base_url}workspaces/{workspace}/coveragestores/{coverage_store}?purge=all&recurse=true"
 

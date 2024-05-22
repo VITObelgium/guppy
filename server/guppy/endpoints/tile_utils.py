@@ -5,8 +5,8 @@ from threading import Lock
 
 import numpy as np
 
-from guppy2.db.db_session import SessionLocal
-from guppy2.db.models import TileStatistics
+from guppy.db.db_session import SessionLocal
+from guppy.db.models import TileStatistics
 
 logger = logging.getLogger(__name__)
 

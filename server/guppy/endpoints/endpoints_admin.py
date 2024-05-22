@@ -5,7 +5,7 @@ import time
 from fastapi import Response, status
 from sqlalchemy.orm import Session
 
-import guppy2.db.models as m
+import guppy.db.models as m
 
 logger = logging.getLogger(__name__)
 

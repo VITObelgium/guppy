@@ -9,9 +9,9 @@ from fastapi import UploadFile
 from osgeo import gdal
 from sqlalchemy.orm import Session
 
-from guppy2.config import config as cfg
-from guppy2.db.models import LayerMetadata
-from guppy2.error import create_error
+from guppy.config import config as cfg
+from guppy.db.models import LayerMetadata
+from guppy.error import create_error
 
 logger = logging.getLogger(__name__)
 

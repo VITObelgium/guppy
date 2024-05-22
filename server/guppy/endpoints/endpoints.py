@@ -21,10 +21,10 @@ from shapely.ops import transform
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from guppy2.config import config as cfg
-from guppy2.db import models as m
-from guppy2.db import schemas as s
-from guppy2.endpoints.endpoint_utils import get_overview_factor, create_stats_response, _extract_area_from_dataset, _extract_shape_mask_from_dataset, _decode, sample_coordinates_window
+from guppy.config import config as cfg
+from guppy.db import models as m
+from guppy.db import schemas as s
+from guppy.endpoints.endpoint_utils import get_overview_factor, create_stats_response, _extract_area_from_dataset, _extract_shape_mask_from_dataset, _decode, sample_coordinates_window
 
 logger = logging.getLogger(__name__)
 
