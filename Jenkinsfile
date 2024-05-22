@@ -6,10 +6,10 @@ pipeline {
   environment {
     registry = "rma-tools-docker-local.repo.vito.be"
     registryCredential = "svc_git_rma"
-    repository = "guppy2_server"
+    repository = "guppy_server"
     version = get_version()
     datetime = get_datetime()
-    deploy_project = "guppy2_deploy"
+    deploy_project = "guppy_deploy"
     deploy_test_branch = "test"
     deploy_prod_branch = "prod"
   }
@@ -33,7 +33,7 @@ pipeline {
       steps {
         script {
           dockerImage.inside() {
-            sh '/opt/guppy2/server/conda-env/bin/python -m unittest discover -s server -v'
+            sh '/opt/guppy/server/conda-env/bin/python -m unittest discover -s server -v'
           }
         }
       }

@@ -15,6 +15,6 @@ CREATE TABLE "layer_metadata" (
    count INTEGER NOT NULL
  );
 
-GRANT ALL ON all tables IN SCHEMA guppy2 TO guppy2;
-GRANT ALL ON all sequences IN SCHEMA guppy2 TO guppy2;
+GRANT ALL ON all tables IN SCHEMA guppy TO guppy;
+GRANT ALL ON all sequences IN SCHEMA guppy TO guppy;
 
