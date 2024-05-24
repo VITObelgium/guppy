@@ -641,10 +641,13 @@
                             const result = await response.json();
 
                             if (result && result.data && result.data.length > 0) {
-                                labels = [...Array(result.data.length).keys()];
+                                // Replace -9999 values with null
+                                const transformedData = result.data.map(value => value === -9999 ? null : value);
+
+                                labels = [...Array(transformedData.length).keys()];
                                 datasets.push({
                                     label: layerId,
-                                    data: result.data,
+                                    data: transformedData,
                                     fill: false,
                                     borderColor: getRandomColor(), // now using random color function
                                     tension: 0.1
