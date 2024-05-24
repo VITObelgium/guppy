@@ -124,7 +124,6 @@ def data_to_rgba(data: np.ndarray, nodata):
     rgb[2] = np.where(data == nodata, 255, rgb[2])
     rgb[1] = np.where(data == nodata, 255, rgb[1])
     rgb[0] = np.where(data == nodata, 255, rgb[0])
-    m = np.zeros((4, 256, 256), dtype="bool")
 
     return np.ma.MaskedArray(rgb)
 
