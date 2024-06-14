@@ -85,6 +85,31 @@ def create_stats_response(rst: np.array, mask_array: np.array, nodata: float, ty
     return response
 
 
+def create_quantile_response(rst: np.array, nodata: float, type: str, quantiles: [float], layer_name: str = None) -> s.QuantileResponse:
+    """
+    Args:
+        rst (np.array): The input array containing the raster data.
+        mask_array (np.array): The array representing the mask.
+        nodata (float): The nodata value in the raster.
+        type (str): The type of the response.
+        quantiles (List[float]): The quantiles to calculate.
+        layer_name (str, optional): The name of the layer.
+
+    Returns:
+        s.QuantileResponse: The quantile response object.
+
+    """
+    rst = rst.astype(float)
+    rst[rst == nodata] = np.nan
+    calculated_quantiles = np.nanquantile(rst, quantiles)
+    response = s.QuantileResponse(type=type,
+                                  quantiles=[s.QuantileList(quantile=quantile, value=no_nan(float(value))) for quantile, value in zip(quantiles, calculated_quantiles)]
+                                  )
+    if layer_name:
+        response.layer_name = layer_name
+    return response
+
+
 def _extract_area_from_dataset(raster_ds, geom, crop=True, all_touched=False, is_rgb=False):
     """
     Args:

@@ -24,7 +24,8 @@ from sqlalchemy.orm import Session
 from guppy.config import config as cfg
 from guppy.db import models as m
 from guppy.db import schemas as s
-from guppy.endpoints.endpoint_utils import get_overview_factor, create_stats_response, _extract_area_from_dataset, _extract_shape_mask_from_dataset, _decode, sample_coordinates_window
+from guppy.endpoints.endpoint_utils import get_overview_factor, create_stats_response, _extract_area_from_dataset, _extract_shape_mask_from_dataset, _decode, sample_coordinates_window, \
+    create_quantile_response
 
 logger = logging.getLogger(__name__)
 
@@ -465,4 +466,39 @@ def get_countour_for_models(db: Session, body: s.CountourBodyList):
         logger.info(f'get_countour_for_models 204 {time.time() - t}')
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     logger.info(f'get_countour_for_models 404 {time.time() - t}')
+    return Response(status_code=status.HTTP_404_NOT_FOUND)
+
+
+def get_quantiles_for_wkt(db: Session, layer_name: str, body: s.QuantileBody, native: bool):
+    t = time.time()
+    layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
+    if layer_model:
+        quantiles = body.quantiles
+        path = layer_model.file_path
+        if os.path.exists(path) and body:
+            geom = wkt.loads(body.geometry)
+            with rasterio.open(path) as src:
+                target_srs = src.crs.to_epsg()
+            if geom.is_valid:
+                geom = transform(Transformer.from_crs(body.srs if body.srs else "EPSG:4326", f"EPSG:{target_srs}", always_xy=True).transform, geom)
+                if geom.is_valid:
+                    overview_factor, overview_bin = get_overview_factor(geom.bounds, native, path)
+                    with rasterio.open(path, overview_level=overview_factor) as src:
+                        try:
+                            rst, _ = _extract_area_from_dataset(src, [geom], crop=True, is_rgb=layer_model.is_rgb)
+                            if layer_model.is_rgb:
+                                rst = _decode(rst)
+                        except ValueError as e:
+                            return Response(content=str(e), status_code=status.HTTP_406_NOT_ACCEPTABLE)
+                    if rst.size != 0:
+                        response = create_quantile_response(rst, src.nodata,
+                                                            type=f'quantile wkt. Overview level: {overview_factor}, {overview_bin} scale',
+                                                            layer_name=layer_model.layer_name,
+                                                            quantiles=quantiles)
+                        logger.info(f'get_stats_for_wkt 200 {time.time() - t}')
+                        return response
+        logger.warning(f'file not found {path}')
+        logger.info(f'get_stats_for_wkt 204 {time.time() - t}')
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    logger.info(f'get_stats_for_wkt 404 {time.time() - t}')
     return Response(status_code=status.HTTP_404_NOT_FOUND)

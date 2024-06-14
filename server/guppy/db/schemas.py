@@ -55,6 +55,17 @@ class StatsResponse(CamelModel):
     q98: Optional[float] = None
 
 
+class QuantileList(CamelModel):
+    quantile: float
+    value: float
+
+
+class QuantileResponse(CamelModel):
+    type: str
+    layer_name: Optional[str] = None
+    quantiles: list[QuantileList]
+
+
 class ClassificationEntry(CamelModel):
     value: float
     count: int
@@ -89,6 +100,12 @@ class MultiLineData(CamelModel):
 class GeometryBody(CamelModel):
     geometry: str
     srs: Optional[str] = None
+
+
+class QuantileBody(CamelModel):
+    geometry: str
+    srs: Optional[str] = None
+    quantiles: list[float]
 
 
 class GeometryBodyList(CamelModel):
