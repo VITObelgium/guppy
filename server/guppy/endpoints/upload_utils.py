@@ -7,6 +7,7 @@ import geopandas as gpd
 import rasterio
 from fastapi import UploadFile
 from osgeo import gdal
+from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from guppy.config import config as cfg
@@ -141,12 +142,13 @@ def create_preprocessed_layer_file(ext: str, file_location: str, sanitized_filen
         df.to_crs(epsg=4326, inplace=True)
         gpkg_loc = f"{cfg.deploy.content}/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}.gpkg"
         if 'bounds' not in df.columns:
-            df['bounds'] = df.geometry.envelope
+            df['bounds'] = df.geometry.envelope.to_wkt()
         df.to_file(gpkg_loc, index=False)
         to_mbtiles(sanitized_layer_name, gpkg_loc, file_location)
         os.remove(tmp_file_location)
         df.drop(columns=['geometry'], inplace=True)
-        df.to_file(file_location.replace('.mbtiles', '.sqlite'), index=False)
+        engine = create_engine(f'sqlite:///{file_location.replace(".mbtiles", ".sqlite")}')
+        df.to_sql('tiles', con=engine, index=False)
         if os.path.exists(gpkg_loc):
             os.remove(gpkg_loc)
         is_mbtile = True
@@ -258,7 +260,7 @@ def validate_file_input(ext: str, file: UploadFile, filename_without_extension: 
         raise create_error(message=f"Upload failed: File size {file.size} is too large.", code=400)
     if file.size < 1000:  # 1kb
         raise create_error(message=f"Upload failed: File size {file.size} is too small.", code=400)
-    check_disk_space(file.size)
+    # check_disk_space(file.size)
 
 
 def save_geotif_tiled_overviews(input_file: str, output_file: str, nodata: int) -> str:
