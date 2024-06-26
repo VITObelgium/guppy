@@ -25,7 +25,7 @@ def upload_file(layer_name: str, db: Session = Depends(get_db)):
 
 @router.get("/upload/ui", description="simple UI to upload a  file (GeoTiff or Gpkg) to the server.")
 def read_index():
-    with open(f'{cfg.deploy.path}/html/upload.html', 'r', encoding='utf-8') as file:
+    with open(f'guppy/html/upload.html', 'r', encoding='utf-8') as file:
         file_content = file.read()
 
     file_content = file_content.replace('$deploy_path$', cfg.deploy.path)
@@ -34,7 +34,7 @@ def read_index():
 
 @router.get("/layers", description="layers")
 def read_index():
-    with open(f'{cfg.deploy.path}/html/layers.html', 'r', encoding='utf-8') as file:
+    with open(f'guppy/html/layers.html', 'r', encoding='utf-8') as file:
         file_content = file.read()
 
     file_content = file_content.replace('$deploy_path$', cfg.deploy.path)
@@ -43,7 +43,7 @@ def read_index():
 
 @router.get("/stats", description="stats")
 def read_index():
-    with open(f'{cfg.deploy.path}/html/statistics.html', 'r', encoding='utf-8') as file:
+    with open(f'guppy/html/statistics.html', 'r', encoding='utf-8') as file:
         file_content = file.read()
 
     file_content = file_content.replace('$deploy_path$', cfg.deploy.path)
@@ -83,7 +83,7 @@ def get_tilestatsgpkg(layerName: str, db: Session = Depends(get_db)):
 
 @router.get("/map", description="map")
 def read_index():
-    with open(f'{cfg.deploy.path}/html/map.html', 'r', encoding='utf-8') as file:
+    with open(f'guppy/html/map.html', 'r', encoding='utf-8') as file:
         file_content = file.read()
 
     file_content = file_content.replace('$deploy_path$', cfg.deploy.path)
