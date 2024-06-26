@@ -278,7 +278,7 @@ def save_geotif_tiled_overviews(input_file: str, output_file: str, nodata: int) 
     with rasterio.open(input_file) as src:
         target_crs = rasterio.crs.CRS.from_epsg(code=3857)
         tmp_input_file = None
-        if src.crs != target_crs:
+        if src.crs != target_crs or nodata != src.nodata:
             transform, width, height = rasterio.warp.calculate_default_transform(src.crs, target_crs, src.width, src.height, *src.bounds)
             profile = src.profile
             profile.update(crs=target_crs, transform=transform, width=width, height=height)
@@ -292,7 +292,8 @@ def save_geotif_tiled_overviews(input_file: str, output_file: str, nodata: int) 
                         src_crs=src.crs,
                         dst_transform=transform,
                         dst_crs=target_crs,
-                        resampling=rasterio.enums.Resampling.nearest
+                        resampling=rasterio.enums.Resampling.nearest,
+                        dst_nodata=nodata
                     )
     if tmp_input_file:
         os.remove(input_file)
