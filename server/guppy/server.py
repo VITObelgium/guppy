@@ -83,11 +83,11 @@ app.include_router(tiles_router)
 app.include_router(data_router)
 app.include_router(stats_router)
 app.include_router(calculation_router)
+app.include_router(admin_router)
 
 instrumentator = Instrumentator()
 instrumentator.instrument(app)
-instrumentator.expose(admin_router, endpoint="/metrics")
-app.include_router(admin_router)
+instrumentator.expose(app, endpoint=f"{cfg.deploy.path}/admin/metrics")
 
 if __name__ == "__main__":
     uvicorn.run(app, port=5000)
