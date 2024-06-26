@@ -4,6 +4,7 @@ import logging
 import time
 from functools import lru_cache
 
+import numpy as np
 from fastapi import HTTPException
 from osgeo import gdal
 from rio_tiler.colormap import cmap, InvalidColorMapName
@@ -19,7 +20,7 @@ from guppy.endpoints.tile_utils import data_to_rgba
 logger = logging.getLogger(__name__)
 
 
-def get_tile_for_layer(layer_name: str, style: str, db: Session, z: int, x: int, y: int) -> Response:
+def get_tile_for_layer(layer_name: str, style: str, db: Session, z: int, x: int, y: int, values: str = None, colors: str = None) -> Response:
     """
     Args:
         layer_name: A string representing the name of the layer.
@@ -28,6 +29,8 @@ def get_tile_for_layer(layer_name: str, style: str, db: Session, z: int, x: int,
         z: An integer representing the zoom level of the tile.
         x: An integer representing the x coordinate of the tile.
         y: An integer representing the y coordinate of the tile.
+        values: An optional string representing the values for the custom style.
+        colors: An optional string representing the colors for the custom style.
 
     Returns:
         The tile for the given layer, style, zoom level, and coordinates.
@@ -36,7 +39,7 @@ def get_tile_for_layer(layer_name: str, style: str, db: Session, z: int, x: int,
     t = time.time()
     file_path = validate_layer_and_get_file_path(db, layer_name)
 
-    result = get_tile(file_path, z, x, y, style)
+    result = get_tile(file_path, z, x, y, style, values, colors)
     log_cache_info(t)
     return result
 
@@ -69,8 +72,26 @@ def get_cached_colormap(name):
     return cmap.get(name)
 
 
+def generate_colormap(min_val, max_val, value_points, colors):
+    # Map the provided value_points from [min_val, max_val] to [0, 255]
+    rescaled_points = np.interp(value_points, (min_val, max_val), (0, 255))
+    # Generate colormap over 256 values
+    all_values = np.linspace(0, 255, 256)
+    colors = np.array(colors)
+    colormap = {}
+
+    # Interpolate color channels
+    r = np.interp(all_values, rescaled_points, colors[:, 0])
+    g = np.interp(all_values, rescaled_points, colors[:, 1])
+    b = np.interp(all_values, rescaled_points, colors[:, 2])
+    a = np.interp(all_values, rescaled_points, colors[:, 3])
+
+    final_colormap = {int(v): (int(r[i]), int(g[i]), int(b[i]), int(a[i])) for i, v in enumerate(all_values)}
+    return final_colormap
+
+
 @lru_cache(maxsize=128)
-def get_tile(file_path: str, z: int, x: int, y: int, style: str = None) -> Response:
+def get_tile(file_path: str, z: int, x: int, y: int, style: str = None, values: str = None, colors: str = None) -> Response:
     """
     Args:
         file_path: A string representing the path to the file.
@@ -78,6 +99,8 @@ def get_tile(file_path: str, z: int, x: int, y: int, style: str = None) -> Respo
         x: An integer representing the x-coordinate of the tile.
         y: An integer representing the y-coordinate of the tile.
         style: An optional string representing the style of the tile.
+        values: An optional string representing the values for the custom style.
+        colors: An optional string representing the colors for the custom style.
 
     Returns:
         A Response object containing the rendered tile image in PNG format, or raises an HTTPException with a status code of 404 and a corresponding detail message.
@@ -101,18 +124,34 @@ def get_tile(file_path: str, z: int, x: int, y: int, style: str = None) -> Respo
             colormap = None
             add_mask = True
             if style:
-                if style != 'shader_rgba':
-                    try:
-                        colormap = get_cached_colormap(style)
-                        if img.dataset_statistics:
-                            img.rescale(in_range=img.dataset_statistics)
-                        else:
-                            img.rescale(in_range=[(stats.min, stats.max)])
-                    except InvalidColorMapName:
-                        raise HTTPException(status_code=404, detail=f"Invalid colormap name: {style}")
-                else:
+                if style == 'shader_rgba':
                     img.array = data_to_rgba(img.data[0], nodata)
                     add_mask = False
+                else:
+                    if img.dataset_statistics:
+                        img.rescale(in_range=img.dataset_statistics)
+                        min_val = img.dataset_statistics[0][0]
+                        max_val = img.dataset_statistics[0][1]
+                    else:
+                        img.rescale(in_range=[(stats.min, stats.max)])
+                        min_val = stats.min
+                        max_val = stats.max
+
+                    if style == 'custom':
+                        if not values or not colors:
+                            raise HTTPException(status_code=400, detail='values and colors must be provided for a custom style')
+                        value_points = [float(x) for x in values.split(',')]
+                        colors_points = [(int(x), int(y), int(z), int(a)) for x, y, z, a in
+                                         [color.split(',') for color in colors.split('_')]]
+                        try:
+                            colormap = generate_colormap(min_val, max_val, value_points, colors_points)
+                        except ValueError as e:
+                            raise HTTPException(status_code=400, detail='values and colors must be the same length. colors must be sets of 4 values r,g,b,a separated by commas and sets of colors separated by _')
+                    else:
+                        try:
+                            colormap = get_cached_colormap(style)
+                        except InvalidColorMapName:
+                            raise HTTPException(status_code=404, detail=f"Invalid colormap name: {style}")
             elif img.dataset_statistics:
                 img.rescale(in_range=img.dataset_statistics)
             else:
