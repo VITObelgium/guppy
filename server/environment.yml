@@ -28,4 +28,5 @@ dependencies:
   - prometheus-fastapi-instrumentator
   - pygeofilter
   - mapbox-vector-tile
+  - mercantile
 prefix: /opt/mapbase3/server/conda-env
