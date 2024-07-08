@@ -26,6 +26,7 @@ from guppy.db import models as m
 from guppy.db import schemas as s
 from guppy.endpoints.endpoint_utils import get_overview_factor, create_stats_response, _extract_area_from_dataset, _extract_shape_mask_from_dataset, _decode, sample_coordinates_window, \
     create_quantile_response
+from guppy.endpoints.tile_utils import latlon_to_tilexy, get_tile_data, pbf_to_geodataframe
 
 logger = logging.getLogger(__name__)
 
@@ -292,10 +293,10 @@ def get_multi_line_data_list_for_wkt(db: Session, body: s.MultiLineGeometryListB
     return Response(status_code=status.HTTP_404_NOT_FOUND)
 
 
-def get_point_value_from_raster(db: Session, layer_name: str, x: float, y: float):
+def get_point_value_from_layer(db: Session, layer_name: str, x: float, y: float):
     t = time.time()
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
-    if layer_model:
+    if layer_model and not layer_model.is_mbtile:
         path = layer_model.file_path
         if os.path.exists(path) and x and y:
             with rasterio.open(path) as src:
@@ -306,6 +307,19 @@ def get_point_value_from_raster(db: Session, layer_name: str, x: float, y: float
                 for v in src.sample([(x_, y_)], indexes=1):
                     logger.info(f'get_point_value_from_raster 200 {time.time() - t}')
                     return s.PointResponse(type='point value', layer_name=layer_name, value=None if math.isclose(float(v[0]), nodata) else float(v[0]))
+        logger.warning(f'file not found {path}')
+    elif layer_model and layer_model.is_mbtile:
+        path = layer_model.file_path
+        if os.path.exists(path) and x and y:
+            tile_z, tile_x, tile_y = latlon_to_tilexy(x, y, 14)
+            tile = get_tile_data(layer_name=layer_name, mb_file=path, z=tile_z, x=tile_x, y=tile_y)
+            tile_df = pbf_to_geodataframe(tile, tile_x, tile_y, tile_z)
+            # get the value of the point
+            point = wkt.loads(f'POINT ({x} {y})')
+            values = tile_df[tile_df.intersects(point)].drop(columns=['geometry'])
+            result = {'type': 'point value', 'layer_name': layer_name, 'value': values.to_dict(orient='records')[0]}
+            logger.info(f'get_point_value_from_raster 200 {time.time() - t}')
+            return result
         logger.warning(f'file not found {path}')
     logger.info(f'get_point_value_from_raster 204 {time.time() - t}')
     return Response(status_code=status.HTTP_204_NO_CONTENT)

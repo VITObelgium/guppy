@@ -36,7 +36,7 @@ class LayerMetadataSchema(CamelModel):
 class PointResponse(CamelModel):
     type: str
     layer_name: str
-    value: Optional[float] = None
+    value: Optional[float | dict] = None
 
 
 class StatsResponse(CamelModel):

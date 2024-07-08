@@ -3,12 +3,21 @@ import math
 import time
 from threading import Lock
 
+import geopandas as gpd
+import mapbox_vector_tile
+import mercantile
 import numpy as np
+from shapely.geometry import shape
+from shapely.ops import transform
 
 from guppy.db.db_session import SessionLocal
 from guppy.db.models import TileStatistics
+from guppy.error import create_error
 
 logger = logging.getLogger(__name__)
+from typing import Optional
+import gzip
+import sqlite3
 
 
 def tile2lonlat(x, y, z):
@@ -31,6 +40,14 @@ def tile2lonlat(x, y, z):
     lat_top_rad = math.atan(math.sinh(math.pi * (1 - 2 * (y + 1) / n)))
     lat_top = math.degrees(lat_top_rad)
     return (lon_left, -lat_bottom, lon_right, -lat_top)
+
+
+def latlon_to_tilexy(lon, lat, z):
+    lat_rad = math.radians(lat)
+    n = 2.0 ** z
+    xtile = int((lon + 180.0) / 360.0 * n)
+    ytile = int((1.0 - math.asinh(math.tan(lat_rad)) / math.pi) / 2.0 * n)
+    return z, xtile, ytile
 
 
 # In-memory request counter, structured by layer_name -> z/x/y -> count
@@ -163,3 +180,70 @@ def get_field_mapping(conn):
     cursor.execute("PRAGMA table_info(tiles)")
     columns = cursor.fetchall()
     return {col[1]: col[1] for col in columns}  # Simple mapping of name to name
+
+
+def get_tile_data(layer_name: str, mb_file: str, z: int, x: int, y: int) -> Optional[bytes]:
+    """
+    Args:
+        layer_name: The name of the layer for which the tile data is being retrieved.
+        mb_file: The path to the MBTiles file from which the tile data is being retrieved.
+        z: The zoom level of the tile.
+        x: The X coordinate of the tile.
+        y: The Y coordinate of the tile.
+
+    Returns:
+        Optional[bytes]: The tile data as bytes if found, or None if no tile data exists for the given parameters.
+
+    Raises:
+        HTTPException: If there is an error retrieving the tile data from the MBTiles file.
+
+    """
+    # Flip Y coordinate because MBTiles grid is TMS (bottom-left origin)
+    y = (1 << z) - 1 - y
+    logger.info(f"Getting tile for layer {layer_name} at zoom {z}, x {x}, y {y}")
+    try:
+        uri = f'file:{mb_file}?mode=ro'
+        with sqlite3.connect(uri, uri=True) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT tile_data FROM tiles WHERE zoom_level=? AND tile_column=? AND tile_row=?", (z, x, y))
+            tile = cursor.fetchone()
+            if tile:
+                return gzip.decompress(bytes(tile[0]))
+            else:
+                return None
+    except Exception as e:
+        create_error(code=404, message=str(e))
+
+
+def pbf_to_geodataframe(pbf_data, x, y, z):
+    """
+    Converts PBF data to a GeoDataFrame.
+
+    :param pbf_data: The PBF data to be decoded.
+    :param x: The x-coordinate of the tile.
+    :param y: The y-coordinate of the tile.
+    :param z: The zoom level of the tile.
+    :return: A GeoDataFrame containing the decoded PBF data in GeoJSON format.
+    """
+    # Decode PBF data
+    decoded_data = mapbox_vector_tile.decode(pbf_data)
+    tile_bounds = mercantile.bounds(x, y, z)
+    # Collect features and convert them to GeoJSON format
+    features = []
+    for layer_name, layer in decoded_data.items():
+        for feature in layer['features']:
+            geom = shape(feature['geometry'])
+
+            def scale_translate(x, y, bounds=tile_bounds, tile_dim=4096):
+                # Adjust for the flipped tiles by inverting the y-axis calculation
+                lon = (x / tile_dim) * (bounds.east - bounds.west) + bounds.west
+                lat = (y / tile_dim) * (bounds.north - bounds.south) + bounds.south
+                return lon, lat
+
+            geom_transformed = transform(scale_translate, geom)
+            properties = feature['properties']
+            properties["featureId"] = feature['id']
+            features.append({'type': 'Feature', 'geometry': geom_transformed, 'properties': properties})
+
+    gdf = gpd.GeoDataFrame.from_features(features, crs='EPSG:4326')
+    return gdf

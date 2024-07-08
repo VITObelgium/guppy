@@ -27,4 +27,5 @@ dependencies:
   - rio-tiler
   - prometheus-fastapi-instrumentator
   - pygeofilter
+  - mapbox-vector-tile
 prefix: /opt/mapbase3/server/conda-env

@@ -2,10 +2,10 @@ from fastapi import Depends, APIRouter
 from fastapi.responses import ORJSONResponse
 from sqlalchemy.orm import Session
 
-from guppy.endpoints import endpoints
 from guppy.config import config as cfg
 from guppy.db import schemas as s
 from guppy.db.dependencies import get_db
+from guppy.endpoints import endpoints
 
 router = APIRouter(
     prefix=f"{cfg.deploy.path}/layers",
@@ -38,9 +38,9 @@ def get_multi_line_data_list_for_wkt(body: s.MultiLineGeometryListBody, db: Sess
     return endpoints.get_multi_line_data_list_for_wkt(db=db, body=body)
 
 
-@router.get("/{layer_name}/point", response_model=s.PointResponse, description="Get point value for a given coordinate from raster within a layer.")
-def get_point_value_from_raster(layer_name: str, x: float, y: float, db: Session = Depends(get_db)):
-    return endpoints.get_point_value_from_raster(db=db, layer_name=layer_name, x=x, y=y)
+@router.get("/{layer_name}/point", response_model=s.PointResponse, description="Get point value for a given coordinate (in 4326) from a layer.")
+def get_point_value_from_layer(layer_name: str, x: float, y: float, db: Session = Depends(get_db)):
+    return endpoints.get_point_value_from_layer(db=db, layer_name=layer_name, x=x, y=y)
 
 
 @router.post("/{layer_name}/object", response_class=ORJSONResponse, description="Get object list for a given line wkt geometry within a layer.")
