@@ -317,9 +317,10 @@ def get_point_value_from_layer(db: Session, layer_name: str, x: float, y: float)
             # get the value of the point
             point = wkt.loads(f'POINT ({x} {y})')
             values = tile_df[tile_df.intersects(point)].drop(columns=['geometry'])
-            result = {'type': 'point value', 'layer_name': layer_name, 'value': values.to_dict(orient='records')[0]}
-            logger.info(f'get_point_value_from_raster 200 {time.time() - t}')
-            return result
+            if values:
+                result = {'type': 'point value', 'layer_name': layer_name, 'value': values.to_dict(orient='records')[0]}
+                logger.info(f'get_point_value_from_raster 200 {time.time() - t}')
+                return result
         logger.warning(f'file not found {path}')
     logger.info(f'get_point_value_from_raster 204 {time.time() - t}')
     return Response(status_code=status.HTTP_204_NO_CONTENT)
