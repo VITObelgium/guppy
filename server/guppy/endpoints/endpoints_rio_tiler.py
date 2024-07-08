@@ -72,20 +72,54 @@ def get_cached_colormap(name):
     return cmap.get(name)
 
 
+def is_hex_color(input):
+    """
+    Function to check if a string is a valid hex color.
+    Args:
+        input: The string to check.
+
+    Returns:
+        True if the input is a valid hex color, False otherwise.
+
+    """
+    return len(input) == 6 and all(c in "0123456789ABCDEF" for c in input.upper())
+
+
+def hex_to_rgb(hex_color):
+    """
+    Function to convert a hex color to an RGB color.
+    Args:
+        hex_color: The hex color to convert.
+
+    Returns:
+        A tuple containing the RGB color.
+
+    """
+    hex_color = hex_color.lstrip("#")
+    return tuple(int(hex_color[i:i + 2], 16) for i in (0, 2, 4))
+
+
 def generate_colormap(min_val, max_val, value_points, colors):
     # Map the provided value_points from [min_val, max_val] to [0, 255]
     rescaled_points = np.interp(value_points, (min_val, max_val), (0, 255))
     # Generate colormap over 256 values
     all_values = np.linspace(0, 255, 256)
-    colors = np.array(colors)
-    colormap = {}
 
+    colormap = {}
+    if len(colors) != len(value_points):
+        raise ValueError("values and colors must be the same length")
+    if isinstance(colors[0],str) and is_hex_color(colors[0]):
+        colors = [hex_to_rgb(color) for color in colors]
+
+    colors = np.array(colors)
     # Interpolate color channels
     r = np.interp(all_values, rescaled_points, colors[:, 0])
     g = np.interp(all_values, rescaled_points, colors[:, 1])
     b = np.interp(all_values, rescaled_points, colors[:, 2])
-    a = np.interp(all_values, rescaled_points, colors[:, 3])
-
+    if colors.shape[1] == 4:
+        a = np.interp(all_values, rescaled_points, colors[:, 3])
+    else:
+        a = np.full_like(all_values, 255)
     final_colormap = {int(v): (int(r[i]), int(g[i]), int(b[i]), int(a[i])) for i, v in enumerate(all_values)}
     return final_colormap
 
@@ -141,12 +175,16 @@ def get_tile(file_path: str, z: int, x: int, y: int, style: str = None, values: 
                         if not values or not colors:
                             raise HTTPException(status_code=400, detail='values and colors must be provided for a custom style')
                         value_points = [float(x) for x in values.split(',')]
-                        colors_points = [(int(x), int(y), int(z), int(a)) for x, y, z, a in
+                        if '_' in colors:
+                            colors_points = [(int(x), int(y), int(z), int(a)) for x, y, z, a in
                                          [color.split(',') for color in colors.split('_')]]
+                        else:
+                            colors_points = [str(x) for x in colors.split(',')]
                         try:
                             colormap = generate_colormap(min_val, max_val, value_points, colors_points)
                         except ValueError as e:
-                            raise HTTPException(status_code=400, detail='values and colors must be the same length. colors must be sets of 4 values r,g,b,a separated by commas and sets of colors separated by _')
+                            raise HTTPException(status_code=400,
+                                                detail='values and colors must be the same length. colors must be sets of 4 values r,g,b,a separated by commas and sets of colors separated by _')
                     else:
                         try:
                             colormap = get_cached_colormap(style)
