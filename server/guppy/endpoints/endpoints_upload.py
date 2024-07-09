@@ -33,7 +33,7 @@ def upload_file(layer_name: str, label: str, file: UploadFile, db: Session, is_r
     sanitized_layer_name = sanitize_input_str(layer_name)
     sanitized_filename = sanitize_input_str(filename_without_extension)
 
-    check_layer_exists(layer_name=f"{sanitized_layer_name}_{sanitized_filename}", db=db)
+    check_layer_exists(layer_name=f"{sanitized_layer_name}", db=db)
 
     file_location, tmp_file_location = create_location_paths_and_check_if_exists(ext, sanitized_filename, sanitized_layer_name)
 
@@ -41,8 +41,8 @@ def upload_file(layer_name: str, label: str, file: UploadFile, db: Session, is_r
 
     is_mbtile = create_preprocessed_layer_file(ext, file_location, sanitized_filename, sanitized_layer_name, tmp_file_location, max_zoom)
 
-    insert_into_layer_metadata(layer_uuid=f"{sanitized_layer_name}_{sanitized_filename}", label=label, file_path=file_location, db=db, is_rgb=is_rgb, is_mbtile=is_mbtile)
-    return f"Upload successful: Layer {sanitized_layer_name}_{sanitized_filename} uploaded with label {label}."
+    insert_into_layer_metadata(layer_uuid=sanitized_layer_name, label=label, file_path=file_location, db=db, is_rgb=is_rgb, is_mbtile=is_mbtile)
+    return f"Upload successful: Layer {sanitized_layer_name} uploaded with label {label}."
 
 
 def generate_sqlite_file(layer_name, db):
