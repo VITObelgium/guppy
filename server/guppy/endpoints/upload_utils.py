@@ -138,12 +138,14 @@ def create_preprocessed_layer_file(ext: str, file_location: str, sanitized_filen
         is_mbtile = True
     else:
         df = gpd.read_file(tmp_file_location)
-        df['fid'] = df.index
         df.to_crs(epsg=4326, inplace=True)
-        gpkg_loc = f"{cfg.deploy.content}/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}.gpkg"
+        if len(df) == 1:  # explode if there is only one row
+            df = df.explode().reset_index(drop=True)
+        df['fid'] = df.index
+        gpkg_loc = f"{cfg.deploy.content}/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}_tmp.gpkg"
         if 'bounds' not in df.columns:
             df['bounds'] = df.geometry.envelope.to_wkt()
-        df.to_file(gpkg_loc, index=False)
+        df.to_file(gpkg_loc, index=False, layer=sanitized_layer_name, driver='GPKG')
         to_mbtiles(sanitized_layer_name, gpkg_loc, file_location)
         os.remove(tmp_file_location)
         df.drop(columns=['geometry'], inplace=True)
