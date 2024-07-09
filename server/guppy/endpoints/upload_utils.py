@@ -115,7 +115,7 @@ def check_layer_exists(layer_name: str, db: Session):
         raise create_error(code=400, message=f"Upload failed: Layer {layer_name} already exists.")
 
 
-def create_preprocessed_layer_file(ext: str, file_location: str, sanitized_filename: str, sanitized_layer_name: str, tmp_file_location: str) -> bool:
+def create_preprocessed_layer_file(ext: str, file_location: str, sanitized_filename: str, sanitized_layer_name: str, tmp_file_location: str, max_zoom: int = 17) -> bool:
     """
     Args:
         ext (str): The extension of the file.
@@ -146,7 +146,7 @@ def create_preprocessed_layer_file(ext: str, file_location: str, sanitized_filen
         if 'bounds' not in df.columns:
             df['bounds'] = df.geometry.envelope.to_wkt()
         df.to_file(gpkg_loc, index=False, layer=sanitized_layer_name, driver='GPKG')
-        to_mbtiles(sanitized_layer_name, gpkg_loc, file_location)
+        to_mbtiles(sanitized_layer_name, gpkg_loc, file_location, max_zoom)
         os.remove(tmp_file_location)
         df.drop(columns=['geometry'], inplace=True)
         engine = create_engine(f'sqlite:///{file_location.replace(".mbtiles", ".sqlite")}')
@@ -213,7 +213,7 @@ def write_input_file_to_disk(file: UploadFile, tmp_file_location: str):
         file.file.close()
 
 
-def to_mbtiles(name: str, input_file_path: str, output_file_path: str):
+def to_mbtiles(name: str, input_file_path: str, output_file_path: str, max_zoom=17):
     """
     Args:
         name: A string representing the name of the MBTiles file.
@@ -228,7 +228,7 @@ def to_mbtiles(name: str, input_file_path: str, output_file_path: str):
         '-dsco', 'MAX_FEATURES=5000000',
         '-dsco', 'MAX_SIZE=5000000',
         '-dsco', 'MINZOOM=0',
-        '-dsco', 'MAXZOOM=17',
+        '-dsco', f'MAXZOOM={max_zoom}',
         '-dsco', f'NAME={name}',
         '-lco', f'NAME={name}',
         '-preserve_fid',

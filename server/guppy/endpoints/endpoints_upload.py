@@ -15,7 +15,7 @@ from guppy.error import create_error
 logger = logging.getLogger(__name__)
 
 
-def upload_file(layer_name: str, label: str, file: UploadFile, db: Session, is_rgb: bool = False):
+def upload_file(layer_name: str, label: str, file: UploadFile, db: Session, is_rgb: bool = False, max_zoom: int = 17):
     """
     Args:
         layer_name (str): The name of the layer.
@@ -39,7 +39,7 @@ def upload_file(layer_name: str, label: str, file: UploadFile, db: Session, is_r
 
     write_input_file_to_disk(file, tmp_file_location)
 
-    is_mbtile = create_preprocessed_layer_file(ext, file_location, sanitized_filename, sanitized_layer_name, tmp_file_location)
+    is_mbtile = create_preprocessed_layer_file(ext, file_location, sanitized_filename, sanitized_layer_name, tmp_file_location, max_zoom)
 
     insert_into_layer_metadata(layer_uuid=f"{sanitized_layer_name}_{sanitized_filename}", label=label, file_path=file_location, db=db, is_rgb=is_rgb, is_mbtile=is_mbtile)
     return f"Upload successful: Layer {sanitized_layer_name}_{sanitized_filename} uploaded with label {label}."
