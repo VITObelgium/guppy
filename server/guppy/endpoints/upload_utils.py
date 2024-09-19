@@ -142,10 +142,10 @@ def create_preprocessed_layer_file(ext: str, file_location: str, sanitized_filen
         if len(df) == 1:  # explode if there is only one row
             df = df.explode().reset_index(drop=True)
         df['fid'] = df.index
-        gpkg_loc = f"{cfg.deploy.content}/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}_tmp.gpkg"
+        gpkg_loc = f"{cfg.deploy.content}/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}_tmp.geojson"
         if 'bounds' not in df.columns:
             df['bounds'] = df.geometry.envelope.to_wkt()
-        df.to_file(gpkg_loc, index=False, layer=sanitized_layer_name, driver='GPKG')
+        df.to_file(gpkg_loc, index=False, layer=sanitized_layer_name, driver='GeoJSON')  # needs to be geojson to preserve the fid field in the mbtile
         to_mbtiles(sanitized_layer_name, gpkg_loc, file_location, max_zoom)
         os.remove(tmp_file_location)
         df.drop(columns=['geometry'], inplace=True)
@@ -262,7 +262,7 @@ def validate_file_input(ext: str, file: UploadFile, filename_without_extension: 
         raise create_error(message=f"Upload failed: File size {file.size} is too large.", code=400)
     if file.size < 1000:  # 1kb
         raise create_error(message=f"Upload failed: File size {file.size} is too small.", code=400)
-    # check_disk_space(file.size)
+    check_disk_space(file.size)
 
 
 def save_geotif_tiled_overviews(input_file: str, output_file: str, nodata: int) -> str:
