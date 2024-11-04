@@ -22,7 +22,7 @@ async def get_vector_tile(layer_name: str, z: int, x: int, y: int, db: Session =
 @router.get(r"/raster/{layer_name}/{z}/{x}/{y}.png", responses={200: {"content": {"image/png": {}}, "description": "Return an image.", }}, response_class=Response,
             description="Read COG and return a png tile")
 async def get_raster_tile(layer_name: str, z: int, x: int, y: int,
-                          style: str = Query(..., description=f"Style should be '<b>shader_rgba</b>', '<b>custom</b>' or one of {list(cmap.data.keys())} values. <br><br>"
+                          style: str = Query(default=None, description=f"Style should be '<b>shader_rgba</b>', '<b>custom</b>' or one of {list(cmap.data.keys())} values. <br><br>"
                                                               f"If '<b>custom</b>', extra parameters values and colors are needed like:<br> values=1.23,80.35,190.587&colors=255,0,0,255_0,255,0,255_0,0,255,255 <br>"
                                                               f"so values are comma seperated, and colors are r,g,b,a and _ seperated."),
                           values: str = None, colors: str = None,

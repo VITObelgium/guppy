@@ -39,7 +39,10 @@ def get_tile_for_layer(layer_name: str, style: str, db: Session, z: int, x: int,
     t = time.time()
     file_path = validate_layer_and_get_file_path(db, layer_name)
 
-    result = get_tile(file_path, z, x, y, style, values, colors)
+    if file_path.endswith('.mbtiles'):
+        result = get_tile_from_mbtiles(file_path, z, x, y)
+    else:
+        result = get_tile(file_path, z, x, y, style, values, colors)
     log_cache_info(t)
     return result
 
@@ -122,6 +125,35 @@ def generate_colormap(min_val, max_val, value_points, colors):
         a = np.full_like(all_values, 255)
     final_colormap = {int(v): (int(r[i]), int(g[i]), int(b[i]), int(a[i])) for i, v in enumerate(all_values)}
     return final_colormap
+
+
+def get_tile_from_mbtiles(file_path: str, z: int, x: int, y: int) -> Response:
+    """
+    Args:
+        file_path: A string representing the path to the file.
+        z: An integer representing the zoom level.
+        x: An integer representing the x-coordinate of the tile.
+        y: An integer representing the y-coordinate of the tile.
+
+    Returns:
+        A Response object containing the rendered tile image in PNG format, or raises an HTTPException with a status code of 404 and a corresponding detail message.
+
+    """
+    y = (1 << z) - 1 - y
+    try:
+        uri = f'file:{file_path}?mode=ro'
+        with sqlite3.connect(uri, uri=True) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT tile_data FROM tiles WHERE zoom_level=? AND tile_column=? AND tile_row=?", (z, x, y))
+            tile = cursor.fetchone()
+            if tile:
+                return Response(bytes(tile[0]), media_type="image/png")
+            else:
+                return None
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except TileOutsideBounds:
+        raise HTTPException(status_code=204, detail=f"Tile out of bounds {z} {x} {y}")
 
 
 @lru_cache(maxsize=128)
