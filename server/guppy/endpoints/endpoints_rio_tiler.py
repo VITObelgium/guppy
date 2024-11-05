@@ -1,6 +1,7 @@
 """rio-tiler tile server."""
 
 import logging
+import sqlite3
 import time
 from functools import lru_cache
 
