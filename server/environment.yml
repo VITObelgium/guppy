@@ -9,6 +9,7 @@ dependencies:
   - uvicorn
   - psycopg2
   - python=3.11
+  - gdal
   - sqlalchemy
   - pyyaml
   - json5
