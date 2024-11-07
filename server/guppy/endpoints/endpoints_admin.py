@@ -27,7 +27,7 @@ def delete_layer_mapping(db: Session, layer_name: str):
     if layer_model:
         if os.path.exists(layer_model.file_path):
             os.remove(layer_model.file_path)
-        if os.path.exists(layer_model.data_path):
+        if layer_model.data_path and os.path.exists(layer_model.data_path):
             os.remove(layer_model.data_path)
         db.delete(layer_model)
         db.commit()
