@@ -175,7 +175,7 @@ def create_location_paths_and_check_if_exists(ext: str, sanitized_filename: str,
 
     """
     if ext.lower() in ['.tif', '.tiff', '.asc', ]:
-        tmp_file_location = f"{cfg.deploy.content}/tifs/uploaded/{sanitized_layer_name}_{sanitized_filename}_tmp.{ext}"
+        tmp_file_location = f"{cfg.deploy.content}/tifs/uploaded/{sanitized_layer_name}_{sanitized_filename}_tmp{ext}"
         file_location = f"{cfg.deploy.content}/tifs/uploaded/{sanitized_layer_name}_{sanitized_filename}.tif"
         if os.path.exists(file_location):
             raise create_error(message=f"Upload failed: File {sanitized_layer_name}_{sanitized_filename}.tif already exists.", code=400)

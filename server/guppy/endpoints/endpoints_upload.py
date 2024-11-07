@@ -45,7 +45,7 @@ def upload_file(layer_name: str, label: str, file: UploadFile, data: UploadFile 
 
     if data:
         data_location, tmp_data_location = create_location_paths_and_check_if_exists(d_ext, sanitized_dataname, sanitized_layer_name, is_raster=True)
-        write_input_file_to_disk(data, tmp_data_location)
+        write_input_file_to_disk(data, data_location)
 
     is_mbtile = create_preprocessed_layer_file(ext, file_location, sanitized_filename, sanitized_layer_name, tmp_file_location, max_zoom)
 
