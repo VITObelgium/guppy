@@ -157,7 +157,7 @@ def create_preprocessed_layer_file(ext: str, file_location: str, sanitized_filen
     return is_mbtile
 
 
-def create_location_paths_and_check_if_exists(ext: str, sanitized_filename: str, sanitized_layer_name: str) -> tuple[str, str]:
+def create_location_paths_and_check_if_exists(ext: str, sanitized_filename: str, sanitized_layer_name: str, is_raster=False) -> tuple[str, str]:
     """
     Creates file paths for the uploaded file and checks if the file already exists.
 
@@ -165,6 +165,7 @@ def create_location_paths_and_check_if_exists(ext: str, sanitized_filename: str,
         ext (str): The file extension.
         sanitized_filename (str): The sanitized name of the file.
         sanitized_layer_name (str): The sanitized name of the layer.
+        is_raster (bool): Optional. Indicates whether the file is a raster file. Default is False.
 
     Returns:
         tuple: A tuple containing the file location and temporary file location.
@@ -179,7 +180,11 @@ def create_location_paths_and_check_if_exists(ext: str, sanitized_filename: str,
         if os.path.exists(file_location):
             raise create_error(message=f"Upload failed: File {sanitized_layer_name}_{sanitized_filename}.tif already exists.", code=400)
     elif ext.lower() in ['.mbtiles']:
-        file_location = f"{cfg.deploy.content}/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}.mbtiles"
+        if is_raster:
+            folder = 'tifs'
+        else:
+            folder = 'shapefiles'
+        file_location = f"{cfg.deploy.content}/{folder}/uploaded/{sanitized_layer_name}_{sanitized_filename}.mbtiles"
         tmp_file_location = file_location
         if os.path.exists(file_location):
             raise create_error(message=f"Upload failed: File {sanitized_layer_name}_{sanitized_filename}.mbtiles already exists.", code=400)
@@ -309,7 +314,7 @@ def save_geotif_tiled_overviews(input_file: str, output_file: str, nodata: int) 
     return output_file
 
 
-def insert_into_layer_metadata(layer_uuid: str, label: str, file_path: str, db: Session, is_rgb: bool = False, is_mbtile: bool = False):
+def insert_into_layer_metadata(layer_uuid: str, label: str, file_path: str, data_path: str, db: Session, is_rgb: bool = False, is_mbtile: bool = False):
     """
     Inserts a record into the layer_metadata table.
 
@@ -319,7 +324,7 @@ def insert_into_layer_metadata(layer_uuid: str, label: str, file_path: str, db: 
         db: The database connection object.
         is_rgb: Optional. Indicates whether the layer is an RGB layer. Default is False.
     """
-    new_layer = LayerMetadata(layer_name=layer_uuid, label=label, file_path=file_path, is_rgb=is_rgb, is_mbtile=is_mbtile)
+    new_layer = LayerMetadata(layer_name=layer_uuid, label=label, file_path=file_path, data_path=data_path, is_rgb=is_rgb, is_mbtile=is_mbtile)
     db.add(new_layer)
     db.commit()
     logger.info("Record inserted into layer metadata")

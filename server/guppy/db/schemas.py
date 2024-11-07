@@ -21,6 +21,7 @@ class LayerMetadataSchema(CamelModel):
     layer_name: str
     label: Optional[str] = None
     file_path: str
+    data_path: Optional[str] = None
     is_rgb: Optional[bool] = False
     is_mbtile: Optional[bool] = False
 
@@ -199,6 +200,7 @@ class LayerMetadataBody(CamelModel):
     layer_name: str
     label: str
     file_path: str
+    data_path: Optional[str] = None
     is_rgb: Optional[bool] = False
     is_mbtile: Optional[bool] = False
 

@@ -465,7 +465,7 @@ def fill_path_and_argument_lists(arguments_list, layer_list, db, nodata, path_li
     for layer_item in layer_list:
         layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_item.layer_name).first()
         if layer_model:
-            path = layer_model.file_path
+            path = layer_model.file_path if not layer_model.is_mbtile else layer_model.data_path
             path_list.append(path)
             if os.path.exists(path):
                 with rasterio.open(path) as src:

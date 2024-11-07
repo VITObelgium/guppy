@@ -204,6 +204,8 @@ def validate_layer_and_get_file_path(db: Session, layer_name: str) -> str:
         file_path = layer.file_path
         if not os.path.exists(file_path):
             raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
+        if file_path.endswith('.mbtiles') and os.path.exists(layer.data_path):
+            file_path = layer.data_path
         layer_data_chache[layer_name] = file_path
     return layer_data_chache[layer_name]
 
@@ -243,7 +245,7 @@ def sample_coordinates_window(coords_dict, layer_models, bounds, round_val=None)
 
     """
     result_all = []
-    path = layer_models[0].file_path
+    path = layer_models[0].file_path if not layer_models[0].is_mbtile else layer_models[0].data_path
     coords = []
     for k, v in coords_dict.items():
         coords.extend(v)

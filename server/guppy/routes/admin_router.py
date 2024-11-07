@@ -14,8 +14,9 @@ router = APIRouter(
 
 
 @router.post("/upload", description="Upload a file (GeoTiff or Gpkg) to the server.")
-def upload_file(layerName: str = Form(...), layerLabel: str = Form(...), isRgb: bool = Form(False), maxZoom: int = Form(17), file: UploadFile = File(...), db: Session = Depends(get_db)):
-    return endpoints_upload.upload_file(layer_name=layerName, label=layerLabel, file=file, is_rgb=isRgb, max_zoom=maxZoom, db=db)
+def upload_file(layerName: str = Form(...), layerLabel: str = Form(...), isRgb: bool = Form(False), maxZoom: int = Form(17), file: UploadFile = File(...), data: UploadFile = File(defaut=None),
+                db: Session = Depends(get_db)):
+    return endpoints_upload.upload_file(layer_name=layerName, label=layerLabel, file=file, data=data, is_rgb=isRgb, max_zoom=maxZoom, db=db)
 
 
 @router.get("/{layer_name}/generate_db", description="Generate sqlite file for a mbtiles layer")
@@ -57,12 +58,12 @@ def delete_layer(layerName: str, db: Session = Depends(get_db)):
 
 @router.put("/layer/{layerName}", description="Update a layer on the server.")
 def update_layer(body: LayerMetadataBody, db: Session = Depends(get_db)):
-    return endpoints_admin.update_layer_mapping(db=db, layer_name=body.layer_name, label=body.label, file_path=body.file_path, is_rgb=body.is_rgb, is_mbtile=body.is_mbtile)
+    return endpoints_admin.update_layer_mapping(db=db, layer_name=body.layer_name, label=body.label, file_path=body.file_path, data_path=body.data_path, is_rgb=body.is_rgb, is_mbtile=body.is_mbtile)
 
 
 @router.post("/layer", description="Insert a layer on the server.")
 def insert_layer(body: LayerMetadataBody, db: Session = Depends(get_db)):
-    return endpoints_admin.insert_layer_mapping(db=db, layer_name=body.layer_name, label=body.label, file_path=body.file_path, is_rgb=body.is_rgb, is_mbtile=body.is_mbtile)
+    return endpoints_admin.insert_layer_mapping(db=db, layer_name=body.layer_name, label=body.label, file_path=body.file_path, data_path=body.data_path, is_rgb=body.is_rgb, is_mbtile=body.is_mbtile)
 
 
 @router.get("/cache/clear", description="Clear the tile cache.")

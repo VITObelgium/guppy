@@ -91,6 +91,7 @@
     <input type="text" id="layer_name" name="layer_name" placeholder="Layer Name" required>
     <input type="text" id="label" name="label" placeholder="Layer Label" required>
     <input type="text" id="file_path" name="file_path" placeholder="File Path" required>
+    <input type="text" id="data_path" name="data_path" placeholder="Data Path" required>
     <label>
         <input type="checkbox" id="is_rgb" name="is_rgb"> Is RGB
     </label>
@@ -110,6 +111,7 @@
         const layerName = document.getElementById('layer_name').value;
         const label = document.getElementById('label').value;
         const filePath = document.getElementById('file_path').value;
+        const dataPath = document.getElementById('data_path').value;
         const isRgb = document.getElementById('is_rgb').checked;
         const isMbtile = document.getElementById('is_mbtile').checked;
 
@@ -118,7 +120,7 @@
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({layerName, label, filePath, isRgb, isMbtile}),
+            body: JSON.stringify({layerName, label, filePath,dataPath, isRgb, isMbtile}),
         });
 
         if (response.ok) {
@@ -144,6 +146,7 @@
                 <th>Name</th>
                 <th>Label</th>
                 <th>Path</th>
+                <th>Data Path</th>
                 <th>Is RGB</th>
                 <th>Is MBTile</th>
                 <th>Actions</th>
@@ -159,15 +162,17 @@
             const nameCell = row.insertCell(0);
             const labelCell = row.insertCell(1);
             const pathCell = row.insertCell(2);
-            const rgbCell = row.insertCell(3);
-            const mbtileCell = row.insertCell(4);
-            const deleteCell = row.insertCell(5); // Cell for the delete button
-            const statsCell = row.insertCell(6); // Cell for the stats button
-            const downloadCell = row.insertCell(7); // Cell for the download button
+            const dataCell = row.insertCell(3);
+            const rgbCell = row.insertCell(4);
+            const mbtileCell = row.insertCell(5);
+            const deleteCell = row.insertCell(6); // Cell for the delete button
+            const statsCell = row.insertCell(7); // Cell for the stats button
+            const downloadCell = row.insertCell(8); // Cell for the download button
 
             nameCell.textContent = layer.layerName;
             labelCell.textContent = layer.effectiveLabel;
             pathCell.textContent = layer.filePath;
+            dataCell.textContent = layer.dataPath;
             rgbCell.textContent = layer.isRgb ? 'Yes' : 'No';
             mbtileCell.textContent = layer.isMbtile ? 'Yes' : 'No';
 

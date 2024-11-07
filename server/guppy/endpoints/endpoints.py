@@ -40,7 +40,7 @@ def get_stats_for_bbox(db: Session, layer_name: str, bbox_left: float, bbox_bott
     t = time.time()
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
     if layer_model:
-        path = layer_model.file_path
+        path = layer_model.file_path if not layer_model.is_mbtile else layer_model.data_path
         if os.path.exists(path) and bbox_left and bbox_bottom and bbox_right and bbox_top:
             with rasterio.open(path) as src:
                 target_srs = src.crs.to_epsg()
@@ -74,7 +74,7 @@ def get_data_for_wkt(db: Session, layer_name: str, body: s.GeometryBody):
     t = time.time()
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
     if layer_model:
-        path = layer_model.file_path
+        path = layer_model.file_path if not layer_model.is_mbtile else layer_model.data_path
         if os.path.exists(path) and body:
             geom = wkt.loads(body.geometry)
             with rasterio.open(path) as src:
@@ -107,7 +107,7 @@ def get_stats_for_wkt(db: Session, layer_name: str, body: s.GeometryBody, native
     t = time.time()
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
     if layer_model:
-        path = layer_model.file_path
+        path = layer_model.file_path if not layer_model.is_mbtile else layer_model.data_path
         if os.path.exists(path) and body:
             geom = wkt.loads(body.geometry)
             with rasterio.open(path) as src:
@@ -150,7 +150,7 @@ def get_stats_for_model(layer_model, native, geom, srs):
     Returns:
         The statistics response if successful, otherwise None.
     """
-    path = layer_model.file_path
+    path = layer_model.file_path if not layer_model.is_mbtile else layer_model.data_path
     if os.path.exists(path) and geom:
         with rasterio.open(path) as src:
             target_srs = src.crs.to_epsg()
@@ -205,7 +205,7 @@ def get_line_data_for_wkt(db: Session, layer_name: str, body: s.LineGeometryBody
     t = time.time()
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
     if layer_model:
-        path = layer_model.file_path
+        path = layer_model.file_path if not layer_model.is_mbtile else layer_model.data_path
         if os.path.exists(path) and body:
             line = wkt.loads(body.geometry)
             with rasterio.open(path) as src:
@@ -296,8 +296,9 @@ def get_multi_line_data_list_for_wkt(db: Session, body: s.MultiLineGeometryListB
 def get_point_value_from_layer(db: Session, layer_name: str, x: float, y: float):
     t = time.time()
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
-    if layer_model and not layer_model.is_mbtile:
-        path = layer_model.file_path
+    is_raster = not layer_model.is_mbtile or layer_model.data_path != None
+    if layer_model and is_raster:
+        path = layer_model.file_path if not layer_model.is_mbtile else layer_model.data_path
         if os.path.exists(path) and x and y:
             with rasterio.open(path) as src:
                 nodata = src.nodata
@@ -308,8 +309,8 @@ def get_point_value_from_layer(db: Session, layer_name: str, x: float, y: float)
                     logger.info(f'get_point_value_from_raster 200 {time.time() - t}')
                     return s.PointResponse(type='point value', layer_name=layer_name, value=None if math.isclose(float(v[0]), nodata) else float(v[0]))
         logger.warning(f'file not found {path}')
-    elif layer_model and layer_model.is_mbtile:
-        path = layer_model.file_path
+    elif layer_model:
+        path = layer_model.file_path if not layer_model.is_mbtile else layer_model.data_path
         if os.path.exists(path) and x and y:
             tile_z, tile_x, tile_y = latlon_to_tilexy(x, y, 14)
             tile = get_tile_data(layer_name=layer_name, mb_file=path, z=tile_z, x=tile_x, y=tile_y)
@@ -362,7 +363,8 @@ def get_line_object_list_for_wkt(db: Session, layer_name: str, body: s.LineObjec
         if layer_model.file_path.endswith('.pkl'):
             input_file_df = pd.read_pickle(layer_model.file_path)
         else:
-            input_file_df = gpd.read_file(layer_model.file_path)
+
+            input_file_df = gpd.read_file(layer_model.file_path if not layer_model.is_mbtile else layer_model.data_path)
         input_file_df.to_crs(crs='epsg:3857', inplace=True)
         input_file_df = input_file_df[~pd.isna(input_file_df.geometry)]
         input_file_df = input_file_df[~input_file_df.is_empty]
@@ -391,7 +393,7 @@ def get_classification_for_wkt(db: Session, layer_name: str, body: s.GeometryBod
     t = time.time()
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
     if layer_model:
-        path = layer_model.file_path
+        path = layer_model.file_path if not layer_model.is_mbtile else layer_model.data_path
         if os.path.exists(path) and body:
             geom = wkt.loads(body.geometry)
             with rasterio.open(path) as src:
@@ -433,7 +435,7 @@ def get_combine_layers(db: Session, body: s.CombineLayersGeometryBody):
         geom = wkt.loads(body.geometry)
         layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_item.layer_name).first()
         if layer_model:
-            path = layer_model.file_path
+            path = layer_model.file_path if not layer_model.is_mbtile else layer_model.data_path
             if os.path.exists(path) and body:
                 with rasterio.open(path) as src:
                     target_srs = src.crs.to_epsg()
@@ -465,7 +467,8 @@ def get_combine_layers(db: Session, body: s.CombineLayersGeometryBody):
 
 
 def get_layer_contour(layer):
-    with rasterio.open(layer.file_path) as src:
+    file_path = layer.file_path if not layer.is_mbtile else layer.data_path
+    with rasterio.open(file_path) as src:
         contour_geojson = list(dataset_features(src, bidx=1, as_mask=True, precision=1, band=False, geographic=False))
         return {'layerName': layer.layer_name, 'geometry': contour_geojson}
 
@@ -489,7 +492,7 @@ def get_quantiles_for_wkt(db: Session, layer_name: str, body: s.QuantileBody, na
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
     if layer_model:
         quantiles = body.quantiles
-        path = layer_model.file_path
+        path = layer_model.file_path if not layer_model.is_mbtile else layer_model.data_path
         if os.path.exists(path) and body:
             geom = wkt.loads(body.geometry)
             with rasterio.open(path) as src:
