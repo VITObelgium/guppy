@@ -121,6 +121,8 @@ def perform_operation(*input_arrs, layer_args, output_rgb, unique_values=None):
         is_rgb = args_dict['is_rgb']
         if is_rgb:
             input_arr = _decode(input_arr)
+        if input_arr.dtype == np.byte or input_arr.dtype == np.uint8 or input_arr.dtype == np.uint16 or input_arr.dtype == np.uint32 or input_arr.dtype == np.int8 or input_arr.dtype == np.int16:
+            input_arr = input_arr.astype(np.int32)
         input_arr[input_arr == args_dict['nodata']] = out_nodata
         input_arr[np.isnan(input_arr)] = out_nodata
         if idx == 0:
