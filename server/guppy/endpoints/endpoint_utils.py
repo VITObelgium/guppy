@@ -7,6 +7,7 @@ import rasterio
 from fastapi import HTTPException
 from rasterio.mask import mask, raster_geometry_mask
 from rasterio.windows import from_bounds
+from rasterio.transform import rowcol
 from sqlalchemy.orm import Session
 
 from guppy.db import schemas as s
@@ -249,7 +250,7 @@ def sample_coordinates_window(coords_dict, layer_models, bounds, round_val=None)
         coords.extend(v)
     with rasterio.open(path) as src:
         geometry_window = from_bounds(bounds[0], bounds[1], bounds[2], bounds[3], src.transform).round_offsets()
-        rows, cols = src.rowcol([p[0] for p in coords], [p[1] for p in coords])
+        rows, cols = rowcol(src.transform, [p[0] for p in coords], [p[1] for p in coords])
         cols = [c - geometry_window.col_off for c in cols]
         rows = [r - geometry_window.row_off for r in rows]
         in_rows = []
