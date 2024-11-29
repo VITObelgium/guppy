@@ -249,12 +249,7 @@ def sample_coordinates_window(coords_dict, layer_models, bounds, round_val=None)
         coords.extend(v)
     with rasterio.open(path) as src:
         geometry_window = from_bounds(bounds[0], bounds[1], bounds[2], bounds[3], src.transform).round_offsets()
-        rows = []
-        cols = []
-        for x, y in zip([p[0] for p in coords], [p[1] for p in coords]):
-            row, col = src.index(x, y)
-            rows.append(row)
-            cols.append(col)
+        rows, cols = src.rowcol([p[0] for p in coords], [p[1] for p in coords])
         cols = [c - geometry_window.col_off for c in cols]
         rows = [r - geometry_window.row_off for r in rows]
         in_rows = []
