@@ -132,7 +132,7 @@
     };
 
     async function loadLayers() {
-        const response = await fetch('$deploy_path$/layers');
+        const response = await fetch('$deploy_path$/layers?limit=1000');
         const layers = await response.json();
         const container = document.getElementById('layersList');
 

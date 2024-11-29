@@ -263,7 +263,7 @@
     MapboxDraw.constants.classes.CONTROL_GROUP = "maplibregl-ctrl-group";
 
     async function fetchLayers() {
-        const response = await fetch(`$deploy_path$/layers`);
+        const response = await fetch(`$deploy_path$/layers?limit=1000`);
         return response.json();
     }
 
