@@ -148,6 +148,7 @@ class AllowedOperations(str, PyEnum):
     boolean_mask = "boolean_mask"
     unique_product = "unique_product"
     clip = "clip"
+    normalize = "normalize"
 
 
 class CombineLayersList(CamelModel):
