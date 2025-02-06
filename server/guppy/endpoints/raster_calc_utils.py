@@ -458,6 +458,7 @@ def get_unique_values(arguments_list, fixed_path_list):
                 with rasterio.open(path) as src:
                     for ji, window in src.block_windows():
                         arr = src.read(window=window)
+                        arr = arr[arr != src.nodata]
                         if min_val is None:
                             min_val = np.min(arr)
                             max_val = np.max(arr)
