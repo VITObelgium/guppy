@@ -459,13 +459,14 @@ def get_unique_values(arguments_list, fixed_path_list):
                     for ji, window in src.block_windows():
                         arr = src.read(window=window)
                         arr = arr[arr != src.nodata]
-                        if min_val is None:
-                            min_val = np.min(arr)
-                            max_val = np.max(arr)
-                        else:
-                            min_val = min(min_val, np.min(arr))
-                            max_val = max(max_val, np.max(arr))
-                unique_values.append([min_val, max_val])
+                        if len(arr) > 0:
+                            if min_val is None:
+                                min_val = np.min(arr)
+                                max_val = np.max(arr)
+                            else:
+                                min_val = min(min_val, np.min(arr))
+                                max_val = max(max_val, np.max(arr))
+                unique_values.append([float(min_val), float(max_val)])
             else:
                 unique_values.append(None)
     return unique_values
