@@ -157,9 +157,7 @@ def perform_operation(*input_arrs, layer_args, output_rgb, unique_values=None):
             elif operation == s.AllowedOperations.normalize:
                 valid_mask = output_arr != out_nodata
                 if np.any(valid_mask):
-                    valid_min = np.nanmin(output_arr[valid_mask])
-                    valid_max = np.nanmax(output_arr[valid_mask])
-                    output_arr = np.where(valid_mask, (output_arr - valid_min) / (valid_max - valid_min), out_nodata)
+                    output_arr = np.where(valid_mask, (output_arr - unique_vals[0]) / (unique_vals[1] - unique_vals[0]), out_nodata)
     if output_rgb:
         output_arr = data_to_rgba(output_arr, out_nodata)
     return output_arr
@@ -443,17 +441,32 @@ def cleanup_files(path_list, unique_identifier):
 
 def get_unique_values(arguments_list, fixed_path_list):
     unique_values = []
-    if s.AllowedOperations.unique_product in [arg['operation'] for arg in arguments_list]:
+    if s.AllowedOperations.unique_product in [arg['operation'] for arg in arguments_list] or s.AllowedOperations.normalize in [arg['operation'] for arg in arguments_list]:
         for path, arg in zip(fixed_path_list, arguments_list):
             if arg['operation_data']:
                 unique_values.append(arg['operation_data'])
-            else:
+            elif arg['operation'] == s.AllowedOperations.unique_product:
                 unique_values_set = set()
                 with rasterio.open(path) as src:
                     for ji, window in src.block_windows():
                         arr = src.read(window=window)
                         unique_values_set.update(np.unique(arr))
                 unique_values.append(list(unique_values_set))
+            elif arg['operation'] == s.AllowedOperations.normalize:
+                min_val = None
+                max_val = None
+                with rasterio.open(path) as src:
+                    for ji, window in src.block_windows():
+                        arr = src.read(window=window)
+                        if min_val is None:
+                            min_val = np.min(arr)
+                            max_val = np.max(arr)
+                        else:
+                            min_val = min(min_val, np.min(arr))
+                            max_val = max(max_val, np.max(arr))
+                unique_values.append([min_val, max_val])
+            else:
+                unique_values.append(None)
     return unique_values
 
 
@@ -496,4 +509,3 @@ def read_raster_without_nodata_as_array(path: str) -> np.ndarray:
             output.append(data)
 
     return np.concatenate(output)
-
