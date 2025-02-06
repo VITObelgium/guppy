@@ -156,9 +156,10 @@ def perform_operation(*input_arrs, layer_args, output_rgb, unique_values=None):
                 output_arr[:] = combo_arr  # Update output_arr in-place
             elif operation == s.AllowedOperations.normalize:
                 valid_mask = output_arr != out_nodata
-                valid_min = np.nanmin(output_arr[valid_mask])
-                valid_max = np.nanmax(output_arr[valid_mask])
-                output_arr = np.where(valid_mask, (output_arr - valid_min) / (valid_max - valid_min), out_nodata)
+                if np.any(valid_mask):
+                    valid_min = np.nanmin(output_arr[valid_mask])
+                    valid_max = np.nanmax(output_arr[valid_mask])
+                    output_arr = np.where(valid_mask, (output_arr - valid_min) / (valid_max - valid_min), out_nodata)
     if output_rgb:
         output_arr = data_to_rgba(output_arr, out_nodata)
     return output_arr
