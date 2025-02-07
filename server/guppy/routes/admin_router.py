@@ -14,7 +14,7 @@ router = APIRouter(
 
 
 @router.post("/upload", description="Upload a file (GeoTiff or Gpkg) to the server.")
-def upload_file(layerName: str = Form(...), layerLabel: str = Form(...), metadata: dict = Form(...), isRgb: bool = Form(False), maxZoom: int = Form(17), file: UploadFile = File(...),
+def upload_file(layerName: str = Form(...), layerLabel: str = Form(...), metadata: str = Form(None), isRgb: bool = Form(False), maxZoom: int = Form(17), file: UploadFile = File(...),
                 data: UploadFile = File(None),
                 db: Session = Depends(get_db)):
     return endpoints_upload.upload_file(layer_name=layerName, label=layerLabel, file=file, data=data, is_rgb=isRgb, max_zoom=maxZoom, db=db, meatadata=metadata)

@@ -24,6 +24,8 @@ def upload_file(layer_name: str, label: str, file: UploadFile, data: UploadFile 
         data (UploadFile): The data to upload (if the input is a mbtile raster, we need the data geotiff aswell for sampling functions).
         db (Session): The database session.
         is_rgb (bool, optional): Indicates whether the file is in RGB format.
+        max_zoom (int, optional): The maximum zoom level of the layer.
+        meatadata (dict, optional): The metadata of the layer.
 
     """
     data_location = None
