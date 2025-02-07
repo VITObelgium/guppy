@@ -160,6 +160,7 @@ class AllowedOperations(str, PyEnum):
     unique_product = "unique_product"
     clip = "clip"
     normalize = "normalize"
+    max_normalize = "max_normalize"
 
 
 class CombineLayersList(CamelModel):

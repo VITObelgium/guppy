@@ -158,6 +158,10 @@ def perform_operation(*input_arrs, layer_args, output_rgb, unique_values=None):
                 valid_mask = output_arr != out_nodata
                 if np.any(valid_mask):
                     output_arr = np.where(valid_mask, (output_arr - unique_vals[0]) / (unique_vals[1] - unique_vals[0]), out_nodata)
+            elif operation == s.AllowedOperations.max_normalize:
+                valid_mask = output_arr != out_nodata
+                if np.any(valid_mask):
+                    output_arr = np.where(valid_mask, output_arr / unique_vals[1], out_nodata)
     if output_rgb:
         output_arr = data_to_rgba(output_arr, out_nodata)
     return output_arr
