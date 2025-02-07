@@ -67,7 +67,7 @@ def update_layer_mapping(db: Session, layer_name: str, label: str, file_path: st
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-def insert_layer_mapping(db: Session, layer_name: str, label: str, file_path: str, data_path: str, is_rgb: bool, is_mbtile: bool):
+def insert_layer_mapping(db: Session, layer_name: str, label: str, file_path: str, data_path: str, is_rgb: bool, is_mbtile: bool, metadata: dict=None):
     """
     Inserts a layer mapping into the database.
     Args:
@@ -82,7 +82,7 @@ def insert_layer_mapping(db: Session, layer_name: str, label: str, file_path: st
 
     """
     t = time.time()
-    layer_model = m.LayerMetadata(layer_name=layer_name, label=label, file_path=file_path, data_path=data_path, is_rgb=is_rgb, is_mbtile=is_mbtile)
+    layer_model = m.LayerMetadata(layer_name=layer_name, label=label, file_path=file_path, data_path=data_path, is_rgb=is_rgb, is_mbtile=is_mbtile, metadata_str=str(metadata))
     db.add(layer_model)
     db.commit()
     logger.info(f'insert_layer_mapping 201 {time.time() - t}')

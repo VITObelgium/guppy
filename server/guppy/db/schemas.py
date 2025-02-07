@@ -1,8 +1,10 @@
 # coding: utf-8
+import ast
 from enum import Enum as PyEnum
 from typing import Optional, Union
 
 from pydantic import BaseModel, computed_field
+from pydantic.fields import Field
 
 
 def to_camel(s):
@@ -24,6 +26,15 @@ class LayerMetadataSchema(CamelModel):
     data_path: Optional[str] = None
     is_rgb: Optional[bool] = False
     is_mbtile: Optional[bool] = False
+    metadata_str: Optional[str] = Field(exclude=True, default=None)
+
+    @computed_field
+    @property
+    def metadata(self) -> dict:
+        try:
+            return ast.literal_eval(self.metadata_str) if self.metadata_str else {}
+        except ValueError:
+            return {"value": self.metadata_str}
 
     @computed_field
     @property
@@ -204,6 +215,22 @@ class LayerMetadataBody(CamelModel):
     data_path: Optional[str] = None
     is_rgb: Optional[bool] = False
     is_mbtile: Optional[bool] = False
+    metadata_str: Optional[str] = Field(exclude=True, default=None)
+
+    @computed_field
+    @property
+    def metadata(self) -> dict:
+        return ast.literal_eval(self.metadata_str) if self.metadata_str else {}
+
+
+class LayerMetadataPostBody(CamelModel):
+    layer_name: str
+    label: str
+    file_path: str
+    data_path: Optional[str] = None
+    is_rgb: Optional[bool] = False
+    is_mbtile: Optional[bool] = False
+    metadata: Optional[str] = None
 
 
 class TileStatisticsSchema(CamelModel):

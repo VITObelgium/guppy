@@ -15,9 +15,10 @@ class LayerMetadata(Base):
     layer_name = Column(String, nullable=False, unique=True)
     label = Column(String, nullable=False)
     file_path = Column(String, nullable=False)
-    data_path = Column(String, nullable=True)
+    data_path = Column(String)
     is_rgb = Column(Boolean, nullable=False, default=False, server_default=text('FALSE'))
     is_mbtile = Column(Boolean, nullable=False, default=False, server_default=text('FALSE'))
+    metadata_str = Column(String)
 
 
 class TileStatistics(Base):

@@ -1,10 +1,13 @@
 CREATE TABLE "layer_metadata" (
   "id" SERIAL PRIMARY KEY,
   "layer_name" varchar UNIQUE NOT NULL,
+"label" varchar NOT NULL,
   "file_path" varchar NOT NULL,
+  "data_path" varchar,
   "is_rgb" boolean NOT NULL,
   "rgb_factor" float,
-  "is_mbtile" boolean NOT NULL
+  "is_mbtile" boolean NOT NULL,
+    "metafdata_str" varchar
 );
  CREATE TABLE "tile_statistics" (
    id SERIAL PRIMARY KEY,
