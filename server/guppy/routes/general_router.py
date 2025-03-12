@@ -13,8 +13,8 @@ router = APIRouter(
 
 
 @router.get("/layers", response_model=list[s.LayerMetadataSchema], description="Get layers mapping with pagination.")
-def get_layers_mapping(db: Session = Depends(get_db), limit: int = 100, offset: int = 0):
-    return endpoints.get_layers_mapping(db=db, limit=limit, offset=offset)
+def get_layers_mapping(db: Session = Depends(get_db), limit: int = 100, offset: int = 0, filter: str = None):
+    return endpoints.get_layers_mapping(db=db, limit=limit, offset=offset, filter=filter)
 
 
 @router.get("/layers/{layer_name}", response_model=s.LayerMetadataSchema, description="Get mapping for a specified layer.")

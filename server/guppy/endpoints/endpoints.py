@@ -337,9 +337,13 @@ def get_layer_mapping(db, layer_name):
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-def get_layers_mapping(db, limit=100, offset=0):
+def get_layers_mapping(db, limit=100, offset=0, filter: str = None):
     t = time.time()
-    layer_model = db.query(m.LayerMetadata).limit(limit).offset(offset).all()
+    query = db.query(m.LayerMetadata)
+    if filter:
+        query = query.filter(text(filter))
+    query = query.limit(limit).offset(offset)
+    layer_model = query.sort_by(m.LayerMetadata.layer_name).all()
     if layer_model:
         logger.info(f'get_layers_mapping 200 {time.time() - t}')
         return layer_model
