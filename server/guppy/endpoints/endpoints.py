@@ -342,8 +342,8 @@ def get_layers_mapping(db, limit=100, offset=0, filter: str = None):
     query = db.query(m.LayerMetadata)
     if filter:
         query = query.filter(text(filter))
-    query = query.limit(limit).offset(offset)
-    layer_model = query.order_by(m.LayerMetadata.layer_name).all()
+    query = query.order_by(m.LayerMetadata.layer_name).limit(limit).offset(offset)
+    layer_model = query.all()
     if layer_model:
         logger.info(f'get_layers_mapping 200 {time.time() - t}')
         return layer_model
