@@ -228,7 +228,7 @@ def sample_coordinates(coords, path, layer_name):
                 result.append(v[0])
     else:
         logger.error(f'sample_coordinates: file not found {path}')
-    return s.LineData(layer_name=layer_name, data=result)
+    return {'layerName': layer_name, 'data': result}
 
 
 def sample_coordinates_window(coords_dict, layer_models, bounds, round_val=None):
