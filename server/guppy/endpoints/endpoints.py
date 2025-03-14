@@ -246,7 +246,7 @@ def get_line_data_list_for_wkt(db: Session, body: s.LineGeometryListBody):
         if coords:
             logger.info(f'get_line_data_list_for_wkt pre sample {time.time() - t}')
             # result = sample_coordinates_window(coords, layer_models, line.bounds)
-            result = Parallel(n_jobs=4, prefer='threads')(delayed(sample_coordinates)(coords['1'], layer_model.file_path, layer_model.layer_name) for layer_model in layer_models)
+            result = Parallel(n_jobs=-1, prefer='threads')(delayed(sample_coordinates)(coords['1'], layer_model.file_path, layer_model.layer_name) for layer_model in layer_models)
             if result:
                 logger.info(f'get_line_data_list_for_wkt 200 {time.time() - t}')
                 return ORJSONResponse(content=result)
