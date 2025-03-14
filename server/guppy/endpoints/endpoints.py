@@ -25,7 +25,7 @@ from guppy.config import config as cfg
 from guppy.db import models as m
 from guppy.db import schemas as s
 from guppy.endpoints.endpoint_utils import get_overview_factor, create_stats_response, _extract_area_from_dataset, _extract_shape_mask_from_dataset, _decode, sample_coordinates_window, \
-    create_quantile_response
+    create_quantile_response,sample_coordinates
 from guppy.endpoints.tile_utils import latlon_to_tilexy, get_tile_data, pbf_to_geodataframe
 
 logger = logging.getLogger(__name__)
@@ -245,7 +245,8 @@ def get_line_data_list_for_wkt(db: Session, body: s.LineGeometryListBody):
                 coords['1'] = [(point.x, point.y) for point in points]
         if coords:
             logger.info(f'get_line_data_list_for_wkt pre sample {time.time() - t}')
-            result = sample_coordinates_window(coords, layer_models, line.bounds)
+            # result = sample_coordinates_window(coords, layer_models, line.bounds)
+            result = Parallel(n_jobs=4, prefer='threads')(delayed(sample_coordinates)(coords['1'], layer_model.file_path, layer_model.layer_name) for layer_model in layer_models)
             if result:
                 logger.info(f'get_line_data_list_for_wkt 200 {time.time() - t}')
                 return ORJSONResponse(content=result)
