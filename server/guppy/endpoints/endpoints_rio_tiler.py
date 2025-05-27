@@ -148,7 +148,11 @@ def get_tile_from_mbtiles(file_path: str, z: int, x: int, y: int) -> Response:
             cursor.execute("SELECT tile_data FROM tiles WHERE zoom_level=? AND tile_column=? AND tile_row=?", (z, x, y))
             tile = cursor.fetchone()
             if tile:
-                return Response(bytes(tile[0]), media_type="image/png")
+                content = bytes(tile[0])
+                return Response(content, media_type="image/png", headers={
+                "Cache-Control": "public, max-age=31536000",
+                "ETag": str(hash(content))
+            })
             else:
                 return None
     except Exception as e:
@@ -228,6 +232,9 @@ def get_tile(file_path: str, z: int, x: int, y: int, style: str = None, values: 
             else:
                 img.rescale(in_range=[(stats.min, stats.max)])
             content = img.render(img_format="PNG", colormap=colormap, add_mask=add_mask, **img_profiles.get("png"))
-            return Response(content, media_type="image/png")
+            return Response(content, media_type="image/png", headers={
+                "Cache-Control": "public, max-age=31536000",
+                "ETag": str(hash(content))
+            })
     except TileOutsideBounds:
         raise HTTPException(status_code=204, detail=f"Tile out of bounds {z} {x} {y}")

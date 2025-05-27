@@ -15,7 +15,7 @@ from guppy.error import create_error
 logger = logging.getLogger(__name__)
 
 
-def upload_file(layer_name: str, label: str, file: UploadFile, data: UploadFile | None, db: Session, is_rgb: bool = False, max_zoom: int = 17, meatadata: dict = None):
+def upload_file(layer_name: str, label: str, file: UploadFile, data: UploadFile | None, db: Session, is_rgb: bool = False, max_zoom: int = 17, metadata: dict = None):
     """
     Args:
         layer_name (str): The name of the layer.
@@ -25,7 +25,7 @@ def upload_file(layer_name: str, label: str, file: UploadFile, data: UploadFile 
         db (Session): The database session.
         is_rgb (bool, optional): Indicates whether the file is in RGB format.
         max_zoom (int, optional): The maximum zoom level of the layer.
-        meatadata (dict, optional): The metadata of the layer.
+        metadata (dict, optional): The metadata of the layer.
 
     """
     data_location = None
@@ -51,7 +51,7 @@ def upload_file(layer_name: str, label: str, file: UploadFile, data: UploadFile 
 
     is_mbtile = create_preprocessed_layer_file(ext, file_location, sanitized_filename, sanitized_layer_name, tmp_file_location, max_zoom)
 
-    insert_into_layer_metadata(layer_uuid=sanitized_layer_name, label=label, file_path=file_location, data_path=data_location, db=db, is_rgb=is_rgb, is_mbtile=is_mbtile, metadata=meatadata)
+    insert_into_layer_metadata(layer_uuid=sanitized_layer_name, label=label, file_path=file_location, data_path=data_location, db=db, is_rgb=is_rgb, is_mbtile=is_mbtile, metadata=metadata)
     return f"Upload successful: Layer {sanitized_layer_name} uploaded with label {label}."
 
 
