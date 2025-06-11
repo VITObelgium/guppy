@@ -175,6 +175,7 @@
             nameText.style.overflow = "hidden";
             nameText.style.textOverflow = "ellipsis"; // will only apply for a single line, but remains harmless
             nameText.style.userSelect = "all";
+            nameText.title = layer.layerName
             nameCell.appendChild(nameText);
 
             // Editable Label
@@ -182,7 +183,7 @@
             const labelInput = document.createElement('input');
             labelInput.type = 'text';
             labelInput.value = layer.effectiveLabel || '';
-            labelInput.style.width = "120px";
+            labelInput.title = labelInput.value
             labelCell.appendChild(labelInput);
 
             // Editable filePath
@@ -190,7 +191,7 @@
             const filePathInput = document.createElement('input');
             filePathInput.type = 'text';
             filePathInput.value = layer.filePath || '';
-            filePathInput.style.width = "140px";
+            filePathInput.title = filePathInput.value
             pathCell.appendChild(filePathInput);
 
             // Editable dataPath
@@ -198,7 +199,7 @@
             const dataPathInput = document.createElement('input');
             dataPathInput.type = 'text';
             dataPathInput.value = layer.dataPath || '';
-            dataPathInput.style.width = "120px";
+            dataPathInput.title = dataPathInput.value;
             dataCell.appendChild(dataPathInput);
 
             // Editable metadata (as string)
@@ -211,7 +212,7 @@
             } catch (e) {
                 metadataInput.value = layer.metadata || "";
             }
-            metadataInput.style.width = "120px";
+            metadataInput.title = metadataInput.value;
             metadataCell.appendChild(metadataInput);
 
             // Editable isRgb
