@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from starlette.responses import Response
 
 from guppy.endpoints.endpoint_utils import validate_layer_and_get_file_path
-from guppy.endpoints.tile_utils import data_to_rgba
+from guppy.endpoints.tile_utils import data_to_rgba, add_item_to_request_counter
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +44,7 @@ def get_tile_for_layer(layer_name: str, style: str, db: Session, z: int, x: int,
         result = get_tile_from_mbtiles(file_path, z, x, y)
     else:
         result = get_tile(file_path, z, x, y, style, values, colors)
+    add_item_to_request_counter(layer_name, z, x, y)
     log_cache_info(t)
     return result
 
