@@ -290,14 +290,14 @@
                 const statsButton = document.createElement('button');
                 statsButton.textContent = 'View Stats';
                 statsButton.onclick = function () {
-                    window.location.href = `$deploy_path$/admin/stats?layerName=${encodeURIComponent(nameInput.value)}`;
+                    window.location.href = `$deploy_path$/admin/stats?layerName=${encodeURIComponent(layer.layerName)}`;
                 };
                 statsCell.appendChild(statsButton);
 
                 const downloadButton = document.createElement('button');
                 downloadButton.textContent = 'Download Stats';
                 downloadButton.onclick = function () {
-                    window.location.href = `$deploy_path$/admin/tilestatsgpkg?layerName=${encodeURIComponent(nameInput.value)}`;
+                    window.location.href = `$deploy_path$/admin/tilestatsgpkg?layerName=${encodeURIComponent(layer.layerName)}`;
                 };
                 statsCell.appendChild(downloadButton);
             }
