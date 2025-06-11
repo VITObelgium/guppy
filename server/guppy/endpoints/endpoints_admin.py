@@ -37,7 +37,7 @@ def delete_layer_mapping(db: Session, layer_name: str):
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-def update_layer_mapping(db: Session, layer_name: str, label: str, file_path: str, data_path: str, is_rgb: bool, is_mbtile: bool):
+def update_layer_mapping(db: Session, layer_name: str, label: str, file_path: str, data_path: str, is_rgb: bool, is_mbtile: bool, metadata: dict=None,):
     """
     Updates the mapping of a layer in the database.
 
@@ -60,6 +60,7 @@ def update_layer_mapping(db: Session, layer_name: str, label: str, file_path: st
         layer_model.data_path = data_path
         layer_model.is_rgb = is_rgb
         layer_model.is_mbtile = is_mbtile
+        layer_model.metadata_str = str(metadata)
         db.commit()
         logger.info(f'update_layer_mapping 200 {time.time() - t}')
         return status.HTTP_200_OK

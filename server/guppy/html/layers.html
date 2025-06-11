@@ -43,6 +43,8 @@
             font-size: 16px;
             cursor: pointer;
             border-radius: 5px;
+            margin-right: 15px;
+            margin-bottom: 2px;
         }
 
         button:hover {
@@ -75,7 +77,10 @@
             background-color: #ff4d4d;
             color: white;
             border: none;
-            padding: 5px 10px;
+            padding: 10px 15px;
+            text-align: center;
+            display: inline-block;
+            font-size: 16px;
             cursor: pointer;
             border-radius: 5px;
         }
@@ -133,15 +138,13 @@
         }
     };
 
+    // No change to form submit handler above
+
     async function loadLayers() {
         const response = await fetch('$deploy_path$/layers?limit=1000');
         const layers = await response.json();
         const container = document.getElementById('layersList');
-
-        // Clear previous content
         container.innerHTML = '';
-
-        // Create a table and a header row
         const table = document.createElement('table');
         table.innerHTML = `
             <tr>
@@ -153,44 +156,121 @@
                 <th>Is RGB</th>
                 <th>Is MBTile</th>
                 <th>Actions</th>
-                <th>View Stats</th>
-                <th>Download Stats</th>
+                <th>Stats</th>
             </tr>
         `;
         container.appendChild(table);
 
-        // Insert rows into the table for each layer
         layers.forEach(layer => {
-            const row = table.insertRow(-1); // Append row to the end of the table
+            const row = table.insertRow(-1);
+
+// Editable Name (optional: disable)
             const nameCell = row.insertCell(0);
+            const nameText = document.createElement('span');
+            nameText.innerHTML = layer.layerName.replace(/_/g, '_<wbr>');
+            nameText.style.display = "inline-block";
+            nameText.style.whiteSpace = "normal"; // allow wrapping now
+            nameText.style.overflowWrap = "break-word";
+            nameText.style.wordBreak = "break-all";   // breaks anywhere if needed
+            nameText.style.overflow = "hidden";
+            nameText.style.textOverflow = "ellipsis"; // will only apply for a single line, but remains harmless
+            nameText.style.userSelect = "all";
+            nameCell.appendChild(nameText);
+
+            // Editable Label
             const labelCell = row.insertCell(1);
+            const labelInput = document.createElement('input');
+            labelInput.type = 'text';
+            labelInput.value = layer.effectiveLabel || '';
+            labelInput.style.width = "120px";
+            labelCell.appendChild(labelInput);
+
+            // Editable filePath
             const pathCell = row.insertCell(2);
+            const filePathInput = document.createElement('input');
+            filePathInput.type = 'text';
+            filePathInput.value = layer.filePath || '';
+            filePathInput.style.width = "140px";
+            pathCell.appendChild(filePathInput);
+
+            // Editable dataPath
             const dataCell = row.insertCell(3);
+            const dataPathInput = document.createElement('input');
+            dataPathInput.type = 'text';
+            dataPathInput.value = layer.dataPath || '';
+            dataPathInput.style.width = "120px";
+            dataCell.appendChild(dataPathInput);
+
+            // Editable metadata (as string)
             const metadataCell = row.insertCell(4);
+            const metadataInput = document.createElement('input');
+            metadataInput.type = 'text';
+            // If metadata is an object, stringify, otherwise leave as is
+            try {
+                metadataInput.value = typeof layer.metadata === "object" && layer.metadata !== null ? JSON.stringify(layer.metadata) : (layer.metadata || "");
+            } catch (e) {
+                metadataInput.value = layer.metadata || "";
+            }
+            metadataInput.style.width = "120px";
+            metadataCell.appendChild(metadataInput);
+
+            // Editable isRgb
             const rgbCell = row.insertCell(5);
+            const rgbCheckbox = document.createElement('input');
+            rgbCheckbox.type = 'checkbox';
+            rgbCheckbox.checked = layer.isRgb;
+            rgbCell.appendChild(rgbCheckbox);
+
+            // Editable isMbtile
             const mbtileCell = row.insertCell(6);
-            const deleteCell = row.insertCell(7); // Cell for the delete button
-            const statsCell = row.insertCell(8); // Cell for the stats button
-            const downloadCell = row.insertCell(9); // Cell for the download button
+            const mbtileCheckbox = document.createElement('input');
+            mbtileCheckbox.type = 'checkbox';
+            mbtileCheckbox.checked = layer.isMbtile;
+            mbtileCell.appendChild(mbtileCheckbox);
 
-            nameCell.textContent = layer.layerName;
-            labelCell.textContent = layer.effectiveLabel;
-            pathCell.textContent = layer.filePath;
-            dataCell.textContent = layer.dataPath;
-            metadataCell.textContent = JSON.stringify(layer.metadata);
-            rgbCell.textContent = layer.isRgb ? 'Yes' : 'No';
-            mbtileCell.textContent = layer.isMbtile ? 'Yes' : 'No';
+            // Action cell (Save / Delete)
+            const actionCell = row.insertCell(7);
+            // Save button
+            const saveButton = document.createElement('button');
+            saveButton.textContent = 'Save';
+            saveButton.onclick = async () => {
+                const putBody = {
+                    layer_name: layer.layerName,
+                    label: labelInput.value,
+                    file_path: filePathInput.value,
+                    data_path: dataPathInput.value,
+                    metadata: metadataInput.value,
+                    is_rgb: rgbCheckbox.checked,
+                    is_mbtile: mbtileCheckbox.checked,
+                };
+                try {
+                    const resp = await fetch(`$deploy_path$/admin/layer/${encodeURIComponent(putBody.layer_name)}`, {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(putBody)
+                    });
+                    if (resp.ok) {
+                        saveButton.textContent = "Saved!";
+                        setTimeout(() => saveButton.textContent = "Save", 1500);
+                    } else {
+                        saveButton.textContent = "Error!";
+                    }
+                } catch (e) {
+                    saveButton.textContent = "Error!";
+                }
+            };
+            actionCell.appendChild(saveButton);
 
-            // Create a delete button
+            // Delete button (as before)
             const deleteButton = document.createElement('button');
             deleteButton.textContent = 'Delete';
+            deleteButton.className = "deleteButton";
             deleteButton.onclick = async () => {
                 try {
-                    const response = await fetch(`$deploy_path$/admin/layer/${layer.layerName}`, {
+                    const response = await fetch(`$deploy_path$/admin/layer/${encodeURIComponent(layer.layerName)}`, {
                         method: 'DELETE',
                     });
                     if (response.ok) {
-                        // Remove the row from the table if the delete was successful
                         row.remove();
                     } else {
                         console.error('Failed to delete the layer');
@@ -199,28 +279,29 @@
                     console.error('Error:', error);
                 }
             };
-            deleteCell.appendChild(deleteButton);
-            // Create and append the View Stats button
-            const statsButton = document.createElement('button');
-            statsButton.textContent = 'View Stats';
-            statsButton.onclick = function () {
-                window.location.href = `$deploy_path$/admin/stats?layerName=${encodeURIComponent(layer.layerName)}`;
-            };
-            if (layer.isMbtile) {
+            actionCell.appendChild(deleteButton);
+
+            // Stats and Download (as before)
+            const statsCell = row.insertCell(8);
+
+            // Only show if MBTile
+            if (mbtileCheckbox.checked) {
+                const statsButton = document.createElement('button');
+                statsButton.textContent = 'View Stats';
+                statsButton.onclick = function () {
+                    window.location.href = `$deploy_path$/admin/stats?layerName=${encodeURIComponent(nameInput.value)}`;
+                };
                 statsCell.appendChild(statsButton);
-            }
-            // Create and append the Download Stats button
-            const downloadButton = document.createElement('button');
-            downloadButton.textContent = 'Download Stats';
-            downloadButton.onclick = function () {
-                window.location.href = `$deploy_path$/admin/tilestatsgpkg?layerName=${encodeURIComponent(layer.layerName)}`;
-            };
-            if (layer.isMbtile) {
-                downloadCell.appendChild(downloadButton);
+
+                const downloadButton = document.createElement('button');
+                downloadButton.textContent = 'Download Stats';
+                downloadButton.onclick = function () {
+                    window.location.href = `$deploy_path$/admin/tilestatsgpkg?layerName=${encodeURIComponent(nameInput.value)}`;
+                };
+                statsCell.appendChild(downloadButton);
             }
         });
     }
-
 
     loadLayers();
 </script>

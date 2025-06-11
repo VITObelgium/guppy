@@ -49,13 +49,14 @@ app = FastAPI(
     openapi_url=f"{cfg.deploy.path}",
     lifespan=lifespan,
 )
+ALLOWED_METHODS = ["GET", "POST", "PUT", "DELETE"]
 
 # Add CORS middleware to allow all origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allows all origins
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
+    allow_methods=ALLOWED_METHODS,  # Allows all methods
     allow_headers=["*"],  # Allows all headers
 )
 
