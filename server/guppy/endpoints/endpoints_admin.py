@@ -24,11 +24,28 @@ def delete_layer_mapping(db: Session, layer_name: str):
     """
     t = time.time()
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
+    
     if layer_model:
-        if os.path.exists(layer_model.file_path):
-            os.remove(layer_model.file_path)
-        if layer_model.data_path and os.path.exists(layer_model.data_path):
-            os.remove(layer_model.data_path)
+        file_path = layer_model.file_path
+        sqlite_path = layer_model.file_path.replace(".mbtiles", ".sqlite")
+        data_path = layer_model.data_path
+
+        other_layers_file = db.query(m.LayerMetadata).filter(
+            m.LayerMetadata.layer_name != layer_name,
+            m.LayerMetadata.file_path == file_path
+        ).first()
+        other_layers_data = db.query(m.LayerMetadata).filter(
+            m.LayerMetadata.layer_name != layer_name,
+            m.LayerMetadata.data_path == data_path
+        ).first()
+
+        if os.path.exists(file_path) and not other_layers_file:
+            os.remove(file_path)
+        if os.path.exists(sqlite_path) and not other_layers_file:
+            os.remove(sqlite_path)
+        if data_path and os.path.exists(data_path) and not other_layers_data:
+            os.remove(data_path)
+
         db.delete(layer_model)
         db.commit()
         logger.info(f'delete_layer_mapping 200 {time.time() - t}')
