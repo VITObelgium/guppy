@@ -35,6 +35,8 @@ class LayerMetadataSchema(CamelModel):
             return ast.literal_eval(self.metadata_str) if self.metadata_str else {}
         except ValueError:
             return {"value": self.metadata_str}
+        except SyntaxError:
+            return {"value": self.metadata_str}
 
     @computed_field
     @property
