@@ -9,9 +9,12 @@ from rasterio.mask import mask, raster_geometry_mask
 from rasterio.windows import from_bounds
 from rasterio.transform import rowcol
 from sqlalchemy.orm import Session
-
+from rasterio.features import shapes
+from shapely.geometry import shape
+import geopandas as gpd
 from guppy.db import schemas as s
 from guppy.db.models import LayerMetadata
+
 
 logger = logging.getLogger(__name__)
 layer_data_chache = {}
@@ -51,6 +54,99 @@ def no_nan(input):
         return None
     return input
 
+
+def create_stats_response_polygon(path, geom, layer_model, overview_factor:int,layer_name:str=None):
+    """
+    Create a statistics response based on the polygon method for small raster datasets.
+
+    This function calculates various statistical metrics (e.g., min, max, mean, quantiles)
+    based on the intersection of a polygon with a raster dataset. It processes raster data
+    within the specified region, determines weighted statistics, and packages the results
+    in a response object.
+
+    Args:
+        path (str): The file path to the raster dataset.
+        geom (dict): The geometry defining the area of interest, as a GeoJSON-like dict.
+        layer_model (LayerModel): A model representing the layer's metadata, including
+            color information and data properties.
+        overview_factor (int): The level of the overview to use for reading raster data.
+        layer_name (str, optional): The name of the layer associated with the statistics.
+
+    Returns:
+        StatsResponse: A response object containing calculated statistics for the raster
+            data in the provided polygon area.
+
+    Raises:
+        ValueError: If required input parameters are not provided or invalid.
+        RasterioIOError: If the raster file cannot be opened or processed.
+        GeoPandasError: If the intersection geometries cannot be computed.
+    """
+    logger.info("fallback to polygon method for small raster in stats")
+    with rasterio.open(path, overview_level=overview_factor) as src:
+        rst, crop_transform = _extract_area_from_dataset(src, [geom], crop=True, all_touched=True, is_rgb=layer_model.is_rgb)
+        if layer_model.is_rgb:
+            rst = _decode(rst)
+        shape_mask = _extract_shape_mask_from_dataset(src, [geom], all_touched=True, crop=True)
+        pixel_res = abs(src.res[0] * src.res[1])
+        nodata = src.nodata if src.nodata is not None else -9999
+        crs = src.crs.to_epsg()
+    transform_to_use = crop_transform if crop_transform is not None else src.transform
+    mask = np.where(shape_mask == 0, rst, nodata)
+
+    polygon_shapes = []
+    for geom_shape, value in shapes(mask.astype(np.float32), transform=transform_to_use):
+        if value != nodata:
+            poly = shape(geom_shape)
+            polygon_shapes.append({'geometry': poly, 'value': value})
+
+    if polygon_shapes:
+        raster_gdf = gpd.GeoDataFrame(polygon_shapes, crs=f"EPSG:{crs}")
+        input_gdf = gpd.GeoDataFrame([{'geometry': geom}], crs=f"EPSG:{crs}")
+        intersections = gpd.overlay(raster_gdf, input_gdf, how='intersection', keep_geom_type=False)
+        if not intersections.empty:
+            intersections['area'] = intersections.geometry.area
+
+            values = intersections['value'].values
+            areas = intersections['area'].values
+
+            valid_mask = values != nodata
+            values = values[valid_mask]
+            areas = areas[valid_mask]
+
+            if len(values) > 0:
+                weighted_mean = np.sum(values * areas) / np.sum(areas)
+                min_val = float(np.min(values))
+                max_val = float(np.max(values))
+                sum_val = float(np.sum(values * areas / pixel_res))
+
+                pixel_counts = np.maximum(np.round(areas).astype(int), 1)
+                weighted_samples = []
+                for val, count in zip(values, pixel_counts):
+                    weighted_samples.extend([val] * count)
+                weighted_samples = np.array(weighted_samples, dtype=float)
+
+                q2, q5, q95, q98 = np.quantile(weighted_samples, [0.02, 0.05, 0.95, 0.98])
+
+                count_data = np.sum(np.isfinite(rst)&shape_mask == 0)
+                count_total = np.sum(shape_mask == 0)  # Including nodata polygons
+                count_no_data = count_total - count_data
+
+                response = s.StatsResponse(type="polygon stats",
+                                           min=no_nan(min_val),
+                                           max=no_nan(max_val),
+                                           sum=no_nan(sum_val),
+                                           mean=no_nan(weighted_mean),
+                                           count_no_data=count_no_data,
+                                           count_total=count_total,
+                                           count_data=count_data,
+                                           q02=no_nan(float(q2)),
+                                           q05=no_nan(float(q5)),
+                                           q95=no_nan(float(q95)),
+                                           q98=no_nan(float(q98)),
+                                           )
+                if layer_name:
+                    response.layer_name = layer_name
+                return response
 
 def create_stats_response(rst: np.array, mask_array: np.array, nodata: float, type: str, layer_name: str = None):
     """
@@ -146,6 +242,81 @@ def _extract_shape_mask_from_dataset(raster_ds, geom, crop=True, all_touched=Fal
     return shape_mask
 
 
+def _calculate_classification_polygon_method(rst, shape_mask, input_geom, src, crop_transform=None):
+    """
+    Calculates classification results based on polygon method for small raster data.
+
+    The function processes raster data and extracts classification polygons based on
+    the provided shape mask and input geometry. It computes the intersection
+    between the resulting polygon shapes and the input geometry to determine the
+    corresponding classification statistics such as value, count, and percentage
+    distribution.
+
+    Args:
+        rst: np.ndarray. The raster data array for processing.
+        shape_mask: np.ndarray. Binary mask defining the region of interest in the raster.
+        input_geom: shapely.geometry.base.BaseGeometry. Input geometry against which
+            classification polygons are intersected.
+        src: rasterio.io.DatasetReader. Source raster dataset providing
+            metadata (e.g., nodata value, CRS).
+        crop_transform: affine.Affine, optional. Transformation matrix to apply to
+            the cropped raster; defaults to the transformation of the source raster if not provided.
+
+    Returns:
+        s.ClassificationResult: An instance encapsulating the classification results.
+        It contains the list of classified entries, including the value, count, and
+        calculated percentage.
+    """
+    logger.info("fallback to polygon method for small raster")
+    transform = crop_transform if crop_transform is not None else src.transform
+
+    mask = np.where(shape_mask == 0, rst, src.nodata if src.nodata is not None else -9999)
+
+    polygon_shapes = []
+    for geom_shape, value in shapes(mask.astype(np.int32), transform=transform):
+        if value != (src.nodata if src.nodata is not None else -9999):
+            poly = shape(geom_shape)
+            polygon_shapes.append({'geometry': poly, 'value': value})
+
+    if not polygon_shapes:
+        return s.ClassificationResult(type='classification', data=[])
+
+    raster_gdf = gpd.GeoDataFrame(polygon_shapes, crs=f"EPSG:{src.crs.to_epsg()}")
+    input_gdf = gpd.GeoDataFrame([{'geometry': input_geom}], crs=f"EPSG:{src.crs.to_epsg()}")
+
+    intersections = gpd.overlay(raster_gdf, input_gdf, how='intersection', keep_geom_type=False)
+
+    if intersections.empty:
+        return s.ClassificationResult(type='classification', data=[])
+
+    intersections['area'] = intersections.geometry.area
+    total_area = input_gdf.area.values[0]
+
+    value_stats = intersections.groupby('value').agg({        'area': 'sum'    }).reset_index()
+
+    result_classes = []
+    for _, row in value_stats.iterrows():
+        value = row['value']
+        area = row['area']
+
+        percentage = (area / total_area) * 100 if total_area > 0 else 0
+
+        result_classes.append({
+            'value': int(value),
+            'count': -1,
+            'percentage': percentage
+        })
+
+    final_classes = []
+    for class_data in result_classes:
+        final_classes.append(s.ClassificationEntry(
+            value=class_data['value'],
+            count=class_data['count'],
+            percentage=class_data['percentage']
+        ))
+
+    return s.ClassificationResult(type='classification_polygon', data=final_classes)
+
 def get_overview(res_x: float, res_y: float, overviews: [int], bounds: (float,)):
     """
     Determine the overview level and the corresponding value from the overview levels list based on the resolution and bounds.
@@ -221,8 +392,8 @@ def sample_coordinates(coords, path, layer_name):
 
     """
     result = []
-    if os.path.exists(path):
-        with rasterio.open(path) as src:
+    if os.path.exists(path[1:]):
+        with rasterio.open(path[1:]) as src:
             x = src.sample(coords, indexes=1)
             for v in x:
                 result.append(v[0])
@@ -248,7 +419,7 @@ def sample_coordinates_window(coords_dict, layer_models, bounds, round_val=None)
     coords = []
     for k, v in coords_dict.items():
         coords.extend(v)
-    with rasterio.open(path) as src:
+    with rasterio.open(path[1:]) as src:
         geometry_window = from_bounds(bounds[0], bounds[1], bounds[2], bounds[3], src.transform).round_offsets()
         rows, cols = rowcol(src.transform, [p[0] for p in coords], [p[1] for p in coords])
         cols = [c - geometry_window.col_off for c in cols]
@@ -299,7 +470,7 @@ def sample_layer(in_cols, in_idx, in_rows, layer_model, out_idx, geometry_window
         dict: A dictionary containing the layer name and the extracted values based on the given indices.
 
     """
-    path = layer_model.file_path
+    path = layer_model.file_path[1:]
     with rasterio.open(path) as src:
         data = src.read(1, window=geometry_window)
         nodata = src.nodata
