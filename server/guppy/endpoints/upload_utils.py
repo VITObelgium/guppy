@@ -311,7 +311,26 @@ def save_geotif_tiled_overviews(input_file: str, output_file: str, nodata: int) 
         os.remove(input_file)
         input_file = tmp_input_file
 
-    translate_options = gdal.TranslateOptions(gdal.ParseCommandLine(f"-of COG -co COMPRESS=ZSTD -co BIGTIFF=YES -a_nodata {nodata} -co BLOCKSIZE=256 -co RESAMPLING=NEAREST"))
+    translate_options = gdal.TranslateOptions(
+        format='COG',
+        creationOptions=[
+            'BIGTIFF=YES',
+            f'COMPRESS=LZW',
+            'PREDICTOR=YES',
+            'BLOCKSIZE=512',
+            'TILING_SCHEME=GoogleMapsCompatible',
+            'ADD_ALPHA=NO',
+            'STATISTICS=YES',
+            'RESAMPLING=NEAREST',
+            'OVERVIEW_RESAMPLING=NEAREST',
+            'NUM_THREADS=ALL_CPUS',
+            'SPARSE_OK=TRUE',
+            'ZOOM_LEVEL_STRATEGY=AUTO',
+            'ALIGNED_LEVELS=2',
+            'OVERVIEWS=IGNORE_EXISTING'
+        ],
+        noData=nodata
+    )
     gdal.Translate(output_file, input_file, options=translate_options)
     gdal.Info(output_file, computeMinMax=True, stats=True)
     os.remove(input_file)
