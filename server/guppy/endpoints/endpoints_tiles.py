@@ -2,6 +2,7 @@ import logging
 import os
 import sqlite3
 import tempfile
+import time
 from functools import lru_cache
 from typing import Optional
 
@@ -194,6 +195,7 @@ def get_cog_result(layer_name: str, request: Request, db: Session):
     Serve COG (Cloud Optimized GeoTIFF) files with HTTP range request support.
     This endpoint supports partial content requests which are essential for COG files.
     """
+    t = time.time()
     file_path = validate_layer_and_get_file_path(db, layer_name)
 
     if not os.path.exists(file_path):
@@ -233,7 +235,7 @@ def get_cog_result(layer_name: str, request: Request, db: Session):
             "Content-Length": str(end - start + 1),
             "Content-Type": "image/tiff",
         }
-
+        logger.info(f"Serving COG file {file_path}    {time.time() - t}")
         return StreamingResponse(iterfile(), status_code=206, headers=headers)
 
     else:
@@ -248,5 +250,5 @@ def get_cog_result(layer_name: str, request: Request, db: Session):
             'Content-Length': str(file_size),
             'Content-Type': 'image/tiff'
         }
-
+        logger.info(f"Serving full COG file {file_path}    {time.time() - t}")
         return StreamingResponse(iterfile(), status_code=200, headers=headers)
