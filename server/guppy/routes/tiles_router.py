@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query,Request
+
 from rio_tiler.colormap import cmap
 from sqlalchemy.orm import Session
 from starlette.responses import Response
@@ -7,6 +8,7 @@ from guppy.config import config as cfg
 from guppy.db.dependencies import get_db
 from guppy.db.schemas import QueryParams
 from guppy.endpoints import endpoints_rio_tiler, endpoints_tiles
+
 
 router = APIRouter(
     prefix=f"{cfg.deploy.path}/tiles",
@@ -33,3 +35,8 @@ async def get_raster_tile(layer_name: str, z: int, x: int, y: int,
 @router.post("/vector/{layer_name}/search", description="Search for a vector tile for a specified layer.")
 async def search_vector_tile(layer_name: str, params: QueryParams, limit: int = 100, offset: int = 0, db: Session = Depends(get_db)):
     return endpoints_tiles.search_tile(layer_name=layer_name, params=params, limit=limit, offset=offset, db=db)
+
+
+@router.get("/cog/{layer_name}", description="Serve COG files with range request support")
+async def get_cog_file(layer_name: str, request: Request,db: Session = Depends(get_db)):
+    return endpoints_tiles.get_cog_result(layer_name=layer_name,request=request,db=db)

@@ -6,7 +6,8 @@ from functools import lru_cache
 from typing import Optional
 
 import geopandas as gpd
-from fastapi import HTTPException, Response
+from fastapi import HTTPException, Response, Request
+from fastapi.responses import StreamingResponse
 from pygeofilter.backends.sql import to_sql_where
 from pygeofilter.parsers.ecql import parse
 from shapely.geometry import box
@@ -186,3 +187,66 @@ def search_tile(layer_name: str, params: QueryParams, limit: int, offset: int, d
             create_error(code=204, message="No data found for the specified query.")
     except SQLAlchemyError as e:
         create_error(code=404, message=str(e))
+
+
+def get_cog_result(layer_name: str, request: Request, db: Session):
+    """
+    Serve COG (Cloud Optimized GeoTIFF) files with HTTP range request support.
+    This endpoint supports partial content requests which are essential for COG files.
+    """
+    file_path = validate_layer_and_get_file_path(db, layer_name)
+
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+
+    file_size = os.path.getsize(file_path)
+
+    range_header = request.headers.get("range")
+
+    if range_header:
+        try:
+            range_match = range_header.replace("bytes=", "").split("-")
+            start = int(range_match[0]) if range_match[0] else 0
+            end = int(range_match[1]) if range_match[1] else file_size - 1
+
+            if start >= file_size or end >= file_size or start > end:
+                raise HTTPException(status_code=416, detail="Range not satisfiable")
+
+        except (ValueError, IndexError):
+            raise HTTPException(status_code=400, detail="Invalid range header")
+
+        def iterfile():
+            with open(file_path, "rb") as file:
+                file.seek(start)
+                remaining = end - start + 1
+                chunk_size = 8192
+                while remaining > 0:
+                    chunk = file.read(min(chunk_size, remaining))
+                    if not chunk:
+                        break
+                    remaining -= len(chunk)
+                    yield chunk
+
+        headers = {
+            "Content-Range": f"bytes {start}-{end}/{file_size}",
+            "Accept-Ranges": "bytes",
+            "Content-Length": str(end - start + 1),
+            "Content-Type": "image/tiff",
+        }
+
+        return StreamingResponse(iterfile(), status_code=206, headers=headers)
+
+    else:
+        # Return full file
+        def iterfile():
+            with open(file_path, "rb") as file:
+                while chunk := file.read(8192):
+                    yield chunk
+
+        headers = {
+            'Accept-Ranges': 'bytes',
+            'Content-Length': str(file_size),
+            'Content-Type': 'image/tiff'
+        }
+
+        return StreamingResponse(iterfile(), status_code=200, headers=headers)
