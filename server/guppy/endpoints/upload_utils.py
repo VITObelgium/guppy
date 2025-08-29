@@ -285,10 +285,15 @@ def save_geotif_tiled_overviews(input_file: str, output_file: str, nodata: int) 
     with rasterio.open(input_file) as src:
         target_crs = rasterio.crs.CRS.from_epsg(code=3857)
         tmp_input_file = None
-        if src.crs != target_crs or nodata != src.nodata:
+        if np.issubdtype(src.dtypes[0], np.floating):
+            target_dtype = np.float32
+        else:
+            target_dtype = np.int32
+
+        if src.crs != target_crs or nodata != src.nodata or src.dtypes[0] != target_dtype:
             transform, width, height = rasterio.warp.calculate_default_transform(src.crs, target_crs, src.width, src.height, *src.bounds)
             profile = src.profile
-            profile.update(crs=target_crs, transform=transform, width=width, height=height)
+            profile.update(crs=target_crs, transform=transform, width=width, height=height, dtype=target_dtype)
             tmp_input_file = input_file.replace('.tif', '_tmp.tif')
             with rasterio.open(tmp_input_file, 'w', **profile) as dst:
                 for i in range(1, src.count + 1):

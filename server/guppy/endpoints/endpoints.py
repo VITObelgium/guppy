@@ -435,11 +435,14 @@ def get_classification_for_wkt(db: Session, layer_name: str, body: s.GeometryBod
                                 shape_mask = _extract_shape_mask_from_dataset(src, [geom],all_touched=True, crop=True)
                             response = _calculate_classification_polygon_method(rst, shape_mask, geom, src, crop_transfrom)
                         else:
-                            values, counts = np.unique(np.where(shape_mask == 0, rst, -999999999999), return_counts=True)
+                            mask_value = -999999999999
+                            if rst.dtype == np.int32:
+                                mask_value = -2147483647
+                            values, counts = np.unique(np.where(shape_mask == 0, rst, mask_value), return_counts=True)
                             result_classes = []
-                            total_count = sum([c for v, c in zip(values, counts) if v != -999999999999])
+                            total_count = sum([c for v, c in zip(values, counts) if v != mask_value])
                             for v, c in zip(values, counts):
-                                if v != -999999999999:
+                                if v != mask_value:
                                     result_classes.append(s.ClassificationEntry(value=v, count=c, percentage=c / total_count * 100))
                             response = s.ClassificationResult(type='classification', data=result_classes)
                         logger.info(f'classification_for_wkt 200 {time.time() - t}')
