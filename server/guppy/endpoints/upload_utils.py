@@ -4,6 +4,7 @@ import re
 import shutil
 
 import geopandas as gpd
+import numpy as np
 import rasterio
 from fastapi import UploadFile
 from osgeo import gdal
@@ -12,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from guppy.config import config as cfg
 from guppy.db.models import LayerMetadata
+from guppy.endpoints.endpoints_rio_tiler import get_tile_from_file, get_tile_cog
 from guppy.error import create_error
 
 logger = logging.getLogger(__name__)
