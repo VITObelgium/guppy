@@ -357,7 +357,7 @@ def _decode(data):
     return np.frombuffer(data.reshape(4, -1).transpose().tobytes(), dtype='<f4').reshape((data[0].shape))
 
 
-def validate_layer_and_get_file_path(db: Session, layer_name: str) -> str:
+def validate_layer_and_get_file_path(db: Session, layer_name: str, file_type = None) -> str:
     """
     Args:
         db: The database session to use for querying the LayerMetadata table.
@@ -374,6 +374,8 @@ def validate_layer_and_get_file_path(db: Session, layer_name: str) -> str:
         if not layer:
             raise HTTPException(status_code=404, detail=f"Layer not found: {layer_name}")
         file_path = layer.file_path
+        if file_type and not file_path.endswith(file_type):
+            file_path = layer.data_path
         if file_path and not os.path.exists(file_path):
             raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
         layer_data_chache[layer_name] = file_path

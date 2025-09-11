@@ -196,7 +196,7 @@ def get_cog_result(layer_name: str, request: Request, db: Session):
     This endpoint supports partial content requests which are essential for COG files.
     """
     t = time.time()
-    file_path = validate_layer_and_get_file_path(db, layer_name)
+    file_path = validate_layer_and_get_file_path(db, layer_name, file_type=".tif")
 
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found")
