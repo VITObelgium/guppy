@@ -333,14 +333,13 @@ def get_overview(res_x: float, res_y: float, overviews: [int], bounds: (float,))
     bbox_bottom, bbox_left, bbox_top, bbox_right = bounds
     pixels = (bbox_right - bbox_left) / res_x * (bbox_top - bbox_bottom) / res_y
     factor = int(pixels / 4000000)
-    overview_level = 0
+    best_overview_level = len(overviews) - 1
     for i, value in enumerate(overviews):
         if value > factor:
-            overview_level = i - 1
+            best_overview_level = max(0, i - 1)
             break
-    if overview_level < 0:
-        return None, None
-    return overview_level, overviews[overview_level]
+
+    return best_overview_level, overviews[best_overview_level]
 
 
 def _decode(data):
