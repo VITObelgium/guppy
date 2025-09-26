@@ -234,6 +234,8 @@ def get_cog_result(layer_name: str, request: Request, db: Session):
             "Accept-Ranges": "bytes",
             "Content-Length": str(end - start + 1),
             "Content-Type": "image/tiff",
+            "Cache-Control": "public, max-age=31536000",
+            "ETag": str(hash({start}-{end})),
         }
         logger.info(f"Serving COG file {file_path}    {time.time() - t}")
         return StreamingResponse(iterfile(), status_code=206, headers=headers)
