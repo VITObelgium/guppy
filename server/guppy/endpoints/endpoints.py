@@ -65,7 +65,7 @@ def get_stats_for_bbox(db: Session, layer_name: str, bbox_left: float, bbox_bott
                             geom = box(src.bounds[0], src.bounds[1], src.bounds[2], src.bounds[3])
                             response = create_stats_response_polygon(path, geom, layer_model, overview_factor,layer_name=layer_model.layer_name)
                         else:
-                            response = create_stats_response(rst, np.zeros_like(rst).astype(bool), src.nodata, f'bbox stats. Overview level: {overview_factor}, {overview_bin} scale')
+                            response = create_stats_response(rst, np.zeros_like(rst).astype(bool), src.nodata, f'bbox stats. Overview level: {overview_factor}, {overview_bin} scale', layer_name=layer_model.layer_name)
                         logger.info(f'get_stats_for_bbox 200 {time.time() - t}')
                         return response
         logger.warning(f'file not found {path} or bbox empty')

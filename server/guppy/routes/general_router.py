@@ -1,4 +1,4 @@
-from fastapi import Depends, APIRouter
+from fastapi import Depends, APIRouter, Query
 from sqlalchemy.orm import Session
 
 from guppy.config import config as cfg
@@ -13,7 +13,7 @@ router = APIRouter(
 
 
 @router.get("/layers", response_model=list[s.LayerMetadataSchema], description="Get layers mapping with pagination.")
-def get_layers_mapping(db: Session = Depends(get_db), limit: int = 100, offset: int = 0, filter: str = None):
+def get_layers_mapping(db: Session = Depends(get_db), limit: int = 100, offset: int = 0, filter: str = Query(None, description="Database query filter (e.g., 'layer_name LIKE \"%example%\"' or 'is_rgb = true'). Must include field name and valid SQL syntax.")):
     return endpoints.get_layers_mapping(db=db, limit=limit, offset=offset, filter=filter)
 
 
