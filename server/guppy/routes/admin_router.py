@@ -15,9 +15,9 @@ router = APIRouter(
 
 @router.post("/upload", description="Upload a file (GeoTiff or Gpkg) to the server.")
 def upload_file(layerName: str = Form(...), layerLabel: str = Form(...), metadata: str = Form(None), isRgb: bool = Form(False), maxZoom: int = Form(17), file: UploadFile = File(...),
-                data: UploadFile = File(None),
+                data: UploadFile = File(None), process: bool = Form(True),
                 db: Session = Depends(get_db)):
-    return endpoints_upload.upload_file(layer_name=layerName, label=layerLabel, file=file, data=data, is_rgb=isRgb, max_zoom=maxZoom, db=db, metadata=metadata)
+    return endpoints_upload.upload_file(layer_name=layerName, label=layerLabel, file=file, data=data, is_rgb=isRgb, max_zoom=maxZoom, db=db, metadata=metadata, process=process)
 
 
 @router.get("/{layer_name}/generate_db", description="Generate sqlite file for a mbtiles layer")

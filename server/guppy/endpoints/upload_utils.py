@@ -116,7 +116,8 @@ def check_layer_exists(layer_name: str, db: Session):
         raise create_error(code=400, message=f"Upload failed: Layer {layer_name} already exists.")
 
 
-def create_preprocessed_layer_file(ext: str, file_location: str, sanitized_filename: str, sanitized_layer_name: str, tmp_file_location: str, max_zoom: int = 17) -> bool:
+def create_preprocessed_layer_file(ext: str, file_location: str, sanitized_filename: str, sanitized_layer_name: str, tmp_file_location: str,
+                                   max_zoom: int = 17, process:bool =True) -> bool:
     """
     Args:
         ext (str): The extension of the file.
@@ -124,12 +125,14 @@ def create_preprocessed_layer_file(ext: str, file_location: str, sanitized_filen
         sanitized_filename (str): The sanitized filename.
         sanitized_layer_name (str): The sanitized layer name.
         tmp_file_location (str): The temporary file location.
+        max_zoom (int): Optional. The maximum zoom level. Default is 17.
+        process (bool): Optional. Indicates whether to process the file. Default is True.
 
     Returns:
         bool: True if the file is converted to mbtiles, False otherwise.
     """
     is_mbtile = False
-    if ext.lower() in ['.tif', '.tiff', '.asc']:
+    if ext.lower() in ['.tif', '.tiff', '.asc'] and process:
         error_list = validate_raster(file_path=tmp_file_location)
         if error_list:
             raise create_error(message=f"Upload failed: {', '.join(error_list)}", code=400)
