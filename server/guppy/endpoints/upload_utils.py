@@ -138,9 +138,9 @@ def create_preprocessed_layer_file(ext: str, file_location: str, sanitized_filen
             raise create_error(message=f"Upload failed: {', '.join(error_list)}", code=400)
         else:
             save_geotif_tiled_overviews(input_file=tmp_file_location, output_file=file_location, nodata=-9999)
-    elif ext.lower() in ['.mbtiles']:
+    if ext.lower() in ['.mbtiles']:
         is_mbtile = True
-    else:
+    elif ext.lower() in ['.gpkg', '.geojson'] and process:
         df = gpd.read_file(tmp_file_location)
         df.to_crs(epsg=4326, inplace=True)
         if len(df) == 1:  # explode if there is only one row
