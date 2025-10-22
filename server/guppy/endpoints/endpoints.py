@@ -319,8 +319,8 @@ def get_point_value_from_layer(db: Session, layer_name: str, x: float, y: float)
                     logger.info(f'get_point_value_from_raster 200 {time.time() - t}')
                     return s.PointResponse(type='point value', layer_name=layer_name, value=None if math.isclose(float(v[0]), nodata) else float(v[0]))
         logger.warning(f'file not found {path}')
-    elif layer_model:
-        path = layer_model.file_path if not layer_model.is_mbtile else layer_model.data_path
+    elif layer_model and layer_model.is_mbtile:
+        path = layer_model.file_path
         if os.path.exists(path) and x and y:
             tile_z, tile_x, tile_y = latlon_to_tilexy(x, y, 14)
             tile = get_tile_data(layer_name=layer_name, mb_file=path, z=tile_z, x=tile_x, y=tile_y)
