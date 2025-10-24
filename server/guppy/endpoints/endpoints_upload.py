@@ -44,7 +44,7 @@ def upload_file(layer_name: str, label: str, file: UploadFile, data: UploadFile 
     check_layer_exists(layer_name=f"{sanitized_layer_name}", db=db)
 
     file_location, tmp_file_location = create_location_paths_and_check_if_exists(ext, sanitized_filename, sanitized_layer_name, is_raster=True if data else False)
-    write_input_file_to_disk(file, tmp_file_location)
+    write_input_file_to_disk(file, tmp_file_location if process else file_location)
 
     if data:
         data_location, tmp_data_location = create_location_paths_and_check_if_exists(d_ext, sanitized_dataname, sanitized_layer_name, is_raster=True)
