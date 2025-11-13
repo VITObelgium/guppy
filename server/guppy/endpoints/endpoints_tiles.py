@@ -101,7 +101,15 @@ def get_tile(layer_name: str, db: Session, z: int, x: int, y: int):
     except Exception as e:
         create_error(code=404, message=str(e))
     if tile_data:
-        return Response(tile_data, media_type="application/x-protobuf", headers={"Content-Encoding": "gzip"})
+        return Response(
+            tile_data,
+            media_type="application/x-protobuf",
+            headers={
+                "Content-Encoding": "gzip",
+                "Cache-Control": "public, max-age=31536000",
+                "ETag": str(hash(tile_data)),
+            },
+        )
     else:
         create_error(code=204, message="Tile not found")
 
