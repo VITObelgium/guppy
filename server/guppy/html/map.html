@@ -6,6 +6,7 @@
     <script src="https://unpkg.com/maplibre-gl/dist/maplibre-gl.js"></script>
     <link href="https://unpkg.com/maplibre-gl/dist/maplibre-gl.css" rel="stylesheet"/>
     <script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.js'></script>
+    <script src="https://unpkg.com/@geomatico/maplibre-cog-protocol/dist/index.js"></script>
     <link rel='stylesheet' href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.css' type='text/css'/>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -258,6 +259,7 @@
     <div id="bottom-pane"></div>
 </div>
 <script>
+    maplibregl.addProtocol('cog', MaplibreCOGProtocol.cogProtocol);
     MapboxDraw.constants.classes.CONTROL_BASE = "maplibregl-ctrl";
     MapboxDraw.constants.classes.CONTROL_PREFIX = "maplibregl-ctrl-";
     MapboxDraw.constants.classes.CONTROL_GROUP = "maplibregl-ctrl-group";
@@ -546,7 +548,7 @@
                             rasterSidebar.appendChild(div);
                             map.addSource(layerId, {
                                 type: 'raster',
-                                tiles: [`${window.location.origin}$deploy_path$/tiles/raster/${layerId}/{z}/{x}/{y}.png?style=jet`],
+                                url: `cog://${window.location.origin}$deploy_path$/tiles/cog/${layerId}`,
                                 tileSize: 256
                             });
                             layerIds.push(layerId);
