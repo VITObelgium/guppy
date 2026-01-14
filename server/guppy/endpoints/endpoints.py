@@ -101,6 +101,8 @@ def get_data_for_wkt(db: Session, layer_name: str, body: s.GeometryBody):
                         response = s.DataResponse(type='raw data', data=rst.tolist())
                         logger.info(f'get_data_for_wkt 200 {time.time() - t}')
                         return response
+            logger.info(f'classification_for_wkt 406 invalid geometry {time.time() - t}')
+            return Response(content="invalid geometry", status_code=status.HTTP_406_NOT_ACCEPTABLE)
         logger.warning(f'file not found {path}')
         logger.info(f'get_data_for_wkt 204 {time.time() - t}')
         return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -139,6 +141,8 @@ def get_stats_for_wkt(db: Session, layer_name: str, body: s.GeometryBody, native
                                                          layer_name=layer_model.layer_name)
                         logger.info(f'get_stats_for_wkt 200 {time.time() - t}')
                         return response
+            logger.info(f'classification_for_wkt 406 invalid geometry {time.time() - t}')
+            return Response(content="invalid geometry", status_code=status.HTTP_406_NOT_ACCEPTABLE)
         logger.warning(f'file not found {path}')
         logger.info(f'get_stats_for_wkt 204 {time.time() - t}')
         return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -180,6 +184,8 @@ def get_stats_for_model(layer_model, native, geom, srs):
                                                  type=f'stats wkt. Overview level: {overview_factor}, {overview_bin} scale',
                                                  layer_name=layer_model.layer_name
                                                  )
+        logger.info(f'classification_for_wkt 406 invalid geometry {time.time() - t}')
+        return Response(content="invalid geometry", status_code=status.HTTP_406_NOT_ACCEPTABLE)
     logger.warning(f'file not found {path}')
     return None
 
@@ -233,6 +239,8 @@ def get_line_data_for_wkt(db: Session, layer_name: str, body: s.LineGeometryBody
                         response = s.LineDataResponse(type='line data', data=result)
                         logger.info(f'get_line_data_for_wkt 200 {time.time() - t}')
                         return response
+            logger.info(f'classification_for_wkt 406 invalid geometry {time.time() - t}')
+            return Response(content="invalid geometry", status_code=status.HTTP_406_NOT_ACCEPTABLE)
         logger.warning(f'file not found {path}')
         logger.info(f'get_line_data_for_wkt 204 {time.time() - t}')
         return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -540,6 +548,8 @@ def get_quantiles_for_wkt(db: Session, layer_name: str, body: s.QuantileBody, na
                                                             quantiles=quantiles)
                         logger.info(f'get_stats_for_wkt 200 {time.time() - t}')
                         return response
+            logger.info(f'classification_for_wkt 406 invalid geometry {time.time() - t}')
+            return Response(content="invalid geometry", status_code=status.HTTP_406_NOT_ACCEPTABLE)
         logger.warning(f'file not found {path}')
         logger.info(f'get_stats_for_wkt 204 {time.time() - t}')
         return Response(status_code=status.HTTP_204_NO_CONTENT)
