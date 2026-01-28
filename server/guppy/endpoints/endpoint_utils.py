@@ -114,10 +114,10 @@ def create_stats_response_polygon(path, geom, layer_model, overview_factor: int,
             areas = areas[valid_mask]
 
             if len(values) > 0:
-                weighted_mean = np.sum(values * areas) / np.sum(areas) if np.sum(areas) == 0 else np.sum(values)
+                weighted_mean = np.sum(values * areas) / np.sum(areas) if np.sum(areas) != 0 else np.sum(values)
                 min_val = float(np.min(values))
                 max_val = float(np.max(values))
-                sum_val = float(np.sum(values * areas / pixel_res)) if np.sum(areas) == 0 else np.sum(values)
+                sum_val = float(np.sum(values * areas / pixel_res)) if np.sum(areas) != 0 else np.sum(values)
 
                 pixel_counts = np.maximum(np.round(areas).astype(int), 1)
                 weighted_samples = []
