@@ -2,19 +2,19 @@ import logging
 import math
 import os
 
+import geopandas as gpd
 import numpy as np
 import rasterio
 from fastapi import HTTPException
-from rasterio.mask import mask, raster_geometry_mask
-from rasterio.windows import from_bounds
-from rasterio.transform import rowcol
-from sqlalchemy.orm import Session
 from rasterio.features import shapes
+from rasterio.mask import mask, raster_geometry_mask
+from rasterio.transform import rowcol
+from rasterio.windows import from_bounds
 from shapely.geometry import shape
-import geopandas as gpd
+from sqlalchemy.orm import Session
+
 from guppy.db import schemas as s
 from guppy.db.models import LayerMetadata
-
 
 logger = logging.getLogger(__name__)
 layer_data_chache = {}
@@ -55,7 +55,7 @@ def no_nan(input):
     return input
 
 
-def create_stats_response_polygon(path, geom, layer_model, overview_factor:int,layer_name:str=None):
+def create_stats_response_polygon(path, geom, layer_model, overview_factor: int, layer_name: str = None):
     """
     Create a statistics response based on the polygon method for small raster datasets.
 
@@ -114,10 +114,10 @@ def create_stats_response_polygon(path, geom, layer_model, overview_factor:int,l
             areas = areas[valid_mask]
 
             if len(values) > 0:
-                weighted_mean = np.sum(values * areas) / np.sum(areas)
+                weighted_mean = np.sum(values * areas) / np.sum(areas) if np.sum(areas) == 0 else np.sum(values)
                 min_val = float(np.min(values))
                 max_val = float(np.max(values))
-                sum_val = float(np.sum(values * areas / pixel_res))
+                sum_val = float(np.sum(values * areas / pixel_res)) if np.sum(areas) == 0 else np.sum(values)
 
                 pixel_counts = np.maximum(np.round(areas).astype(int), 1)
                 weighted_samples = []
@@ -127,7 +127,7 @@ def create_stats_response_polygon(path, geom, layer_model, overview_factor:int,l
 
                 q2, q5, q95, q98 = np.quantile(weighted_samples, [0.02, 0.05, 0.95, 0.98])
 
-                count_data = np.sum(np.isfinite(rst)&shape_mask == 0)
+                count_data = np.sum(np.isfinite(rst) & shape_mask == 0)
                 count_total = np.sum(shape_mask == 0)  # Including nodata polygons
                 count_no_data = count_total - count_data
 
@@ -147,6 +147,7 @@ def create_stats_response_polygon(path, geom, layer_model, overview_factor:int,l
                 if layer_name:
                     response.layer_name = layer_name
                 return response
+
 
 def create_stats_response(rst: np.array, mask_array: np.array, nodata: float, type: str, layer_name: str = None):
     """
@@ -292,7 +293,7 @@ def _calculate_classification_polygon_method(rst, shape_mask, input_geom, src, c
     intersections['area'] = intersections.geometry.area
     total_area = input_gdf.area.values[0]
 
-    value_stats = intersections.groupby('value').agg({        'area': 'sum'    }).reset_index()
+    value_stats = intersections.groupby('value').agg({'area': 'sum'}).reset_index()
 
     result_classes = []
     for _, row in value_stats.iterrows():
@@ -316,6 +317,7 @@ def _calculate_classification_polygon_method(rst, shape_mask, input_geom, src, c
         ))
 
     return s.ClassificationResult(type='classification_polygon', data=final_classes)
+
 
 def get_overview(res_x: float, res_y: float, overviews: [int], bounds: (float,)):
     """
@@ -356,7 +358,7 @@ def _decode(data):
     return np.frombuffer(data.reshape(4, -1).transpose().tobytes(), dtype='<f4').reshape((data[0].shape))
 
 
-def validate_layer_and_get_file_path(db: Session, layer_name: str, file_type = None) -> str:
+def validate_layer_and_get_file_path(db: Session, layer_name: str, file_type=None) -> str:
     """
     Args:
         db: The database session to use for querying the LayerMetadata table.
