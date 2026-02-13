@@ -25,7 +25,7 @@ from guppy.config import config as cfg
 from guppy.db import models as m
 from guppy.db import schemas as s
 from guppy.endpoints.endpoint_utils import get_overview_factor, create_stats_response, _extract_area_from_dataset, _extract_shape_mask_from_dataset, _decode, sample_coordinates_window, \
-    create_quantile_response,sample_coordinates,_calculate_classification_polygon_method,create_stats_response_polygon
+    create_quantile_response, sample_coordinates, _calculate_classification_polygon_method, create_stats_response_polygon
 from guppy.endpoints.tile_utils import latlon_to_tilexy, get_tile_data, pbf_to_geodataframe
 
 logger = logging.getLogger(__name__)
@@ -63,9 +63,10 @@ def get_stats_for_bbox(db: Session, layer_name: str, bbox_left: float, bbox_bott
                         if rst.size < 50:
                             logger.info("fallback to polygon method for small raster in stats")
                             geom = box(src.bounds[0], src.bounds[1], src.bounds[2], src.bounds[3])
-                            response = create_stats_response_polygon(path, geom, layer_model, overview_factor,layer_name=layer_model.layer_name)
+                            response = create_stats_response_polygon(path, geom, layer_model, overview_factor, layer_name=layer_model.layer_name)
                         else:
-                            response = create_stats_response(rst, np.zeros_like(rst).astype(bool), src.nodata, f'bbox stats. Overview level: {overview_factor}, {overview_bin} scale', layer_name=layer_model.layer_name)
+                            response = create_stats_response(rst, np.zeros_like(rst).astype(bool), src.nodata, f'bbox stats. Overview level: {overview_factor}, {overview_bin} scale',
+                                                             layer_name=layer_model.layer_name)
                         logger.info(f'get_stats_for_bbox 200 {time.time() - t}')
                         return response
         logger.warning(f'file not found {path} or bbox empty')
@@ -134,11 +135,11 @@ def get_stats_for_wkt(db: Session, layer_name: str, body: s.GeometryBody, native
                     if rst.size != 0:
                         if shape_mask[shape_mask == 0].size < 50:
                             logger.info("fallback to polygon method for small raster in stats")
-                            response = create_stats_response_polygon(path, geom, layer_model, overview_factor,layer_name=layer_model.layer_name)
+                            response = create_stats_response_polygon(path, geom, layer_model, overview_factor, layer_name=layer_model.layer_name)
                         else:
                             response = create_stats_response(rst, shape_mask, src.nodata,
-                                                         type=f'stats wkt. Overview level: {overview_factor}, {overview_bin} scale',
-                                                         layer_name=layer_model.layer_name)
+                                                             type=f'stats wkt. Overview level: {overview_factor}, {overview_bin} scale',
+                                                             layer_name=layer_model.layer_name)
                         logger.info(f'get_stats_for_wkt 200 {time.time() - t}')
                         return response
             logger.info(f'classification_for_wkt 406 invalid geometry {time.time() - t}')
@@ -440,8 +441,10 @@ def get_classification_for_wkt(db: Session, layer_name: str, body: s.GeometryBod
                                 rst, crop_transfrom = _extract_area_from_dataset(src, [geom], crop=True, all_touched=True, is_rgb=layer_model.is_rgb)
                                 if layer_model.is_rgb:
                                     rst = _decode(rst)
-                                shape_mask = _extract_shape_mask_from_dataset(src, [geom],all_touched=True, crop=True)
+                                shape_mask = _extract_shape_mask_from_dataset(src, [geom], all_touched=True, crop=True)
                             response = _calculate_classification_polygon_method(rst, shape_mask, geom, src, crop_transfrom)
+                            if not response.data:
+                                return Response(content='no data found', status_code=status.HTTP_204_NO_CONTENT)
                         else:
                             mask_value = -999999999999
                             if rst.dtype == np.int32:
@@ -452,14 +455,17 @@ def get_classification_for_wkt(db: Session, layer_name: str, body: s.GeometryBod
                             for v, c in zip(values, counts):
                                 if v != mask_value:
                                     result_classes.append(s.ClassificationEntry(value=v, count=c, percentage=c / total_count * 100))
-                            response = s.ClassificationResult(type='classification', data=result_classes)
+                            if result_classes:
+                                response = s.ClassificationResult(type='classification', data=result_classes)
+                            else:
+                                return Response(content='no data found', status_code=status.HTTP_204_NO_CONTENT)
                         logger.info(f'classification_for_wkt 200 {time.time() - t}')
                         return response
             logger.info(f'classification_for_wkt 406 invalid geometry {time.time() - t}')
             return Response(content="invalid geometry", status_code=status.HTTP_406_NOT_ACCEPTABLE)
         logger.warning(f'file not found {path}')
-    logger.info(f'classification_for_wkt 204 {time.time() - t}')
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    logger.info(f'classification_for_wkt 404 {time.time() - t}')
+    return Response(status_code=status.HTTP_404_NOT_FOUND)
 
 
 def get_combine_layers(db: Session, body: s.CombineLayersGeometryBody):
