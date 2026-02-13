@@ -275,9 +275,8 @@ def _calculate_classification_polygon_method(rst, shape_mask, input_geom, src, c
 
     polygon_shapes = []
     for geom_shape, value in shapes(mask.astype(np.int32), transform=transform):
-        if value != (src.nodata if src.nodata is not None else -9999):
-            poly = shape(geom_shape)
-            polygon_shapes.append({'geometry': poly, 'value': value})
+        poly = shape(geom_shape)
+        polygon_shapes.append({'geometry': poly, 'value': value})
 
     if not polygon_shapes:
         return s.ClassificationResult(type='classification', data=[])
