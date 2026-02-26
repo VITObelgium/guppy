@@ -90,5 +90,5 @@ instrumentator = Instrumentator()
 instrumentator.instrument(app)
 instrumentator.expose(app, endpoint=f"{cfg.deploy.path}/admin/metrics")
 
-if __name__ == "__main__":
-    uvicorn.run(app, port=5000)
+# if __name__ == "__main__":
+#     uvicorn.run(app, port=5000)
