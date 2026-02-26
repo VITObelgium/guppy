@@ -33,5 +33,5 @@ ENV PYTHONUNBUFFERED 1
 ENV PATH /opt/guppy/server/conda-env/bin:$PATH
 
 EXPOSE 8080
-CMD ["fastapi", "run", "guppy/main.py", "--port", "8080" ]
+CMD ["fastapi", "run", "guppy/server.py", "--port", "8080" ]
 #CMD ["conda-env/bin/gunicorn", "--bind", "0.0.0.0:8080", "--worker-tmp-dir", "/dev/shm", "--workers=2", "--timeout=300", "--threads=4", "--worker-class=uvicorn.workers.UvicornWorker", "--log-file=-", "guppy.server:app"]
