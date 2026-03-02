@@ -98,7 +98,7 @@ def get_data_for_wkt(db: Session, layer_name: str, body: s.GeometryBody):
                                 rst = _decode(rst)
                             #remove nodata values outside of geom
                             shape_mask = _extract_shape_mask_from_dataset(src, [geom], crop=True, all_touched=True)
-                            rst = np.where(~shape_mask, rst, np.nan)
+                            rst = np.where(~shape_mask, rst, None)
                         except ValueError as e:
                             return Response(content=str(e), status_code=status.HTTP_406_NOT_ACCEPTABLE)
                     if rst.size != 0:
