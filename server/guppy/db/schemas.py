@@ -93,7 +93,7 @@ class ClassificationResult(CamelModel):
 
 class DataResponse(CamelModel):
     type: str
-    data: list[list[float]]
+    data: list[list[float | None]]
 
 
 class LineDataResponse(CamelModel):
