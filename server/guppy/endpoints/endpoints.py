@@ -76,7 +76,7 @@ def get_stats_for_bbox(db: Session, layer_name: str, bbox_left: float, bbox_bott
     return Response(status_code=status.HTTP_404_NOT_FOUND)
 
 
-def get_data_for_wkt(db: Session, layer_name: str, body: s.GeometryBody):
+def get_data_for_wkt(db: Session, layer_name: str, body: s.GeometryBody, all_touched: bool = False):
     t = time.time()
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
     if layer_model:
@@ -93,11 +93,11 @@ def get_data_for_wkt(db: Session, layer_name: str, body: s.GeometryBody):
                             return Response(content=f'geometry area too large ({geom.area}m². allowed <={cfg.guppy.size_limit * (src.res[0] * src.res[1])}m²)',
                                             status_code=status.HTTP_406_NOT_ACCEPTABLE)
                         try:
-                            rst, _ = _extract_area_from_dataset(src, [geom], crop=True, all_touched=True, is_rgb=layer_model.is_rgb)
+                            rst, _ = _extract_area_from_dataset(src, [geom], crop=True, all_touched=all_touched, is_rgb=layer_model.is_rgb)
                             if layer_model.is_rgb:
                                 rst = _decode(rst)
                             #remove nodata values outside of geom
-                            shape_mask = _extract_shape_mask_from_dataset(src, [geom], crop=True, all_touched=True)
+                            shape_mask = _extract_shape_mask_from_dataset(src, [geom], crop=True, all_touched=all_touched)
                             rst = np.where(~shape_mask, rst, None)
                         except ValueError as e:
                             return Response(content=str(e), status_code=status.HTTP_406_NOT_ACCEPTABLE)
