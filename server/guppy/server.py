@@ -27,7 +27,7 @@ Base.metadata.create_all(bind=engine)
 
 keep_db_tables_in_sync()
 
-mcp_app = mcp.http_app(path='')
+mcp_app = mcp.http_app(path='', stateless_http=True, json_response=True)
 
 
 @asynccontextmanager
