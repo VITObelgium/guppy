@@ -3,7 +3,6 @@ import logging
 import threading
 from contextlib import asynccontextmanager
 
-import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -28,6 +27,8 @@ Base.metadata.create_all(bind=engine)
 
 keep_db_tables_in_sync()
 
+mcp_app = mcp.http_app(path='')
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -39,19 +40,19 @@ async def lifespan(app: FastAPI):
     """
     start_background_task()
 
-    yield
+    async with mcp_app.lifespan(app):
+        yield
+
     # save counts in db on shutdown
     save_request_counts()
 
-
-mcp_app = mcp.http_app(path='')
 
 app = FastAPI(
     title="guppy",
     description="A raster analyzer API",
     docs_url=f"{cfg.deploy.path}/docs",
     openapi_url=f"{cfg.deploy.path}",
-    lifespan=mcp_app.lifespan,
+    lifespan=lifespan,
 )
 ALLOWED_METHODS = ["GET", "POST", "PUT", "DELETE"]
 
@@ -95,5 +96,5 @@ instrumentator = Instrumentator()
 instrumentator.instrument(app)
 instrumentator.expose(app, endpoint=f"{cfg.deploy.path}/admin/metrics")
 
-if __name__ == "__main__":
-    uvicorn.run(app, port=5000)
+# if __name__ == "__main__":
+#     uvicorn.run(app, port=5000)
