@@ -1,0 +1,108 @@
+import logging
+
+import httpx
+from fastmcp import FastMCP
+from starlette.requests import Request
+from starlette.responses import PlainTextResponse
+
+from guppy.config import config as cfg
+
+# Initialize FastMCP server
+mcp = FastMCP("Guppy MCP Server")
+
+logger = logging.getLogger(__name__)
+
+
+@mcp.custom_route("/health", methods=["GET"])
+async def health_check(request: Request) -> PlainTextResponse:
+    return PlainTextResponse("OK")
+
+
+@mcp.tool()
+async def get_layers(limit: int = 100, offset: int = 0, filter_query: str = None) -> str:
+    """
+    Get a list of all available layers in the Guppy application.
+    This tool returns metadata for all possible layers, including their name, label, and additional metadata
+    that describes what each layer does, its source, and other properties.
+
+    Args:
+        limit: Maximum number of layers to return.
+        offset: Number of layers to skip.
+        filter_query: Optional SQL-like filter string (e.g., 'layer_name LIKE "%example%"').
+    """
+    # Use the configured deploy path and assuming it's running on localhost in the container
+    # Port 8080 is what is exposed and used in CMD in Dockerfile
+    base_url = f"http://guppy:8080{cfg.deploy.path}"
+    url = f"{base_url}/layers"
+    params = {
+        "limit": limit,
+        "offset": offset,
+        "filter": filter_query
+    }
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, params=params, timeout=30.0)
+            response.raise_for_status()
+            layers = response.json()
+
+            # Ensure metadata is descriptive for the LLM
+            formatted_layers = []
+            for layer in layers:
+                # Extract layer name and label
+                layer_info = {
+                    "layer_name": layer.get("layerName"),
+                    "label": layer.get("label"),
+                    "is_rgb": layer.get("isRgb"),
+                    "is_mbtile": layer.get("isMbtile"),
+                }
+
+                # Include metadata if present, which often contains descriptive information
+                metadata = layer.get("metadata", {})
+                if metadata:
+                    layer_info["description"] = metadata.get("description") or metadata.get("abstract") or "No detailed description available."
+                    layer_info["metadata"] = metadata
+
+                formatted_layers.append(layer_info)
+
+            return str(formatted_layers)
+    except httpx.HTTPStatusError as e:
+        logger.error(f"HTTP error calling {url}: {e}")
+        return f"Error: API returned status {e.response.status_code} - {e.response.text}"
+    except Exception as e:
+        logger.error(f"Unexpected error in get_layers tool: {e}")
+        return f"Error retrieving layers via API: {str(e)}"
+
+
+@mcp.tool()
+async def get_layer_stats(layer_name: str, wkt_geometry: str, srs: str = "EPSG:4326") -> str:
+    """
+    Get statistics for a specific layer within a given WKT (Well-Known Text) geometry.
+    This tool calculates statistics like min, max, mean, and sum for the area defined by the geometry.
+
+    Args:
+        layer_name: The name of the layer to get statistics for.
+        wkt_geometry: The geometry in WKT format (e.g., 'POLYGON((...))').
+        srs: The spatial reference system of the WKT geometry (default: 'EPSG:4326').
+    """
+    base_url = f"http://guppy:8080{cfg.deploy.path}"
+    url = f"{base_url}/layers/{layer_name}/stats"
+
+    payload = {
+        "geometry": wkt_geometry,
+        "srs": srs
+    }
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, json=payload, timeout=60.0)
+            response.raise_for_status()
+            stats = response.json()
+            return str(stats)
+    except httpx.HTTPStatusError as e:
+        logger.error(f"HTTP error calling {url}: {e}")
+        return f"Error: API returned status {e.response.status_code} - {e.response.text}"
+    except Exception as e:
+        logger.error(f"Unexpected error in get_layer_stats tool: {e}")
+        return f"Error retrieving statistics via API: {str(e)}"
+

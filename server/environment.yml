@@ -8,7 +8,7 @@ dependencies:
   - gunicorn
   - uvicorn
   - psycopg2
-  - python=3.11
+  - python=3.13
   - gdal
   - sqlalchemy
   - pyyaml
@@ -30,4 +30,7 @@ dependencies:
   - pygeofilter
   - mapbox-vector-tile
   - mercantile
+  - fastmcp
+  - mcp
+  - httpx
 prefix: /opt/mapbase3/server/conda-env

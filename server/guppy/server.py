@@ -13,6 +13,7 @@ from guppy.config import config as cfg
 from guppy.db.db_session import Base, engine
 from guppy.db.db_sync import keep_db_tables_in_sync
 from guppy.endpoints.tile_utils import save_request_counts, save_request_counts_timer
+from guppy.mcp_server import mcp
 from guppy.routes.admin_router import router as admin_router
 from guppy.routes.calculation_router import router as calculation_router
 from guppy.routes.data_router import router as data_router
@@ -37,17 +38,20 @@ async def lifespan(app: FastAPI):
 
     """
     start_background_task()
+
     yield
     # save counts in db on shutdown
     save_request_counts()
 
+
+mcp_app = mcp.http_app(path='')
 
 app = FastAPI(
     title="guppy",
     description="A raster analyzer API",
     docs_url=f"{cfg.deploy.path}/docs",
     openapi_url=f"{cfg.deploy.path}",
-    lifespan=lifespan,
+    lifespan=mcp_app.lifespan,
 )
 ALLOWED_METHODS = ["GET", "POST", "PUT", "DELETE"]
 
@@ -76,7 +80,7 @@ def start_background_task():
 
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
-    return FileResponse("guppy/html/favicon.ico")
+    return FileResponse("html/favicon.ico")
 
 
 app.include_router(general_router)
@@ -85,10 +89,11 @@ app.include_router(data_router)
 app.include_router(stats_router)
 app.include_router(calculation_router)
 app.include_router(admin_router)
+app.mount(f"{cfg.deploy.path}", mcp_app)
 
 instrumentator = Instrumentator()
 instrumentator.instrument(app)
 instrumentator.expose(app, endpoint=f"{cfg.deploy.path}/admin/metrics")
 
-# if __name__ == "__main__":
-#     uvicorn.run(app, port=5000)
+if __name__ == "__main__":
+    uvicorn.run(app, port=5000)
