@@ -77,8 +77,8 @@ async def get_layers(limit: int = 100, offset: int = 0, filter_query: str = None
 @mcp.tool()
 async def get_layer_stats(layer_name: str, wkt_geometry: str, srs: str = "EPSG:4326") -> str:
     """
-    Get statistics for a specific layer within a given WKT (Well-Known Text) geometry.
-    This tool calculates statistics like min, max, mean, and sum for the area defined by the geometry.
+    Get zonal statistics for a specific layer within a given WKT (Well-Known Text) geometry.
+    This tool calculates zonal statistics like min, max, mean, sum, count and quantiles for the area defined by the geometry.
 
     Args:
         layer_name: The name of the layer to get statistics for.
@@ -105,4 +105,42 @@ async def get_layer_stats(layer_name: str, wkt_geometry: str, srs: str = "EPSG:4
     except Exception as e:
         logger.error(f"Unexpected error in get_layer_stats tool: {e}")
         return f"Error retrieving statistics via API: {str(e)}"
+
+
+@mcp.tool()
+async def get_layer_classification(layer_name: str, wkt_geometry: str, srs: str = "EPSG:4326", all_touched: bool = False) -> str:
+    """
+    Get classification for a specific layer within a given WKT (Well-Known Text) geometry.
+    This tool returns the count of pixels for each value in the specified area.
+    This is only useful on layers that are categorical.
+
+    Args:
+        layer_name: The name of the layer to get classification for.
+        wkt_geometry: The geometry in WKT format (e.g., 'POLYGON((...))').
+        srs: The spatial reference system of the WKT geometry (default: 'EPSG:4326').
+        all_touched: Whether to include all pixels that touch the geometry (default: False).
+    """
+    base_url = f"http://guppy:8080{cfg.deploy.path}"
+    url = f"{base_url}/layers/{layer_name}/classification"
+
+    payload = {
+        "geometry": wkt_geometry,
+        "srs": srs
+    }
+    params = {
+        "all_touched": all_touched
+    }
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, json=payload, params=params, timeout=60.0)
+            response.raise_for_status()
+            classification = response.json()
+            return str(classification)
+    except httpx.HTTPStatusError as e:
+        logger.error(f"HTTP error calling {url}: {e}")
+        return f"Error: API returned status {e.response.status_code} - {e.response.text}"
+    except Exception as e:
+        logger.error(f"Unexpected error in get_layer_classification tool: {e}")
+        return f"Error retrieving classification via API: {str(e)}"
 
