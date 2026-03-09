@@ -69,6 +69,13 @@ class StatsResponse(CamelModel):
     q98: Optional[float] = None
 
 
+class MinMaxResponse(CamelModel):
+    type: str
+    layer_name: Optional[str] = None
+    min: Optional[float] = None
+    max: Optional[float] = None
+
+
 class QuantileList(CamelModel):
     quantile: float
     value: float

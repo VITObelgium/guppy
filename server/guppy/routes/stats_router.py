@@ -16,6 +16,10 @@ router = APIRouter(
 def get_stats_for_bbox(layer_name: str, bbox_left: float, bbox_bottom: float, bbox_right: float, bbox_top: float, native: bool = False, db: Session = Depends(get_db)):
     return endpoints.get_stats_for_bbox(db=db, layer_name=layer_name, bbox_left=bbox_left, bbox_bottom=bbox_bottom, bbox_right=bbox_right, bbox_top=bbox_top, native=native)
 
+@router.get("/{layer_name}/minmax", response_model=s.MinMaxResponse, description="Get min max for a specified layer.")
+def get_min_max_for_layer(layer_name: str, ignore_nodata: bool = True, db: Session = Depends(get_db)):
+    return endpoints.get_min_max_for_layer(db=db, layer_name=layer_name, ignore_nodata=ignore_nodata)
+
 
 @router.post("/{layer_name}/stats", response_model=s.StatsResponse, description="Get statistics for a specified wkt geometry within a layer.")
 def get_stats_for_wkt(layer_name: str, body: s.GeometryBody, native: bool = False, db: Session = Depends(get_db)):
