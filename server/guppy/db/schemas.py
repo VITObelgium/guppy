@@ -3,7 +3,7 @@ import ast
 from enum import Enum as PyEnum
 from typing import Optional, Union
 
-from pydantic import BaseModel, computed_field
+from pydantic import BaseModel, ConfigDict, computed_field
 from pydantic.fields import Field
 
 
@@ -13,9 +13,7 @@ def to_camel(s):
 
 
 class CamelModel(BaseModel):
-    class Config:
-        alias_generator = to_camel
-        populate_by_name = True
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
 class LayerMetadataSchema(CamelModel):
@@ -43,8 +41,7 @@ class LayerMetadataSchema(CamelModel):
     def effective_label(self) -> str:
         return self.label if self.label is not None and self.label else self.layer_name
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PointResponse(CamelModel):
@@ -251,8 +248,7 @@ class TileStatisticsSchema(CamelModel):
     z: int
     count: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class QueryParams(CamelModel):
