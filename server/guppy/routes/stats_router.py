@@ -18,7 +18,7 @@ def get_stats_for_bbox(layer_name: str, bbox_left: float, bbox_bottom: float, bb
 
 @router.get("/{layer_name}/minmax", response_model=s.MinMaxResponse, description="Get min max for a specified layer.")
 def get_min_max_for_layer(layer_name: str, ignore_nodata: bool = True, db: Session = Depends(get_db)):
-    return endpoints.get_min_max_for_layer(db=db, layer_name=layer_name, ignore_nodata=ignore_nodata)
+    return endpoints.get_min_max_for_layer(db=db, layer_name=layer_name)
 
 
 @router.post("/{layer_name}/stats", response_model=s.StatsResponse, description="Get statistics for a specified wkt geometry within a layer.")

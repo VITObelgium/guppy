@@ -38,21 +38,6 @@ def healthcheck(db: Session):
     return 'OK'
 
 
-def _get_min_max_ignore_nodata(path: str):
-    min_val = None
-    max_val = None
-    with rasterio.open(path) as src:
-        for _, window in src.block_windows(1):
-            block = src.read(1, window=window, masked=True)
-            if block is None or block.size == 0 or block.count() == 0:
-                continue
-            block_min = float(block.min())
-            block_max = float(block.max())
-            min_val = block_min if min_val is None else min(min_val, block_min)
-            max_val = block_max if max_val is None else max(max_val, block_max)
-    return min_val, max_val
-
-
 def get_stats_for_bbox(db: Session, layer_name: str, bbox_left: float, bbox_bottom: float, bbox_right: float, bbox_top: float, native: bool):
     t = time.time()
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
@@ -93,7 +78,7 @@ def get_stats_for_bbox(db: Session, layer_name: str, bbox_left: float, bbox_bott
     return Response(status_code=status.HTTP_404_NOT_FOUND)
 
 
-def get_min_max_for_layer(layer_name: str, db: Session, ignore_nodata: bool = True):
+def get_min_max_for_layer(layer_name: str, db: Session):
     t = time.time()
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
     if layer_model:
@@ -101,9 +86,18 @@ def get_min_max_for_layer(layer_name: str, db: Session, ignore_nodata: bool = Tr
         if os.path.exists(path):
             min_val = None
             max_val = None
-            if ignore_nodata:
-                min_val, max_val = _get_min_max_ignore_nodata(path)
-            else:
+            with Reader(path) as reader:
+                stats_by_band = reader.statistics()
+                band_stats = stats_by_band.get("b1") if stats_by_band else None
+                if band_stats is None and stats_by_band:
+                    band_stats = next(iter(stats_by_band.values()))
+                if band_stats is not None:
+                    min_val = band_stats.min
+                    max_val = band_stats.max
+
+            # If stats are not immediately available, compute/persist and retry once.
+            if min_val is None or max_val is None:
+                gdal.Info(path, computeMinMax=True, stats=True)
                 with Reader(path) as reader:
                     stats_by_band = reader.statistics()
                     band_stats = stats_by_band.get("b1") if stats_by_band else None
@@ -113,26 +107,10 @@ def get_min_max_for_layer(layer_name: str, db: Session, ignore_nodata: bool = Tr
                         min_val = band_stats.min
                         max_val = band_stats.max
 
-            # If stats are not immediately available, compute/persist and retry once.
-            if min_val is None or max_val is None:
-                gdal.Info(path, computeMinMax=True, stats=True)
-                if ignore_nodata:
-                    min_val, max_val = _get_min_max_ignore_nodata(path)
-                else:
-                    with Reader(path) as reader:
-                        stats_by_band = reader.statistics()
-                        band_stats = stats_by_band.get("b1") if stats_by_band else None
-                        if band_stats is None and stats_by_band:
-                            band_stats = next(iter(stats_by_band.values()))
-                        if band_stats is not None:
-                            min_val = band_stats.min
-                            max_val = band_stats.max
-
             if min_val is not None and max_val is not None:
                 response = s.MinMaxResponse(type='min max', layer_name=layer_name, min=float(min_val), max=float(max_val))
                 logger.info(f'get_min_max_for_bbox 200 {time.time() - t}')
                 return response
-
         logger.warning(f'file not found {path} or no statistics available')
         logger.info(f'get_min_max_for_bbox 204 {time.time() - t}')
         return Response(status_code=status.HTTP_204_NO_CONTENT)
