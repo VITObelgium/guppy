@@ -20,7 +20,7 @@ def get_data_for_wkt(layer_name: str, body: s.GeometryBody, db: Session = Depend
 
 @router.post("/{layer_name}/classification", response_model=s.ClassificationResult, description="Get classification result for a specified wkt geometry within a layer.")
 def get_classification_for_wkt(layer_name: str, body: s.GeometryBody, all_touched: bool = False, db: Session = Depends(get_db)):
-    return endpoints.get_classification_for_wkt(db=db, layer_name=layer_name, body=body, all_touched=all_touched)
+    return endpoints.get_classification_for_wkt(db=db, layer_name=layer_name, body=body)
 
 
 @router.post("/{layer_name}/line_data", response_model=s.LineDataResponse, description="Get line data for a specified wkt geometry within a layer.")
