@@ -17,7 +17,7 @@ from guppy.db import schemas as s
 from guppy.db.models import LayerMetadata
 
 logger = logging.getLogger(__name__)
-layer_data_chache = {}
+layer_data_cache = {}
 
 
 def get_overview_factor(bounds, native, path):
@@ -369,7 +369,7 @@ def validate_layer_and_get_file_path(db: Session, layer_name: str, file_type=Non
     Raises:
         HTTPException: If the layer cannot be found in the database or if the file path does not exist.
     """
-    if layer_name not in layer_data_chache:
+    if layer_name not in layer_data_cache:
         layer = db.query(LayerMetadata).filter_by(layer_name=layer_name).first()
         if not layer:
             raise HTTPException(status_code=404, detail=f"Layer not found: {layer_name}")
@@ -378,8 +378,28 @@ def validate_layer_and_get_file_path(db: Session, layer_name: str, file_type=Non
             file_path = layer.data_path
         if file_path and not os.path.exists(file_path):
             raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
-        layer_data_chache[layer_name] = file_path
-    return layer_data_chache[layer_name]
+        layer_data_cache[layer_name] = file_path
+    return layer_data_cache[layer_name]
+
+
+def clear_cache():
+    """
+    Clears the entire cache of layer data.
+
+    """
+    layer_data_cache.clear()
+
+
+def remove_from_cache(layer_name):
+    """
+    Removes the specified layer from the cache.
+
+    Args:
+        layer_name (str): The name of the layer to remove from the cache.
+
+    """
+    if layer_name in layer_data_cache:
+        del layer_data_cache[layer_name]
 
 
 def sample_coordinates(coords, path, layer_name):

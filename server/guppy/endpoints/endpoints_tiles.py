@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from guppy.db.models import TileStatistics
 from guppy.db.schemas import QueryParams
-from guppy.endpoints.endpoint_utils import validate_layer_and_get_file_path
+from guppy.endpoints.endpoint_utils import validate_layer_and_get_file_path, clear_cache
 from guppy.endpoints.tile_utils import tile2lonlat, add_item_to_request_counter, get_field_mapping, FUNCTION_MAP
 from guppy.error import create_error
 
@@ -74,6 +74,7 @@ def clear_tile_cache():
 
     """
     get_tile_data.cache_clear()
+    clear_cache()
     logger.info("Tile cache cleared")
 
 

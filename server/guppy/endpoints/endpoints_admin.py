@@ -4,7 +4,7 @@ import time
 
 from fastapi import Response, status
 from sqlalchemy.orm import Session
-
+from endpoint_utils import remove_from_cache
 import guppy.db.models as m
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ def delete_layer_mapping(db: Session, layer_name: str):
     """
     t = time.time()
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
-    
+
     if layer_model:
         file_path = layer_model.file_path
         sqlite_path = layer_model.file_path.replace(".mbtiles", ".sqlite")
@@ -48,6 +48,7 @@ def delete_layer_mapping(db: Session, layer_name: str):
 
         db.delete(layer_model)
         db.commit()
+        remove_from_cache(layer_name)
         logger.info(f'delete_layer_mapping 200 {time.time() - t}')
         return status.HTTP_200_OK
     logger.info(f'get_layer_mapping 204 {time.time() - t}')
@@ -79,6 +80,7 @@ def update_layer_mapping(db: Session, layer_name: str, label: str, file_path: st
         layer_model.is_mbtile = is_mbtile
         layer_model.metadata_str = str(metadata)
         db.commit()
+        remove_from_cache(layer_name)
         logger.info(f'update_layer_mapping 200 {time.time() - t}')
         return status.HTTP_200_OK
     logger.info(f'update_layer_mapping 204 {time.time() - t}')
