@@ -161,7 +161,7 @@ def get_stats_for_wkt(db: Session, layer_name: str, body: s.GeometryBody, native
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
     if layer_model:
         path = layer_model.file_path if not layer_model.is_mbtile else layer_model.data_path
-        if os.path.exists(path) and body:
+        if path and os.path.exists(path) and body:
             geom = wkt.loads(body.geometry)
             with rasterio.open(path) as src:
                 target_srs = src.crs.to_epsg()
