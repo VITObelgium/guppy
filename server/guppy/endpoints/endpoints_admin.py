@@ -4,7 +4,7 @@ import time
 
 from fastapi import Response, status
 from sqlalchemy.orm import Session
-from endpoint_utils import remove_from_cache
+from guppy.endpoints.endpoint_utils import remove_from_cache
 import guppy.db.models as m
 
 logger = logging.getLogger(__name__)
