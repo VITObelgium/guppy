@@ -1,9 +1,14 @@
+import base64
 import logging
+from urllib.parse import quote
+from typing import Any, Dict, List
 
 import httpx
 from fastmcp import FastMCP
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
+from shapely import wkt
+from rio_tiler.io import Reader
 
 from guppy.config import config as cfg
 
@@ -144,3 +149,66 @@ async def get_layer_classification(layer_name: str, wkt_geometry: str, srs: str 
         logger.error(f"Unexpected error in get_layer_classification tool: {e}")
         return f"Error retrieving classification via API: {str(e)}"
 
+
+@mcp.tool()
+async def get_bbox_for_place(location: str, limit: int = 1) -> str:
+    """
+    Get the bounding box for a specific place using the Nominatim API.
+    use the field bounding_box_wkt to get the bounding box in WKT format, which can be directly used in other tools that require WKT input.
+
+    Args:
+        location: The name of the location to geocode.
+        limit: Maximum number of results to return (default: 1).
+    """
+    encoded_location = quote(location)
+    url = f"https://nominatim.openstreetmap.org/search?format=json&q={encoded_location}&limit={limit}&addressdetails=1"
+    headers = {"User-Agent": "Guppy-MCP-Server/1.0"}
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, headers=headers, timeout=30.0)
+            response.raise_for_status()
+            data = response.json()
+
+            if not data:
+                return str({
+                    "error": "No coordinates found for the specified location",
+                    "query": location,
+                    "suggestions": [
+                        "Try including more specific details (e.g., state, country)",
+                        "Check spelling of the location name",
+                        "Use a more general location (e.g., city instead of specific address)",
+                    ],
+                })
+
+            results = []
+            for item in data:
+                result = {
+                    "latitude": float(item["lat"]),
+                    "longitude": float(item["lon"]),
+                    "display_name": item["display_name"],
+                    "place_id": item["place_id"],
+                    "type": item.get("type", ""),
+                    "class": item.get("class", ""),
+                    "importance": item.get("importance", 0),
+                    "bounding_box": {
+                        "south": float(item["boundingbox"][0]),
+                        "north": float(item["boundingbox"][1]),
+                        "west": float(item["boundingbox"][2]),
+                        "east": float(item["boundingbox"][3]),
+                    },
+                    "bounding_box_wkt": f"POLYGON(({item['boundingbox'][2]} {item['boundingbox'][0]}, {item['boundingbox'][2]} {item['boundingbox'][1]}, {item['boundingbox'][3]} {item['boundingbox'][1]}, {item['boundingbox'][3]} {item['boundingbox'][0]}, {item['boundingbox'][2]} {item['boundingbox'][0]}))"
+                }
+                results.append(result)
+
+            return str({
+                "query": location,
+                "results_count": len(results),
+                "coordinates": results,
+            })
+    except httpx.HTTPStatusError as e:
+        logger.error(f"Nominatim API error: {e.response.status_code} {e.response.reason_phrase}")
+        return f"Error: Nominatim API returned status {e.response.status_code}"
+    except Exception as e:
+        logger.error(f"Unexpected error in get_bbox_for_place tool: {e}")
+        return f"Error geocoding location: {str(e)}"
