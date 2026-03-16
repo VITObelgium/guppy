@@ -163,7 +163,7 @@ async def get_bbox_for_place(location: str, limit: int = 1) -> str:
     headers = {"User-Agent": "Guppy-MCP-Server/1.0"}
 
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(verify=False) as client:
             response = await client.get(url, headers=headers, timeout=30.0)
             response.raise_for_status()
             data = response.json()
