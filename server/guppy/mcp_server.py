@@ -208,5 +208,6 @@ async def get_bbox_for_place(location: str, limit: int = 1) -> str:
         logger.error(f"Nominatim API error: {e.response.status_code} {e.response.reason_phrase}")
         return f"Error: Nominatim API returned status {e.response.status_code}"
     except Exception as e:
-        logger.error(f"Unexpected error in get_bbox_for_place tool: {e}")
-        return f"Error geocoding location: {str(e)}"
+        logger.exception("Unexpected error in get_bbox_for_place tool")
+        logger.error(f"type={type(e).__name__}, repr={e!r}, cause={e.__cause__!r}, context={e.__context__!r}")
+        return f"Error geocoding location: {type(e).__name__}"
