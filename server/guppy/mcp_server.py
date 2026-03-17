@@ -32,15 +32,23 @@ async def get_layers(limit: int = 100, offset: int = 0, filter_query: str = None
         limit: Maximum number of layers to return.
         offset: Number of layers to skip.
         filter_query: Optional SQL-like filter string (e.g., 'layer_name LIKE "%example%"').
+                     If you just provide a keyword (e.g., 'geology'), it will automatically be converted to a LIKE filter on layer_name.
     """
     # Use the configured deploy path and assuming it's running on localhost in the container
     # Port 8080 is what is exposed and used in CMD in Dockerfile
     base_url = f"http://guppy:8080{cfg.deploy.path}"
     url = f"{base_url}/layers"
+
+    # Handle simple keyword filters by converting them to SQL-like LIKE clauses
+    processed_filter = filter_query
+    if filter_query and not any(op in filter_query.upper() for op in [" LIKE ", "=", ">", "<", " IN ", " BETWEEN "]):
+        # It looks like a simple keyword, wrap it in a LIKE clause for layer_name
+        processed_filter = f'layer_name LIKE "%{filter_query}%"'
+
     params = {
         "limit": limit,
         "offset": offset,
-        "filter": filter_query
+        "filter": processed_filter
     }
 
     try:
