@@ -1,11 +1,11 @@
-FROM continuumio/miniconda3 as conda-env
+FROM continuumio/miniconda3:26.1.1@sha256:b002473017c77d4b8bad6f8c49747e0298c37419a5ec69ca37ebe36d09ee417a as conda-env
 
 WORKDIR /opt/guppy/server
 COPY environment.yml environment.yml
 RUN conda env update --prefix /opt/guppy/server/conda-env --file environment.yml
 
 
-FROM debian:bullseye-slim
+FROM debian:bullseye-slim@sha256:4333240150a6924f878e05ec2c998aec95238010e0e4d2fec6161c90128c4652
 
 RUN  echo "**** install packages ****" \
 	&& apt-get update \
