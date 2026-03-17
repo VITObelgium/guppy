@@ -32,15 +32,23 @@ async def get_layers(limit: int = 100, offset: int = 0, filter_query: str = None
         limit: Maximum number of layers to return.
         offset: Number of layers to skip.
         filter_query: Optional SQL-like filter string (e.g., 'layer_name LIKE "%example%"').
+                     If you just provide a keyword (e.g., 'geology'), it will automatically be converted to a LIKE filter on layer_name.
     """
     # Use the configured deploy path and assuming it's running on localhost in the container
     # Port 8080 is what is exposed and used in CMD in Dockerfile
-    base_url = f"http://guppy:8000{cfg.deploy.path}"
+    base_url = f"http://guppy:8080{cfg.deploy.path}"
     url = f"{base_url}/layers"
+
+    # Handle simple keyword filters by converting them to SQL-like LIKE clauses
+    processed_filter = filter_query
+    if filter_query and not any(op in filter_query.upper() for op in [" LIKE ", "=", ">", "<", " IN ", " BETWEEN "]):
+        # It looks like a simple keyword, wrap it in a LIKE clause for layer_name
+        processed_filter = f'layer_name LIKE "%{filter_query}%" OR label LIKE "%{filter_query}%" OR metadata_str LIKE "%{filter_query}%"'
+
     params = {
         "limit": limit,
         "offset": offset,
-        "filter": filter_query
+        "filter": processed_filter
     }
 
     try:
@@ -88,7 +96,7 @@ async def get_layer_stats(layer_name: str, wkt_geometry: str, srs: str = "EPSG:4
         wkt_geometry: The geometry in WKT format (e.g., 'POLYGON((...))').
         srs: The spatial reference system of the WKT geometry (default: 'EPSG:4326').
     """
-    base_url = f"http://localhost:8000{cfg.deploy.path}"
+    base_url = f"http://guppy:8080{cfg.deploy.path}"
     url = f"{base_url}/layers/{layer_name}/stats"
 
     payload = {
@@ -123,7 +131,7 @@ async def get_layer_classification(layer_name: str, wkt_geometry: str, srs: str 
         srs: The spatial reference system of the WKT geometry (default: 'EPSG:4326').
         all_touched: Whether to include all pixels that touch the geometry (default: False).
     """
-    base_url = f"http://localhost:8000{cfg.deploy.path}"
+    base_url = f"http://guppy:8080{cfg.deploy.path}"
     url = f"{base_url}/layers/{layer_name}/classification"
 
     payload = {
@@ -208,5 +216,6 @@ async def get_bbox_for_place(location: str, limit: int = 1) -> str:
         logger.error(f"Nominatim API error: {e.response.status_code} {e.response.reason_phrase}")
         return f"Error: Nominatim API returned status {e.response.status_code}"
     except Exception as e:
-        logger.error(f"Unexpected error in get_bbox_for_place tool: {e}")
-        return f"Error geocoding location: {str(e)}"
+        logger.exception("Unexpected error in get_bbox_for_place tool")
+        logger.error(f"type={type(e).__name__}, repr={e!r}, cause={e.__cause__!r}, context={e.__context__!r}")
+        return f"Error geocoding location: {type(e).__name__}"
