@@ -43,7 +43,7 @@ async def get_layers(limit: int = 100, offset: int = 0, filter_query: str = None
     processed_filter = filter_query
     if filter_query and not any(op in filter_query.upper() for op in [" LIKE ", "=", ">", "<", " IN ", " BETWEEN "]):
         # It looks like a simple keyword, wrap it in a LIKE clause for layer_name
-        processed_filter = f'layer_name LIKE "%{filter_query}%"'
+        processed_filter = f'layer_name LIKE "%{filter_query}%" OR label LIKE "%{filter_query}%" OR metadata LIKE "%{filter_query}%"'
 
     params = {
         "limit": limit,
