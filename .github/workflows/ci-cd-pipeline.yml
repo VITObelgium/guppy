@@ -5,6 +5,7 @@ on:
     branches:
       - 'main'
       - 'develop'
+      - 'aikido'
       - 'feature/github-actions'
 
 jobs:
@@ -40,7 +41,7 @@ jobs:
           elif [[ $BRANCH_NAME == 'develop' ]]; then
             echo "::set-output name=tag::latest-dev"
           else
-            echo "::set-output name=tag::${NORMALIZED_BRANCH_NAME}"
+            echo "::set-output name=tag::latest-${NORMALIZED_BRANCH_NAME}"
           fi
       - name: Build and push
         uses: docker/build-push-action@v6
