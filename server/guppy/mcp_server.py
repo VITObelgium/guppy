@@ -88,7 +88,7 @@ async def get_layer_stats(layer_name: str, wkt_geometry: str, srs: str = "EPSG:4
         wkt_geometry: The geometry in WKT format (e.g., 'POLYGON((...))').
         srs: The spatial reference system of the WKT geometry (default: 'EPSG:4326').
     """
-    base_url = f"http://localhost:8000{cfg.deploy.path}"
+    base_url = f"http://guppy:8000{cfg.deploy.path}"
     url = f"{base_url}/layers/{layer_name}/stats"
 
     payload = {
@@ -123,7 +123,7 @@ async def get_layer_classification(layer_name: str, wkt_geometry: str, srs: str 
         srs: The spatial reference system of the WKT geometry (default: 'EPSG:4326').
         all_touched: Whether to include all pixels that touch the geometry (default: False).
     """
-    base_url = f"http://localhost:8000{cfg.deploy.path}"
+    base_url = f"http://guppy:8000{cfg.deploy.path}"
     url = f"{base_url}/layers/{layer_name}/classification"
 
     payload = {
