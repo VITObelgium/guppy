@@ -5,10 +5,12 @@ COPY pixi.lock pixi.toml ./
 RUN pixi install --locked
 
 
-FROM debian:bullseye-slim@sha256:4333240150a6924f878e05ec2c998aec95238010e0e4d2fec6161c90128c4652
+FROM debian:trixie-slim@sha256:26f98ccd92fd0a44d6928ce8ff8f4921b4d2f535bfa07555ee5d18f61429cf0c
 
 RUN echo "**** install packages ****" \
     && apt-get update \
+    && DEBIAN_FRONTEND=noninteractive \
+    apt-get upgrade -y \
     && DEBIAN_FRONTEND=noninteractive \
     apt-get install -y \
     curl \
