@@ -3,10 +3,7 @@ name: ci
 on:
   push:
     branches:
-      - 'main'
-      - 'develop'
-      - 'aikido'
-      - 'feature/github-actions'
+      - '*'
 
 jobs:
   dockerhub-build-push:
@@ -28,28 +25,26 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Generate timestamp
-        id: timestamp
-        run: echo "TIMESTAMP=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_ENV
-      - name: Determine tag
+      - name: Determine tags
         id: tag
         run: |
+          TIMESTAMP="$(date +'%Y%m%d%H%M%S')"
           BRANCH_NAME="${GITHUB_REF#refs/heads/}"
-          NORMALIZED_BRANCH_NAME="${BRANCH_NAME/\//-}"
+          NORMALIZED_BRANCH_NAME="${BRANCH_NAME//\//-}"
           if [[ $BRANCH_NAME == 'main' ]]; then
-            echo "::set-output name=tag::latest"
-          elif [[ $BRANCH_NAME == 'develop' ]]; then
-            echo "::set-output name=tag::latest-dev"
+            echo "::set-output name=tag1::latest"
+            echo "::set-output name=tag2::${TIMESTAMP}"
           else
-            echo "::set-output name=tag::latest-${NORMALIZED_BRANCH_NAME}"
+            echo "::set-output name=tag1::latest-${NORMALIZED_BRANCH_NAME}"
+            echo "::set-output name=tag2::${TIMESTAMP}-${NORMALIZED_BRANCH_NAME}"
           fi
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           push: true
           tags: |
-            vitobelgium/guppy:${{ steps.tag.outputs.tag }}
-            vitobelgium/guppy:${{ env.TIMESTAMP }}
+            vitobelgium/guppy:${{ steps.tag.outputs.tag1 }}
+            vitobelgium/guppy:${{ steps.tag.outputs.tag2 }}
           context: ./server
           file: ./server/Dockerfile
           cache-from: type=gha
