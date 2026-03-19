@@ -1,4 +1,5 @@
 # coding: utf-8
+import aikido_zen
 import logging
 import threading
 from contextlib import asynccontextmanager
@@ -19,6 +20,8 @@ from guppy.routes.data_router import router as data_router
 from guppy.routes.general_router import router as general_router
 from guppy.routes.stats_router import router as stats_router
 from guppy.routes.tiles_router import router as tiles_router
+
+aikido_zen.protect()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

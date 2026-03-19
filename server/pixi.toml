@@ -37,3 +37,7 @@ mercantile = ">=1.2.1,<2"
 fastmcp = ">=3.0.2,<4"
 mcp = ">=1.26.0,<2"
 httpx = ">=0.28.1,<0.29"
+regex = ">=2024.5.15,<2025.0.0"
+
+[pypi-dependencies]
+aikido-zen = ">=1.0.6, <2"
