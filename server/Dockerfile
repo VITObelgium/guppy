@@ -1,25 +1,25 @@
-FROM continuumio/miniconda3 as conda-env
+FROM ghcr.io/prefix-dev/pixi:0.65.0 AS build
 
 WORKDIR /opt/guppy/server
-COPY environment.yml environment.yml
-RUN conda env update --prefix /opt/guppy/server/conda-env --file environment.yml
+COPY pixi.lock pixi.toml ./
+RUN pixi install --locked
 
 
 FROM debian:bullseye-slim
 
-RUN  echo "**** install packages ****" \
-	&& apt-get update \
-	&& DEBIAN_FRONTEND=noninteractive \
-	apt-get install -y \
-	curl \
-	&& rm -rf /var/lib/apt/lists/* \
-	&& echo
+RUN echo "**** install packages ****" \
+    && apt-get update \
+    && DEBIAN_FRONTEND=noninteractive \
+    apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && echo
 
 RUN groupadd --system guppy && \
-	useradd --system -g guppy guppy
+    useradd --system -g guppy guppy
 
 WORKDIR /opt/guppy/server
-COPY --from=conda-env /opt/guppy/server/conda-env conda-env
+COPY --from=build /opt/guppy/server/.pixi .pixi
 COPY guppy guppy
 
 RUN mkdir -p /opt/guppy/server/data
@@ -30,7 +30,7 @@ USER guppy
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
-ENV PATH /opt/guppy/server/conda-env/bin:$PATH
+ENV PATH /opt/guppy/server/.pixi/envs/default/bin:$PATH
 
 EXPOSE 8080
 CMD ["fastapi", "run", "guppy/server.py", "--port", "8080" ]
