@@ -30,9 +30,9 @@ RUN chown -R guppy:guppy /opt/guppy/server/data
 
 USER guppy
 
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-ENV PATH /opt/guppy/server/.pixi/envs/default/bin:$PATH
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PATH=/opt/guppy/server/.pixi/envs/default/bin:$PATH
 
 EXPOSE 8080
 CMD ["fastapi", "run", "guppy/server.py", "--port", "8080" ]
