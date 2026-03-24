@@ -1,4 +1,4 @@
-FROM ghcr.io/prefix-dev/pixi:0.65.0 AS build
+FROM ghcr.io/prefix-dev/pixi:0.65.0@sha256:653a58cc20e0c23ada2681b4d166b3e6fea8552fd58a91bdb159693cd0509feb AS build
 
 WORKDIR /opt/guppy/server
 COPY pixi.lock pixi.toml ./
