@@ -33,24 +33,22 @@ def upload_file(layer_name: str, label: str, file: UploadFile, data: UploadFile 
     filename_without_extension, ext = os.path.splitext(file.filename)
     if data:
         dataname_without_extension, d_ext = os.path.splitext(data.filename)
-        sanitized_dataname = sanitize_input_str(filename_without_extension)
         validate_file_input(d_ext, data, dataname_without_extension, layer_name)
 
     validate_file_input(ext, file, filename_without_extension, layer_name)
 
     sanitized_layer_name = sanitize_input_str(layer_name)
-    sanitized_filename = sanitize_input_str(filename_without_extension)
 
     check_layer_exists(layer_name=f"{sanitized_layer_name}", db=db)
 
-    file_location, tmp_file_location = create_location_paths_and_check_if_exists(ext, sanitized_filename, sanitized_layer_name, is_raster=True if data else False)
+    file_location, tmp_file_location = create_location_paths_and_check_if_exists(ext, is_raster=True if data else False)
     write_input_file_to_disk(file, tmp_file_location if process else file_location)
 
     if data:
-        data_location, tmp_data_location = create_location_paths_and_check_if_exists(d_ext, sanitized_dataname, sanitized_layer_name, is_raster=True)
+        data_location, tmp_data_location = create_location_paths_and_check_if_exists(d_ext, is_raster=True)
         write_input_file_to_disk(data, data_location)
 
-    is_mbtile = create_preprocessed_layer_file(ext, file_location, sanitized_filename, sanitized_layer_name, tmp_file_location, max_zoom, process=process)
+    is_mbtile = create_preprocessed_layer_file(ext, file_location, sanitized_layer_name, tmp_file_location, max_zoom, process=process)
 
     insert_into_layer_metadata(layer_uuid=sanitized_layer_name, label=label, file_path=file_location, data_path=data_location, db=db, is_rgb=is_rgb, is_mbtile=is_mbtile, metadata=metadata)
     return f"Upload successful: Layer {sanitized_layer_name} uploaded with label {label}."

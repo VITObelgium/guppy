@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import shutil
+import uuid
 
 import geopandas as gpd
 import numpy as np
@@ -116,13 +117,12 @@ def check_layer_exists(layer_name: str, db: Session):
         raise create_error(code=400, message=f"Upload failed: Layer {layer_name} already exists.")
 
 
-def create_preprocessed_layer_file(ext: str, file_location: str, sanitized_filename: str, sanitized_layer_name: str, tmp_file_location: str,
+def create_preprocessed_layer_file(ext: str, file_location: str, sanitized_layer_name: str, tmp_file_location: str,
                                    max_zoom: int = 17, process:bool =True) -> bool:
     """
     Args:
         ext (str): The extension of the file.
         file_location (str): The location of the output file.
-        sanitized_filename (str): The sanitized filename.
         sanitized_layer_name (str): The sanitized layer name.
         tmp_file_location (str): The temporary file location.
         max_zoom (int): Optional. The maximum zoom level. Default is 17.
@@ -146,7 +146,7 @@ def create_preprocessed_layer_file(ext: str, file_location: str, sanitized_filen
         if len(df) == 1:  # explode if there is only one row
             df = df.explode().reset_index(drop=True)
         df['fid'] = df.index
-        gpkg_loc = f"{cfg.deploy.content}/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}_tmp.geojson"
+        gpkg_loc = f"{cfg.deploy.content}/shapefiles/uploaded/tmp_{uuid.uuid4().hex}.geojson"
         if 'bounds' not in df.columns:
             df['bounds'] = df.geometry.envelope.to_wkt()
         df.to_file(gpkg_loc, index=False, layer=sanitized_layer_name, driver='GeoJSON')  # needs to be geojson to preserve the fid field in the mbtile
@@ -161,14 +161,12 @@ def create_preprocessed_layer_file(ext: str, file_location: str, sanitized_filen
     return is_mbtile
 
 
-def create_location_paths_and_check_if_exists(ext: str, sanitized_filename: str, sanitized_layer_name: str, is_raster=False) -> tuple[str, str]:
+def create_location_paths_and_check_if_exists(ext: str, is_raster=False) -> tuple[str, str]:
     """
     Creates file paths for the uploaded file and checks if the file already exists.
 
     Args:
         ext (str): The file extension.
-        sanitized_filename (str): The sanitized name of the file.
-        sanitized_layer_name (str): The sanitized name of the layer.
         is_raster (bool): Optional. Indicates whether the file is a raster file. Default is False.
 
     Returns:
@@ -178,25 +176,26 @@ def create_location_paths_and_check_if_exists(ext: str, sanitized_filename: str,
         create_error: If the file already exists.
 
     """
+    unique_id = uuid.uuid4().hex
     if ext.lower() in ['.tif', '.tiff', '.asc', ]:
-        tmp_file_location = f"{cfg.deploy.content}/tifs/uploaded/{sanitized_layer_name}_{sanitized_filename}_tmp{ext}"
-        file_location = f"{cfg.deploy.content}/tifs/uploaded/{sanitized_layer_name}_{sanitized_filename}.tif"
+        tmp_file_location = f"{cfg.deploy.content}/tifs/uploaded/{unique_id}_tmp{ext}"
+        file_location = f"{cfg.deploy.content}/tifs/uploaded/{unique_id}.tif"
         if os.path.exists(file_location):
-            raise create_error(message=f"Upload failed: File {sanitized_layer_name}_{sanitized_filename}.tif already exists.", code=400)
+            raise create_error(message=f"Upload failed: File {unique_id}.tif already exists.", code=400)
     elif ext.lower() in ['.mbtiles']:
         if is_raster:
             folder = 'tifs'
         else:
             folder = 'shapefiles'
-        file_location = f"{cfg.deploy.content}/{folder}/uploaded/{sanitized_layer_name}_{sanitized_filename}.mbtiles"
+        file_location = f"{cfg.deploy.content}/{folder}/uploaded/{unique_id}.mbtiles"
         tmp_file_location = file_location
         if os.path.exists(file_location):
-            raise create_error(message=f"Upload failed: File {sanitized_layer_name}_{sanitized_filename}.mbtiles already exists.", code=400)
+            raise create_error(message=f"Upload failed: File {unique_id}.mbtiles already exists.", code=400)
     else:
-        tmp_file_location = f"{cfg.deploy.content}/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}_tmp{ext}"
-        file_location = f"{cfg.deploy.content}/shapefiles/uploaded/{sanitized_layer_name}_{sanitized_filename}.mbtiles"
+        tmp_file_location = f"{cfg.deploy.content}/shapefiles/uploaded/{unique_id}_tmp{ext}"
+        file_location = f"{cfg.deploy.content}/shapefiles/uploaded/{unique_id}.mbtiles"
         if os.path.exists(file_location):
-            raise create_error(message=f"Upload failed: File {sanitized_layer_name}_{sanitized_filename}.{ext} already exists.", code=400)
+            raise create_error(message=f"Upload failed: File {unique_id}.{ext} already exists.", code=400)
     return file_location, tmp_file_location
 
 
