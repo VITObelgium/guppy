@@ -382,7 +382,7 @@ def get_point_value_from_layer(db: Session, layer_name: str, x: float, y: float)
             tile_df = pbf_to_geodataframe(tile, tile_x, tile_y, tile_z)
             # get the value of the point
             point = wkt.loads(f'POINT ({x} {y})')
-            values = tile_df[tile_df.intersects(point)].drop(columns=['geometry'])
+            values = tile_df[tile_df.intersects(point)]
             if not values.empty:
                 result = {'type': 'point value', 'layer_name': layer_name, 'value': values.to_dict(orient='records')[0]}
                 logger.info(f'get_point_value_from_raster 200 {time.time() - t}')
