@@ -271,10 +271,10 @@ def _calculate_classification_polygon_method(rst, shape_mask, input_geom, src, c
     logger.info("fallback to polygon method for small raster")
     transform = crop_transform if crop_transform is not None else src.transform
 
-    mask = np.where(shape_mask == 0, rst, src.nodata if src.nodata is not None else -9999)
+    selected_pixels = shape_mask == 0
 
     polygon_shapes = []
-    for geom_shape, value in shapes(mask.astype(np.int32), transform=transform):
+    for geom_shape, value in shapes(rst.astype(np.int32), mask=selected_pixels, transform=transform):
         poly = shape(geom_shape)
         polygon_shapes.append({'geometry': poly, 'value': value})
 
