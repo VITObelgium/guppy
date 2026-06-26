@@ -290,10 +290,9 @@ def _calculate_classification_polygon_method(rst, shape_mask, input_geom, src, c
         return s.ClassificationResult(type='classification', data=[])
 
     intersections['area'] = intersections.geometry.area
-    total_area = input_gdf.area.values[0]
 
     value_stats = intersections.groupby('value').agg({'area': 'sum'}).reset_index()
-
+    total_area = value_stats['area'].sum()
     result_classes = []
     for _, row in value_stats.iterrows():
         value = row['value']
