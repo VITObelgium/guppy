@@ -56,53 +56,6 @@
             margin-top: 20px;
         }
 
-        /* Button for opening the modal */
-        .calculate-button {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 10px;
-            background-color: #007BFF;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        /* Modal dialog */
-        .modal {
-            display: none; /* Hidden by default */
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5); /* Transparent black background */
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-
-        .modal-content {
-            background-color: white;
-            padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-            max-width: 500px;
-            width: 90%;
-        }
-
-        .modal-header {
-            font-size: 1.2em;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-
-        .modal-form {
-            display: flex;
-            flex-direction: column;
-        }
 
         .modal-form label {
             margin-bottom: 5px;
@@ -117,34 +70,6 @@
             margin-bottom: 10px;
         }
 
-        /* Button to close the modal */
-        .close-modal {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            font-size: 1.2em;
-        }
-
-        /* Button to add layers and calculate */
-        .modal-add,
-        .modal-calculate {
-            padding: 10px;
-            border-radius: 5px;
-            border: none;
-            color: white;
-            cursor: pointer;
-        }
-
-        .modal-add {
-            background-color: #28A745;
-        }
-
-        .modal-calculate {
-            background-color: #DC3545;
-        }
 
         .layer-item {
             display: flex;
@@ -210,49 +135,6 @@
         <h3>Raster Layers</h3>
     </div>
 
-    <button class="calculate-button" id="open-modal">Calculate New Layer</button>
-
-    <!-- Modal for Layer Operations -->
-    <div class="modal" id="layer-modal">
-        <div class="modal-content">
-            <button class="close-modal" id="close-modal">x</button>
-            <div class="modal-header">New Layer Operation</div>
-            <div class="modal-form">
-                <label for="raster-layer">Select Raster Layer</label>
-                <select id="raster-layer">
-                    <!-- Options will be populated via JavaScript -->
-                </select>
-
-                <label for="operation">Operation</label>
-                <select id="operation">
-                    <option value="add">Add</option>
-                    <option value="subtract">Subtract</option>
-                    <option value="multiply">Multiply</option>
-                    <option value="invert_boolean_mask">Invert Boolean Mask</option>
-                    <option value="boolean_mask">Boolean Mask</option>
-                    <option value="unique_product">Unique Product</option>
-                    <option value="clip">Clip</option>
-                </select>
-
-                <label for="factor">Factor</label>
-                <input type="number" step="0.1" id="factor" placeholder="Enter a factor">
-
-                <!-- Button to add the operation to the list -->
-                <button class="modal-add" id="add-operation">Add Operation</button>
-            </div>
-
-            <!-- List of added operations -->
-            <div id="layer-list">
-                <!-- Populated with added operations -->
-            </div>
-            <div id="layer-label">
-                <label for="factor">Layer label</label>
-                <input id="calcLabel" placeholder="Enter a label">
-            </div>
-            <!-- Button to calculate the new layer -->
-            <button class="modal-calculate" id="calculate-layer">Calculate</button>
-        </div>
-    </div>
 </div>
 <div id="main">
     <div id="map"></div>
@@ -360,12 +242,10 @@
             const openModalButton = document.getElementById("open-modal");
             const closeModalButton = document.getElementById("close-modal");
             const addOperationButton = document.getElementById("add-operation");
-            const calculateLayerButton = document.getElementById("calculate-layer");
             const layerList = document.getElementById("layer-list");
             const rasterLayerSelect = document.getElementById("raster-layer");
             const operationSelect = document.getElementById("operation");
             const factorInput = document.getElementById("factor");
-            const labelInput = document.getElementById("calcLabel");
 
             // List to hold the layer operations
             let layerOperations = [];
@@ -373,7 +253,9 @@
             // Function to populate the raster layer select box
             function populateRasterLayerSelect(layers) {
                 rasterLayerSelect.innerHTML = ""; // Clear existing options
-                layers.forEach((layer) => {
+                layers
+                    .filter(layer => !isVectorLayer(layer))
+                    .forEach((layer) => {
                     const option = document.createElement("option");
                     option.value = layer.layerName;
                     option.textContent = layer.effectiveLabel;
@@ -426,51 +308,142 @@
                 }
             });
 
-            // Calculate the new layer
-            calculateLayerButton.addEventListener("click", async () => {
-                const body = {
-                    layer_list: layerOperations,
-                    fileResponse: false,
-                    geoserver: false,
-                    rgb: false,
-                    rescaleResult: null,
-                    layerListAfterRescale: null,
-                    resultStyle: null,
-                    resultLabel: labelInput.value || "Calculated Layer",
-                };
-                calculateLayerButton.setAttribute("disabled", "disabled");
 
-                try {
-                    const response = await fetch(`${window.location.origin}$deploy_path$/layers/calculate`, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify(body),
-                    });
+            function isVectorLayer(layer) {
+                return Boolean(layer.isMbtile && (layer.dataPath == null || layer.dataPath === ''));
+            }
 
-                    if (response.ok) {
-                        alert("Calculation completed successfully!");
-                    } else {
-                        alert("Calculation failed. Please try again.");
+            function getVectorSourceLayerName(layer) {
+                const metadata = layer.metadata || {};
+                if (metadata.json) {
+                    try {
+                        const parsedJson = typeof metadata.json === 'string' ? JSON.parse(metadata.json) : metadata.json;
+                        if (parsedJson && Array.isArray(parsedJson.vector_layers) && parsedJson.vector_layers.length > 0) {
+                            return parsedJson.vector_layers[0].id;
+                        }
+                    } catch (error) {
+                        console.warn('Failed to parse vector metadata JSON for source-layer fallback.', error);
                     }
-                } catch (error) {
-                    console.error("Error during calculation:", error);
-                    alert("An error occurred. Please try again.");
-                } finally {
-                    calculateLayerButton.removeAttribute("disabled");
                 }
 
-                layerModal.style.display = "none"; // Hide the modal after calculation
-                layerOperations = []; // Clear the operation list
-                layerList.innerHTML = ""; // Clear the UI list
+                return metadata.sourceLayer
+                    || metadata.source_layer
+                    || metadata.layerName
+                    || layer.layerName.split('_')[0]
+                    || layer.layerName;
+            }
+
+            function getVectorRenderLayerIds(layerId) {
+                return {
+                    fill: `${layerId}__fill`,
+                    line: `${layerId}__line`,
+                    circle: `${layerId}__circle`,
+                };
+            }
+
+            function removeLayerIfExists(layerId) {
+                if (map.getLayer(layerId)) {
+                    map.removeLayer(layerId);
+                }
+            }
+
+            function removeSourceIfExists(sourceId) {
+                if (map.getSource(sourceId)) {
+                    map.removeSource(sourceId);
+                }
+            }
+
+            function addVectorRenderLayers(layerId, sourceLayerName) {
+                const ids = getVectorRenderLayerIds(layerId);
+                const color = getRandomColor();
+
+                map.addLayer({
+                    id: ids.fill,
+                    type: 'fill',
+                    source: layerId,
+                    'source-layer': sourceLayerName,
+                    filter: ['==', ['geometry-type'], 'Polygon'],
+                    paint: {
+                        'fill-color': color,
+                        'fill-opacity': 0.45,
+                    }
+                });
+
+                map.addLayer({
+                    id: ids.line,
+                    type: 'line',
+                    source: layerId,
+                    'source-layer': sourceLayerName,
+                    filter: ['==', ['geometry-type'], 'LineString'],
+                    paint: {
+                        'line-color': color,
+                        'line-width': 2,
+                    }
+                });
+
+                map.addLayer({
+                    id: ids.circle,
+                    type: 'circle',
+                    source: layerId,
+                    'source-layer': sourceLayerName,
+                    filter: ['==', ['geometry-type'], 'Point'],
+                    paint: {
+                        'circle-color': color,
+                        'circle-radius': 5,
+                        'circle-stroke-color': '#ffffff',
+                        'circle-stroke-width': 1,
+                    }
+                });
+            }
+
+            function removeVectorRenderLayers(layerId) {
+                const ids = getVectorRenderLayerIds(layerId);
+                removeLayerIfExists(ids.fill);
+                removeLayerIfExists(ids.line);
+                removeLayerIfExists(ids.circle);
+            }
+
+            function getVisibleRasterLayerIds() {
+                return rasterLayerIds.filter(layerId => {
+                    const entry = layerRegistry.get(layerId);
+                    return entry && map.getLayer(entry.renderLayerId);
+                });
+            }
+
+            let rasterLayerIds = [];
+            const layerRegistry = new Map();
+            const activeVectorLayerIds = new Set();
+
+            map.on('load', function () {
                 refreshLayerList();
             });
 
+            map.on('click', function (e) {
+                const activeVectorRenderLayers = [];
+                activeVectorLayerIds.forEach(layerId => {
+                    const ids = getVectorRenderLayerIds(layerId);
+                    [ids.fill, ids.line, ids.circle].forEach(id => {
+                        if (map.getLayer(id)) {
+                            activeVectorRenderLayers.push(id);
+                        }
+                    });
+                });
 
-            var layerIds = [];
-            map.on('load', function () {
-                refreshLayerList();
+                if (activeVectorRenderLayers.length === 0) {
+                    return;
+                }
+
+                const features = map.queryRenderedFeatures(e.point, {layers: activeVectorRenderLayers});
+                if (features.length) {
+                    const feature = features[0];
+                    const description = Object.keys(feature.properties)
+                        .map(key => `${key}: ${feature.properties[key]}`)
+                        .join('<br/>');
+                    new maplibregl.Popup()
+                        .setLngLat(e.lngLat)
+                        .setHTML(description)
+                        .addTo(map);
+                }
             });
 
             function refreshLayerList() {
@@ -486,21 +459,24 @@
                     layerDivs2.forEach((layer) => {
                         rasterSidebar.removeChild(layer);
                     });
-                    // clear all layers
-                    layers.forEach((layer) => {
-                        if (map.getLayer(layer.layerName)) {
-                            map.removeLayer(layer.layerName);
+                    // Clear previously registered map sources/layers first.
+                    layerRegistry.forEach((entry, layerId) => {
+                        if (entry.type === 'vector') {
+                            removeVectorRenderLayers(layerId);
+                            activeVectorLayerIds.delete(layerId);
+                        } else {
+                            removeLayerIfExists(entry.renderLayerId);
                         }
-                        if (map.getSource(layer.layerName)) {
-                            map.removeSource(layer.layerName);
-                        }
+                        removeSourceIfExists(layerId);
                     });
+                    layerRegistry.clear();
+                    rasterLayerIds = [];
 
                     layers.forEach((layer) => {
                         console.log(layer)
                         const layerId = layer.layerName;
                         const layerLabel = layer.effectiveLabel;
-                        const isMbtile = layer.isMbtile && (layer.dataPath == null || layer.dataPath === '');
+                        const isMbtile = isVectorLayer(layer);
                         const div = document.createElement("div");
                         div.className = "layer";
 
@@ -511,20 +487,26 @@
                         // Logic to handle layer addition/removal
                         input.onchange = function () {
                             if (this.checked) {
-                                map.addLayer({
-                                    id: layerId,
-                                    type: isMbtile ? "fill" : "raster",
-                                    source: layerId,
-                                    "source-layer": layerId.split("_")[0],
-                                    paint: isMbtile
-                                        ? {
-                                            'fill-color': getRandomColor(),
-                                            'fill-opacity': 0.5,
-                                        }
-                                        : {"raster-opacity": 0.5},
-                                });
+                                if (isMbtile) {
+                                    const sourceLayerName = getVectorSourceLayerName(layer);
+                                    addVectorRenderLayers(layerId, sourceLayerName);
+                                    activeVectorLayerIds.add(layerId);
+                                } else {
+                                    const rasterRenderLayerId = layerRegistry.get(layerId).renderLayerId;
+                                    map.addLayer({
+                                        id: rasterRenderLayerId,
+                                        type: 'raster',
+                                        source: layerId,
+                                        paint: {'raster-opacity': 0.6},
+                                    });
+                                }
                             } else {
-                                map.removeLayer(layerId);
+                                if (isMbtile) {
+                                    removeVectorRenderLayers(layerId);
+                                    activeVectorLayerIds.delete(layerId);
+                                } else {
+                                    removeLayerIfExists(layerRegistry.get(layerId).renderLayerId);
+                                }
                             }
                             updateArea();
                         };
@@ -540,9 +522,8 @@
                                 tiles: [`${window.location.origin}$deploy_path$/tiles/vector/${layerId}/{z}/{x}/{y}`],
                                 tileSize: 512
                             });
-                            map.on('click', layerId, (e) => {
-                                mbtileClickHandler(layerId, e);
-                                getPointValue(e.lngLat)
+                            layerRegistry.set(layerId, {
+                                type: 'vector',
                             });
                         } else {
                             rasterSidebar.appendChild(div);
@@ -551,7 +532,11 @@
                                 url: `cog://${window.location.origin}$deploy_path$/tiles/cog/${layerId}`,
                                 tileSize: 256
                             });
-                            layerIds.push(layerId);
+                            layerRegistry.set(layerId, {
+                                type: 'raster',
+                                renderLayerId: `${layerId}__raster`,
+                            });
+                            rasterLayerIds.push(layerId);
                         }
                     });
 
@@ -559,26 +544,10 @@
                 });
             }
 
-
-            // Helper function to get fill colors for MBTile layers
-            function getFillColor() {
-                return [
-                    "match",
-                    ["get", "TYPE"],
-                    1,
-                    "#FF0000",
-                    2,
-                    "#00FF00",
-                    3,
-                    "#0000FF",
-                    "#000000",
-                ];
-            }
-
             async function getPointValue(lngLat) {
                 let description = '';
-                for (const layerId of layerIds) {
-                    if (map.getLayer(layerId)) {
+                for (const layerId of getVisibleRasterLayerIds()) {
+                    if (map.getSource(layerId)) {
                         const url = `${window.location.origin}$deploy_path$/layers/${layerId}/point?x=${lngLat.lng}&y=${lngLat.lat}`;
                         try {
                             const response = await fetch(url);
@@ -599,20 +568,6 @@
                     .addTo(map);
             }
 
-            function mbtileClickHandler(layerId, e) {
-                const features = map.queryRenderedFeatures(e.point, {layers: [layerId]});
-                if (features.length) {
-                    const feature = features[0];
-                    const description = Object.keys(feature.properties)
-                        .map(key => `${key}: ${feature.properties[key]}`)
-                        .join('<br/>');
-                    new maplibregl.Popup()
-                        .setLngLat(e.lngLat)
-                        .setHTML(description)
-                        .addTo(map);
-                }
-            }
-
             function getRandomColor() {
                 const r = Math.floor(Math.random() * 256);
                 const g = Math.floor(Math.random() * 256);
@@ -629,8 +584,8 @@
                 let labels = [];
                 let datasets = [];
 
-                for (const layerId of layerIds) {
-                    if (map.getLayer(layerId)) {
+                for (const layerId of getVisibleRasterLayerIds()) {
+                    if (map.getSource(layerId)) {
                         try {
                             const response = await fetch(`${window.location.origin}$deploy_path$/layers/${layerId}/line_data`, {
                                 method: 'POST',
@@ -699,8 +654,8 @@
                 let labels = ['mean', 'min', 'max'];
                 let datasets = [];
 
-                for (const layerId of layerIds) {
-                    if (map.getLayer(layerId)) {
+                for (const layerId of getVisibleRasterLayerIds()) {
+                    if (map.getSource(layerId)) {
                         try {
                             const response = await fetch(`${window.location.origin}$deploy_path$/layers/${layerId}/stats`, {
                                 method: 'POST',
