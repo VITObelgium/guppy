@@ -21,7 +21,7 @@ from guppy.endpoints.tile_utils import data_to_rgba, add_item_to_request_counter
 logger = logging.getLogger(__name__)
 
 
-def get_tile_for_layer(layer_name: str, style: str, db: Session, z: int, x: int, y: int, values: str = None, colors: str = None) -> Response:
+def get_tile_for_layer(layer_name: str, style: str, db: Session, z: int, x: int, y: int, values: str = None, colors: str = None, band: int = 1) -> Response:
     """
     Args:
         layer_name: A string representing the name of the layer.
@@ -43,7 +43,7 @@ def get_tile_for_layer(layer_name: str, style: str, db: Session, z: int, x: int,
     if file_path.endswith('.mbtiles'):
         result = get_tile_from_mbtiles(file_path, z, x, y)
     else:
-        result = get_tile(file_path, z, x, y, style, values, colors)
+        result = get_tile(file_path, z, x, y, style, values, colors, band)
     add_item_to_request_counter(layer_name, z, x, y)
     log_cache_info(t)
     return result
@@ -163,7 +163,7 @@ def get_tile_from_mbtiles(file_path: str, z: int, x: int, y: int) -> Response:
 
 
 @lru_cache(maxsize=128)
-def get_tile(file_path: str, z: int, x: int, y: int, style: str = None, values: str = None, colors: str = None) -> Response:
+def get_tile(file_path: str, z: int, x: int, y: int, style: str = None, values: str = None, colors: str = None, band: int = 1) -> Response:
     """
     Args:
         file_path: A string representing the path to the file.
@@ -184,12 +184,21 @@ def get_tile(file_path: str, z: int, x: int, y: int, style: str = None, values: 
         nodata = None
         with Reader(file_path) as cog:
             try:
-                img = cog.tile(x, y, z)
-                nodata = cog.dataset.nodata
+                if band < 1 or band > cog.dataset.count:
+                    raise HTTPException(status_code=406, detail=f"invalid band {band}. available range: 1-{cog.dataset.count}")
+                img = cog.tile(x, y, z, indexes=band)
+                nodata_values = cog.dataset.nodatavals
+                if nodata_values and len(nodata_values) >= band and nodata_values[band - 1] is not None:
+                    nodata = nodata_values[band - 1]
+                else:
+                    nodata = cog.dataset.nodata
             except TileOutsideBounds:
                 raise HTTPException(status_code=204, detail=f"Tile out of bounds {z} {x} {y}")
             if img.dataset_statistics is None:
-                stats = cog.statistics()['b1']
+                stats_by_band = cog.statistics()
+                stats = stats_by_band.get(f'b{band}') if stats_by_band else None
+                if stats is None and stats_by_band:
+                    stats = next(iter(stats_by_band.values()))
                 # generate statistics file for next time
                 gdal.Info(file_path, computeMinMax=True, stats=True)
         if img:

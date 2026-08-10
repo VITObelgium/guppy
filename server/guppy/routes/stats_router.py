@@ -13,24 +13,24 @@ router = APIRouter(
 
 
 @router.get("/{layer_name}/bbox_stats", response_model=s.StatsResponse, description="Get statistics for a specified bounding box within a layer.")
-def get_stats_for_bbox(layer_name: str, bbox_left: float, bbox_bottom: float, bbox_right: float, bbox_top: float, native: bool = False, db: Session = Depends(get_db)):
-    return endpoints.get_stats_for_bbox(db=db, layer_name=layer_name, bbox_left=bbox_left, bbox_bottom=bbox_bottom, bbox_right=bbox_right, bbox_top=bbox_top, native=native)
+def get_stats_for_bbox(layer_name: str, bbox_left: float, bbox_bottom: float, bbox_right: float, bbox_top: float, native: bool = False, band: int = 1, db: Session = Depends(get_db)):
+    return endpoints.get_stats_for_bbox(db=db, layer_name=layer_name, bbox_left=bbox_left, bbox_bottom=bbox_bottom, bbox_right=bbox_right, bbox_top=bbox_top, native=native, band=band)
 
 @router.get("/{layer_name}/minmax", response_model=s.MinMaxResponse, description="Get min max for a specified layer.")
-def get_min_max_for_layer(layer_name: str, ignore_nodata: bool = True, db: Session = Depends(get_db)):
-    return endpoints.get_min_max_for_layer(db=db, layer_name=layer_name)
+def get_min_max_for_layer(layer_name: str, ignore_nodata: bool = True, band: int = 1, db: Session = Depends(get_db)):
+    return endpoints.get_min_max_for_layer(db=db, layer_name=layer_name, band=band)
 
 
 @router.post("/{layer_name}/stats", response_model=s.StatsResponse, description="Get statistics for a specified wkt geometry within a layer.")
-def get_stats_for_wkt(layer_name: str, body: s.GeometryBody, native: bool = False, db: Session = Depends(get_db)):
-    return endpoints.get_stats_for_wkt(db=db, layer_name=layer_name, body=body, native=native)
+def get_stats_for_wkt(layer_name: str, body: s.GeometryBody, native: bool = False, band: int = 1, db: Session = Depends(get_db)):
+    return endpoints.get_stats_for_wkt(db=db, layer_name=layer_name, body=body, native=native, band=band)
 
 
 @router.post("/{layer_name}/quantiles", response_model=s.QuantileResponse, description="Get custom quantiles for a specified wkt geometry within a layer.")
-def get_quantiles_for_wkt(layer_name: str, body: s.QuantileBody, native: bool = False, db: Session = Depends(get_db)):
-    return endpoints.get_quantiles_for_wkt(db=db, layer_name=layer_name, body=body, native=native)
+def get_quantiles_for_wkt(layer_name: str, body: s.QuantileBody, native: bool = False, band: int = 1, db: Session = Depends(get_db)):
+    return endpoints.get_quantiles_for_wkt(db=db, layer_name=layer_name, body=body, native=native, band=band)
 
 
 @router.post("/statslist", response_model=list[s.StatsResponse], description="Get statistics for a given wkt geometry list.")
-def get_stats_for_wkt_list(body: s.GeometryBodyList, native: bool = False, db: Session = Depends(get_db)):
-    return endpoints.get_stats_for_wkt_list(db=db, body=body, native=native)
+def get_stats_for_wkt_list(body: s.GeometryBodyList, native: bool = False, band: int = 1, db: Session = Depends(get_db)):
+    return endpoints.get_stats_for_wkt_list(db=db, body=body, native=native, band=band)

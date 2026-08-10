@@ -241,7 +241,7 @@ def _get_raster_bounds(input_raster_ds):
     return x_min, y_min, x_max, y_max, resolution_x, resolution_y
 
 
-def compare_rasters(raster_path_a: str, raster_path_b: str, check_nodata: bool = True):
+def compare_rasters(raster_path_a: str, raster_path_b: str, check_nodata: bool = True, band_a: int = 1, band_b: int = 1):
     """ compares raster a with raster b. retruns True if equal.
         checks on geotransform, size, nodata value, epsg code and bounds.
 
@@ -255,8 +255,8 @@ def compare_rasters(raster_path_a: str, raster_path_b: str, check_nodata: bool =
     """
     a_ds = gdal.Open(raster_path_a)
     b_ds = gdal.Open(raster_path_b)
-    band_a = a_ds.GetRasterBand(1)
-    band_b = b_ds.GetRasterBand(1)
+    band_a = a_ds.GetRasterBand(band_a)
+    band_b = b_ds.GetRasterBand(band_b)
 
     if a_ds.GetGeoTransform() != b_ds.GetGeoTransform():
         logger.warning(f'geotransform not equal: {a_ds.GetGeoTransform()} != {b_ds.GetGeoTransform()}')
@@ -279,7 +279,7 @@ def compare_rasters(raster_path_a: str, raster_path_b: str, check_nodata: bool =
 def process_raster_list_with_function_in_chunks(input_file_list: [str], output_file: str, like_file: str, function_to_apply: Callable[..., np.ndarray], function_arguments: {} = None,
                                                 chunks: int = 10,
                                                 overlap_cells: tuple = 0,
-                                                dtype=None, output_bands=1, out_nodata=None):
+                                                dtype=None, output_bands=1, out_nodata=None, bands: [int] = None):
     """ Function to process large rasters in smaller parts to reduce memory footprint and enable parallelization.
 
      Args:
@@ -307,8 +307,12 @@ def process_raster_list_with_function_in_chunks(input_file_list: [str], output_f
     open_da_arrays = []
     ds = rasterio.open(like_file)
     chunk_size = (1, int(ds.shape[0] / chunks), int(ds.shape[1] / chunks))
-    for input_file in input_file_list:
+    if bands is None:
+        bands = [1] * len(input_file_list)
+    for input_file, band in zip(input_file_list, bands):
         values_da_arr = xr.open_rasterio(input_file, chunks=chunk_size)
+        if band is not None:
+            values_da_arr = values_da_arr.isel(band=band - 1).expand_dims(dim={"band": [band]})
         input_da_arrays.append(values_da_arr.data)
         open_da_arrays.append(values_da_arr)  # keep reference of all open dask arrays to close them at the end to free file handles
     r = da.map_overlap(function_to_apply, *input_da_arrays, depth=overlap_cells, boundary='reflect', trim=True,
@@ -416,7 +420,7 @@ def warp_raster(input_raster_file: str, output_raster_file: str, resolution: flo
     return return_array
 
 
-def convert_raster_to_likeraster(input_raster_file: str, like_raster_file: str, output_file: str, error_threshold: float = 0.125, resampling=gdal.GRA_Average):
+def convert_raster_to_likeraster(input_raster_file: str, like_raster_file: str, output_file: str, error_threshold: float = 0.125, resampling=gdal.GRA_Average, like_band: int = 1):
     """convert raster to match the likeraster given
 
     Args:
@@ -428,7 +432,7 @@ def convert_raster_to_likeraster(input_raster_file: str, like_raster_file: str, 
     """
     input_ds = gdal.Open(input_raster_file)
     like_ds = gdal.Open(like_raster_file)
-    band = like_ds.GetRasterBand(1)
+    band = like_ds.GetRasterBand(like_band)
     x_min, y_min, x_max, y_max, resolution_x, resolution_y = _get_raster_bounds(like_ds)
     nodata = band.GetNoDataValue()
     output_bounds = [x_min, y_min, x_max, y_max]
@@ -452,17 +456,21 @@ def get_unique_values(arguments_list, fixed_path_list):
             elif arg['operation'] == s.AllowedOperations.unique_product:
                 unique_values_set = set()
                 with rasterio.open(path) as src:
-                    for ji, window in src.block_windows():
-                        arr = src.read(window=window)
+                    band = arg.get('band', 1)
+                    for ji, window in src.block_windows(band):
+                        arr = src.read(band, window=window)
                         unique_values_set.update(np.unique(arr))
                 unique_values.append(list(unique_values_set))
             elif arg['operation'] == s.AllowedOperations.normalize:
                 min_val = None
                 max_val = None
                 with rasterio.open(path) as src:
-                    for ji, window in src.block_windows():
-                        arr = src.read(window=window)
-                        arr = arr[arr != src.nodata]
+                    band = arg.get('band', 1)
+                    nodata = src.nodatavals[band - 1] if src.nodatavals and len(src.nodatavals) >= band else src.nodata
+                    for ji, window in src.block_windows(band):
+                        arr = src.read(band, window=window)
+                        if nodata is not None:
+                            arr = arr[arr != nodata]
                         if len(arr) > 0:
                             if min_val is None:
                                 min_val = np.min(arr)
@@ -496,22 +504,28 @@ def fill_path_and_argument_lists(arguments_list, layer_list, db, nodata, path_li
             path_list.append(path)
             if os.path.exists(path):
                 with rasterio.open(path) as src:
-                    if nodata is None:
-                        nodata = src.nodata
+                    band = layer_item.band if layer_item.band else 1
+                    if band < 1 or band > src.count:
+                        raise ValueError(f"invalid band {band} for layer {layer_item.layer_name}. available range: 1-{src.count}")
+                    layer_nodata = src.nodatavals[band - 1] if src.nodatavals and len(src.nodatavals) >= band else src.nodata
+                    if layer_nodata is None:
+                        layer_nodata = nodata if nodata is not None else -9999
             else:
                 logger.info(f'WARNING: file does not exists {path}')
                 create_error(message='layer not found', code=status.HTTP_404_NOT_FOUND)
-            arguments_list.append({'nodata': nodata, 'factor': layer_item.factor, 'operation': layer_item.operation, 'operation_data': layer_item.operation_data, 'is_rgb': layer_model.is_rgb})
+            arguments_list.append({'nodata': layer_nodata, 'factor': layer_item.factor, 'operation': layer_item.operation, 'operation_data': layer_item.operation_data, 'is_rgb': layer_model.is_rgb, 'band': layer_item.band if layer_item.band else 1})
         else:
             logger.info(f'WARNING: layer_model does not exists {layer_item.layer_name}')
 
 
-def read_raster_without_nodata_as_array(path: str) -> np.ndarray:
+def read_raster_without_nodata_as_array(path: str, band: int = 1) -> np.ndarray:
     output = []
     with rasterio.open(path) as ds:
-        for ji, window in ds.block_windows(1):
-            data = ds.read(1, window=window)
-            data = data[data != ds.nodata]
+        nodata = ds.nodatavals[band - 1] if ds.nodatavals and len(ds.nodatavals) >= band else ds.nodata
+        for ji, window in ds.block_windows(band):
+            data = ds.read(band, window=window)
+            if nodata is not None:
+                data = data[data != nodata]
             output.append(data)
 
     return np.concatenate(output)

@@ -14,33 +14,33 @@ router = APIRouter(
 
 
 @router.post("/{layer_name}/data", response_model=s.DataResponse, description="Get data for a specified wkt geometry within a layer.")
-def get_data_for_wkt(layer_name: str, body: s.GeometryBody, db: Session = Depends(get_db)):
-    return endpoints.get_data_for_wkt(db=db, layer_name=layer_name, body=body)
+def get_data_for_wkt(layer_name: str, body: s.GeometryBody, band: int = 1, db: Session = Depends(get_db)):
+    return endpoints.get_data_for_wkt(db=db, layer_name=layer_name, body=body, band=band)
 
 
 @router.post("/{layer_name}/classification", response_model=s.ClassificationResult, description="Get classification result for a specified wkt geometry within a layer.")
-def get_classification_for_wkt(layer_name: str, body: s.GeometryBody, all_touched: bool = False, db: Session = Depends(get_db)):
-    return endpoints.get_classification_for_wkt(db=db, layer_name=layer_name, body=body)
+def get_classification_for_wkt(layer_name: str, body: s.GeometryBody, all_touched: bool = False, band: int = 1, db: Session = Depends(get_db)):
+    return endpoints.get_classification_for_wkt(db=db, layer_name=layer_name, body=body, band=band)
 
 
 @router.post("/{layer_name}/line_data", response_model=s.LineDataResponse, description="Get line data for a specified wkt geometry within a layer.")
-def get_line_data_for_wkt(layer_name: str, body: s.LineGeometryBody, db: Session = Depends(get_db)):
-    return endpoints.get_line_data_for_wkt(db=db, layer_name=layer_name, body=body)
+def get_line_data_for_wkt(layer_name: str, body: s.LineGeometryBody, band: int = 1, db: Session = Depends(get_db)):
+    return endpoints.get_line_data_for_wkt(db=db, layer_name=layer_name, body=body, band=band)
 
 
 @router.post("/line_data", response_model=list[s.LineData], description="Get line data list for a given wkt geometry list.")
-def get_line_data_list_for_wkt(body: s.LineGeometryListBody, db: Session = Depends(get_db)):
-    return endpoints.get_line_data_list_for_wkt(db=db, body=body)
+def get_line_data_list_for_wkt(body: s.LineGeometryListBody, band: int = 1, db: Session = Depends(get_db)):
+    return endpoints.get_line_data_list_for_wkt(db=db, body=body, band=band)
 
 
 @router.post("/multi_line_data", response_model=list[s.MultiLineData], description="Get multi-line data list for a given wkt geometry list.")
-def get_multi_line_data_list_for_wkt(body: s.MultiLineGeometryListBody, db: Session = Depends(get_db)):
-    return endpoints.get_multi_line_data_list_for_wkt(db=db, body=body)
+def get_multi_line_data_list_for_wkt(body: s.MultiLineGeometryListBody, band: int = 1, db: Session = Depends(get_db)):
+    return endpoints.get_multi_line_data_list_for_wkt(db=db, body=body, band=band)
 
 
 @router.get("/{layer_name}/point", response_model=s.PointResponse, description="Get point value for a given coordinate (in 4326) from a layer.")
-def get_point_value_from_layer(layer_name: str, x: float, y: float, db: Session = Depends(get_db)):
-    return endpoints.get_point_value_from_layer(db=db, layer_name=layer_name, x=x, y=y)
+def get_point_value_from_layer(layer_name: str, x: float, y: float, band: int = 1, db: Session = Depends(get_db)):
+    return endpoints.get_point_value_from_layer(db=db, layer_name=layer_name, x=x, y=y, band=band)
 
 
 @router.post("/{layer_name}/object", response_class=ORJSONResponse, description="Get object list for a given line wkt geometry within a layer.")

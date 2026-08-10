@@ -32,9 +32,13 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody) -> Response:
     nodata = None
     path_list = []
     arguments_list = []
-    fill_path_and_argument_lists(arguments_list, body.layer_list, db, nodata, path_list)
+    try:
+        fill_path_and_argument_lists(arguments_list, body.layer_list, db, nodata, path_list)
+    except ValueError as e:
+        return Response(content=str(e), status_code=status.HTTP_406_NOT_ACCEPTABLE)
     fixed_path_list = align_files(base_path, path_list, unique_identifier)
     unique_values = get_unique_values(arguments_list, fixed_path_list)
+    selected_bands = [None if arg['is_rgb'] else arg.get('band', 1) for arg in arguments_list]
     logger.info(f'perform_operation {time.time() - t} {unique_values}')
     process_raster_list_with_function_in_chunks(fixed_path_list, os.path.join(base_path, raster_name), fixed_path_list[0],
                                                 function_to_apply=perform_operation,
@@ -42,7 +46,8 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody) -> Response:
                                                 chunks=16,
                                                 output_bands=4 if body.rgb else 1,
                                                 dtype=np.uint8 if body.rgb else np.float32 if unique_values else None,
-                                                out_nodata=255 if body.rgb else -9999)
+                                                out_nodata=255 if body.rgb else -9999,
+                                                bands=selected_bands)
     if body.rescale_result:
         process_rescaling(base_path, body, -9999, raster_name, t)
 
@@ -52,10 +57,14 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody) -> Response:
         tmp_raster_path = os.path.join(base_path, raster_name.replace('.tif', 'tmp.tif'))
         os.rename(src=os.path.join(base_path, raster_name), dst=tmp_raster_path)
         path_list.append(tmp_raster_path)
-        arguments_list.append({'nodata': -9999, 'factor': 1, 'operation': s.AllowedOperations.add, 'is_rgb': False})
-        fill_path_and_argument_lists(arguments_list, body.layer_list_after_rescale, db, nodata, path_list)
+        arguments_list.append({'nodata': -9999, 'factor': 1, 'operation': s.AllowedOperations.add, 'is_rgb': False, 'band': 1})
+        try:
+            fill_path_and_argument_lists(arguments_list, body.layer_list_after_rescale, db, nodata, path_list)
+        except ValueError as e:
+            return Response(content=str(e), status_code=status.HTTP_406_NOT_ACCEPTABLE)
         fixed_path_list = align_files(base_path, path_list, unique_identifier)
         unique_values = get_unique_values(arguments_list, fixed_path_list)
+        selected_bands = [None if arg['is_rgb'] else arg.get('band', 1) for arg in arguments_list]
         logger.info(f'perform_operation {time.time() - t} {unique_values}')
         process_raster_list_with_function_in_chunks(fixed_path_list, os.path.join(base_path, raster_name), fixed_path_list[0],
                                                     function_to_apply=perform_operation,
@@ -63,7 +72,8 @@ def raster_calculation(db: Session, body: s.RasterCalculationBody) -> Response:
                                                     chunks=16,
                                                     output_bands=4 if body.rgb else 1,
                                                     dtype=np.uint8 if body.rgb else np.float32 if unique_values else None,
-                                                    out_nodata=255 if body.rgb else -9999)
+                                                    out_nodata=255 if body.rgb else -9999,
+                                                    bands=selected_bands)
 
     build_overview_tiles = [2, 4, 8, 16, 32, 64]
     with rasterio.open(os.path.join(base_path, raster_name), mode='r+') as dataset:

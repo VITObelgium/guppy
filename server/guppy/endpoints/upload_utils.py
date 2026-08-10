@@ -25,7 +25,7 @@ def validate_raster(file_path: str) -> list:
     - EPSG/CRS required
     - NoData required
     - Transform required
-    - Single band required
+    - Multi-band allowed
     - Scale/Offset forbidden
     Args:
         file_path (str): The file path of the raster file to be validated.
@@ -41,17 +41,19 @@ def validate_raster(file_path: str) -> list:
             if src.crs is None:
                 errors.append("Invalid CRS")
             # Validate NoData
-            if src.nodatavals[0] is None:
-                errors.append("Invalid NoData")
+            invalid_nodata_bands = [idx + 1 for idx, nodata in enumerate(src.nodatavals) if nodata is None]
+            if invalid_nodata_bands:
+                errors.append(f"Invalid NoData (band(s): {', '.join([str(b) for b in invalid_nodata_bands])})")
             # Validate transform
             if src.transform is None:
                 errors.append("Invalid Transform")
-            # Validate single band
-            if src.count != 1:
-                errors.append("More than one band")
             # Validate scale/offset
-            if src.scales[0] != 1.0 or src.offsets[0] != 0.0:
-                errors.append("Has scale/offset")
+            invalid_scale_offset_bands = [
+                idx + 1 for idx, (scale, offset) in enumerate(zip(src.scales, src.offsets))
+                if scale != 1.0 or offset != 0.0
+            ]
+            if invalid_scale_offset_bands:
+                errors.append(f"Has scale/offset (band(s): {', '.join([str(b) for b in invalid_scale_offset_bands])})")
     else:
         logger.error("file not exists")
         errors.append("file not exists")

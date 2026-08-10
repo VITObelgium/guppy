@@ -55,7 +55,7 @@ def no_nan(input):
     return input
 
 
-def create_stats_response_polygon(path, geom, layer_model, overview_factor: int, layer_name: str = None):
+def create_stats_response_polygon(path, geom, layer_model, overview_factor: int, layer_name: str = None, band: int = 1):
     """
     Create a statistics response based on the polygon method for small raster datasets.
 
@@ -83,12 +83,17 @@ def create_stats_response_polygon(path, geom, layer_model, overview_factor: int,
     """
     logger.info("fallback to polygon method for small raster in stats")
     with rasterio.open(path, overview_level=overview_factor) as src:
-        rst, crop_transform = _extract_area_from_dataset(src, [geom], crop=True, all_touched=True, is_rgb=layer_model.is_rgb)
+        rst, crop_transform = _extract_area_from_dataset(src, [geom], crop=True, all_touched=True, is_rgb=layer_model.is_rgb, band=band)
         if layer_model.is_rgb:
             rst = _decode(rst)
         shape_mask = _extract_shape_mask_from_dataset(src, [geom], all_touched=True, crop=True)
         pixel_res = abs(src.res[0] * src.res[1])
-        nodata = src.nodata if src.nodata is not None else -9999
+        if layer_model.is_rgb:
+            nodata = src.nodata if src.nodata is not None else -9999
+        else:
+            nodata = src.nodatavals[band - 1] if src.nodatavals and len(src.nodatavals) >= band and src.nodatavals[band - 1] is not None else src.nodata
+            if nodata is None:
+                nodata = -9999
         crs = src.crs.to_epsg()
     transform_to_use = crop_transform if crop_transform is not None else src.transform
     mask = np.where(shape_mask == 0, rst, nodata)
@@ -208,7 +213,7 @@ def create_quantile_response(rst: np.array, nodata: float, type: str, quantiles:
     return response
 
 
-def _extract_area_from_dataset(raster_ds, geom, crop=True, all_touched=False, is_rgb=False):
+def _extract_area_from_dataset(raster_ds, geom, crop=True, all_touched=False, is_rgb=False, band: int = 1):
     """
     Args:
         raster_ds: A raster dataset from which to extract the area.
@@ -221,10 +226,10 @@ def _extract_area_from_dataset(raster_ds, geom, crop=True, all_touched=False, is
         If is_rgb is True, returns a tuple containing the cropped array and the transform. If is_rgb is False, returns a tuple containing the cropped array (with shape (1, height, width
     *)) and the transform.
     """
-    crop_arr, crop_transform = mask(raster_ds, geom, crop=crop, all_touched=all_touched)
-    if is_rgb:
-        return crop_arr, crop_transform
-    crop_arr = crop_arr[0]
+    indexes = None if is_rgb else band
+    crop_arr, crop_transform = mask(raster_ds, geom, crop=crop, all_touched=all_touched, indexes=indexes)
+    if not is_rgb and crop_arr.ndim == 3:
+        crop_arr = crop_arr[0]
     return crop_arr, crop_transform
 
 
@@ -401,7 +406,7 @@ def remove_from_cache(layer_name):
         del layer_data_cache[layer_name]
 
 
-def sample_coordinates(coords, path, layer_name):
+def sample_coordinates(coords, path, layer_name, band: int = 1):
     """
     Args:
         coords (list): The list of coordinates to sample from the raster file.
@@ -415,7 +420,7 @@ def sample_coordinates(coords, path, layer_name):
     result = []
     if os.path.exists(path[1:]):
         with rasterio.open(path[1:]) as src:
-            x = src.sample(coords, indexes=1)
+            x = src.sample(coords, indexes=band)
             for v in x:
                 result.append(v[0])
     else:
@@ -423,7 +428,7 @@ def sample_coordinates(coords, path, layer_name):
     return {'layerName': layer_name, 'data': result}
 
 
-def sample_coordinates_window(coords_dict, layer_models, bounds, round_val=None):
+def sample_coordinates_window(coords_dict, layer_models, bounds, round_val=None, band: int = 1):
     """
     Args:
         coords_dict: A dictionary containing the coordinates for each layer. The keys of the dictionary represent the layer names, and the values are lists of coordinate tuples (x, y).
@@ -449,7 +454,7 @@ def sample_coordinates_window(coords_dict, layer_models, bounds, round_val=None)
         in_cols = []
         out_idx = []
         in_idx = []
-        data = src.read(1, window=geometry_window)
+        data = src.read(band, window=geometry_window)
         clipped_data = np.full((max(math.ceil(geometry_window.height), data.shape[0]), max(data.shape[1], math.ceil(geometry_window.width))), fill_value=0, dtype=np.float32)
         if data.shape == clipped_data.shape:
             clipped_data = data
@@ -472,11 +477,11 @@ def sample_coordinates_window(coords_dict, layer_models, bounds, round_val=None)
                 in_cols.append(c)
 
     for layer_model in layer_models:
-        result_all.append(sample_layer(in_cols, in_idx, in_rows, layer_model, out_idx, geometry_window, round_val))
+        result_all.append(sample_layer(in_cols, in_idx, in_rows, layer_model, out_idx, geometry_window, round_val, band=band))
     return result_all
 
 
-def sample_layer(in_cols, in_idx, in_rows, layer_model, out_idx, geometry_window, round_val: int = None):
+def sample_layer(in_cols, in_idx, in_rows, layer_model, out_idx, geometry_window, round_val: int = None, band: int = 1):
     """
     Args:
         in_cols: List[int]: List of column indices to extract values from the clipped data.
@@ -493,8 +498,8 @@ def sample_layer(in_cols, in_idx, in_rows, layer_model, out_idx, geometry_window
     """
     path = layer_model.file_path[1:]
     with rasterio.open(path) as src:
-        data = src.read(1, window=geometry_window)
-        nodata = src.nodata
+        data = src.read(band, window=geometry_window)
+        nodata = src.nodatavals[band - 1] if src.nodatavals and len(src.nodatavals) >= band else src.nodata
         if nodata is None:
             nodata = -9999
 

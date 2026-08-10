@@ -27,9 +27,9 @@ async def get_raster_tile(layer_name: str, z: int, x: int, y: int,
                           style: str = Query(default=None, description=f"Style should be '<b>shader_rgba</b>', '<b>custom</b>' or one of {list(cmap.data.keys())} values. <br><br>"
                                                               f"If '<b>custom</b>', extra parameters values and colors are needed like:<br> values=1.23,80.35,190.587&colors=255,0,0,255_0,255,0,255_0,0,255,255 <br>"
                                                               f"so values are comma seperated, and colors are r,g,b,a and _ seperated."),
-                          values: str = None, colors: str = None,
+                          values: str = None, colors: str = None, band: int = 1,
                           db: Session = Depends(get_db)):
-    return endpoints_rio_tiler.get_tile_for_layer(layer_name=layer_name, db=db, z=z, x=x, y=y, style=style, values=values, colors=colors)
+    return endpoints_rio_tiler.get_tile_for_layer(layer_name=layer_name, db=db, z=z, x=x, y=y, style=style, values=values, colors=colors, band=band)
 
 
 @router.post("/vector/{layer_name}/search", description="Search for a vector tile for a specified layer.")

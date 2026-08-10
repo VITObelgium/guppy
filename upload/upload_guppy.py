@@ -1,10 +1,12 @@
 import glob
 import os
 import sqlite3
+import xml.etree.ElementTree as ET
 
 import mercantile
 import numpy as np
 import rasterio
+import rasterio.errors
 import requests
 from fastapi import HTTPException
 from joblib import Parallel, delayed
@@ -14,9 +16,8 @@ from rio_tiler.errors import TileOutsideBounds
 from rio_tiler.io import Reader
 from rio_tiler.models import ImageData
 from rio_tiler.profiles import img_profiles
-from starlette.responses import Response
 from tqdm import tqdm
-import xml.etree.ElementTree as ET
+
 
 def data_to_rgba(data: np.ndarray, nodata):
     """
@@ -45,7 +46,7 @@ def data_to_rgba(data: np.ndarray, nodata):
     return np.ma.MaskedArray(rgb)
 
 
-def get_tile(file_path: str, z: int, x: int, y: int, style: str = None, values: str = None, colors: str = None) -> Response:
+def get_tile(file_path: str, z: int, x: int, y: int, style: str = None, values: str = None, colors: str = None, colormap_params: dict = None) -> bytes:
     """
     Args:
         file_path: A string representing the path to the file.
@@ -55,6 +56,7 @@ def get_tile(file_path: str, z: int, x: int, y: int, style: str = None, values: 
         style: An optional string representing the style of the tile.
         values: An optional string representing the values for the custom style.
         colors: An optional string representing the colors for the custom style.
+        colormap_params: An optional dictionary containing pre-computed colormap parameters.
 
     Returns:
         A Response object containing the rendered tile image in PNG format, or raises an HTTPException with a status code of 404 and a corresponding detail message.
@@ -63,16 +65,22 @@ def get_tile(file_path: str, z: int, x: int, y: int, style: str = None, values: 
     try:
         img = None
         nodata = None
+        if colormap_params:
+            nodata = colormap_params.get("nodata")
+            stats = colormap_params.get("stats")
+
         with Reader(file_path) as cog:
             try:
-                img = cog.tile(x, y, z,indexes=1)
-                nodata = cog.dataset.nodata
+                img = cog.tile(x, y, z, indexes=1)
+                if nodata is None:
+                    nodata = cog.dataset.nodata
             except TileOutsideBounds:
                 return None
             except Exception as e:
                 print(e)
-            if img and img.dataset_statistics is None:
+            if img and img.dataset_statistics is None and not colormap_params:
                 # gdal.Info(file_path, computeMinMax=True, stats=True)
+                print(".")
                 stats = cog.statistics()["b1"]
         if img:
             colormap = None
@@ -82,7 +90,10 @@ def get_tile(file_path: str, z: int, x: int, y: int, style: str = None, values: 
                     img.array = data_to_rgba(img.data[0], nodata)
                     add_mask = False
                 else:
-                    if img.dataset_statistics:
+                    if colormap_params:
+                        min_val = colormap_params["min_val"]
+                        max_val = colormap_params["max_val"]
+                    elif img.dataset_statistics:
                         min_val = img.dataset_statistics[0][0]
                         max_val = img.dataset_statistics[0][1]
                     else:
@@ -90,45 +101,47 @@ def get_tile(file_path: str, z: int, x: int, y: int, style: str = None, values: 
                         max_val = stats.max
 
                     if style in ["custom", "values", "intervals"]:
-                        if not values or not colors:
-                            raise HTTPException(status_code=400, detail="values and colors must be provided for a custom style")
-                        value_points = [float(x) for x in values.split(",")]
-
-                        if "_" in colors:
-                            colors_points = [(int(x), int(y), int(z), int(a)) for x, y, z, a in [color.split(",") for color in colors.split("_")]]
+                        if colormap_params:
+                            value_points = colormap_params["value_points"]
+                            colors_points = colormap_params["colors_points"]
+                            processed_colors = colormap_params["processed_colors"]
                         else:
-                            colors_points = [str(x) for x in colors.split(",")]
-                        try:
-                            # Sort values and colors together, maintaining their relative positions
-                            sorted_pairs = sorted(zip(value_points, colors_points), key=lambda pair: pair[0])
-                            value_points = [pair[0] for pair in sorted_pairs]
-                            colors_points = [pair[1] for pair in sorted_pairs]
-                        except ValueError as e:
-                            raise HTTPException(
-                                status_code=400, detail="values and colors must be the same length. colors must be sets of 4 values r,g,b,a separated by commas and sets of colors separated by _"
-                            )
+                            if not values or not colors:
+                                raise HTTPException(status_code=400, detail="values and colors must be provided for a custom style")
+                            value_points = [float(x) for x in values.split(",")]
 
-                        # OPTIMIZATION: For discrete data, skip interpolation-based rescaling.
-                        if style == "values":
+                            if "_" in colors:
+                                colors_points = [(int(x), int(y), int(z), int(a)) for x, y, z, a in [color.split(",") for color in colors.split("_")]]
+                            else:
+                                colors_points = [str(x) for x in colors.split(",")]
+                            try:
+                                # Sort values and colors together, maintaining their relative positions
+                                sorted_pairs = sorted(zip(value_points, colors_points), key=lambda pair: pair[0])
+                                value_points = [pair[0] for pair in sorted_pairs]
+                                colors_points = [pair[1] for pair in sorted_pairs]
+                            except ValueError as e:
+                                raise HTTPException(
+                                    status_code=400, detail="values and colors must be the same length. colors must be sets of 4 values r,g,b,a separated by commas and sets of colors separated by _"
+                                )
                             processed_colors = []
                             if isinstance(colors_points[0], str):
                                 processed_colors = [hex_to_rgb(c) for c in colors_points]
                             else:
                                 processed_colors = colors_points
 
-                            if all(0 <= v <= 255 for v in value_points):
-                                # Fast path: values already fit in byte range, use directly
-                                colormap = {}
-                                for v, color in zip(value_points, processed_colors):
-                                    r, g, b = color[:3]
-                                    a = color[3] if len(color) > 3 else 255
-                                    colormap[int(v)] = (r, g, b, a)
-                                # Do NOT rescale — raw pixel values map directly to colormap keys
+                        # OPTIMIZATION: For discrete data, skip interpolation-based rescaling.
+                        if style == "values":
+                            if colormap_params and "colormap" in colormap_params:
+                                colormap = colormap_params["colormap"]
+                                img.rescale(in_range=[(min_val, max_val)])
                             else:
-                                # Remap unique raw values to 0-N to avoid collisions after rescaling
-                                unique_vals = sorted(set(value_points))
-                                if len(unique_vals) <= 256:
-                                    val_to_idx = {v: i for i, v in enumerate(unique_vals)}
+                                val_to_idx = colormap_params.get("val_to_idx") if colormap_params else None
+                                if not val_to_idx:
+                                    unique_vals = sorted(set(value_points))
+                                    if len(unique_vals) <= 256:
+                                        val_to_idx = {v: i for i, v in enumerate(unique_vals)}
+
+                                if val_to_idx:
                                     # Remap image data: replace each raw value with its compact index
                                     raw_data = img.array.data[0].astype(np.float32)
                                     remapped = np.full_like(raw_data, 255, dtype=np.uint8)
@@ -159,12 +172,6 @@ def get_tile(file_path: str, z: int, x: int, y: int, style: str = None, values: 
                                     img.rescale(in_range=[(min_val, max_val)])
                                     colormap = generate_colormap_discrete(min_val, max_val, value_points, colors_points)
                         elif style == "intervals":
-                            processed_colors = []
-                            if isinstance(colors_points[0], str):
-                                processed_colors = [hex_to_rgb(c) for c in colors_points]
-                            else:
-                                processed_colors = colors_points
-
                             n_intervals = len(value_points)
                             if n_intervals <= 256:
                                 # Remap each pixel to the interval index it falls into
@@ -191,10 +198,13 @@ def get_tile(file_path: str, z: int, x: int, y: int, style: str = None, values: 
                                     a = color[3] if len(color) > 3 else 255
                                     colormap[i] = (r, g, b, a)
                         else:
-                            min_val = min(min_val, min(value_points))
-                            max_val = max(max_val, max(value_points))
+                            if colormap_params and "colormap" in colormap_params:
+                                colormap = colormap_params["colormap"]
+                            else:
+                                min_val = min(min_val, min(value_points))
+                                max_val = max(max_val, max(value_points))
+                                colormap = generate_colormap(min_val, max_val, value_points, colors_points)
                             img.rescale(in_range=[(min_val, max_val)])
-                            colormap = generate_colormap(min_val, max_val, value_points, colors_points)
 
             elif img.dataset_statistics:
                 img.rescale(in_range=img.dataset_statistics)
@@ -203,7 +213,7 @@ def get_tile(file_path: str, z: int, x: int, y: int, style: str = None, values: 
             content = img.render(img_format="PNG", colormap=colormap, add_mask=add_mask, **img_profiles.get("png"))
             img = None
             del img
-            return Response(content, media_type="image/png")
+            return content
     except TileOutsideBounds:
         pass
 
@@ -232,7 +242,7 @@ def hex_to_rgb(hex_color):
 
     """
     hex_color = hex_color.lstrip("#")
-    return tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
+    return tuple(int(hex_color[i: i + 2], 16) for i in (0, 2, 4))
 
 
 def generate_colormap_discrete(min_val, max_val, value_points, colors):
@@ -263,6 +273,7 @@ def generate_colormap_discrete(min_val, max_val, value_points, colors):
 
     return final_colormap
 
+
 def generate_colormap(min_val, max_val, value_points, colors):
     # Map the provided value_points from [min_val, max_val] to [0, 255]
     rescaled_points = np.interp(value_points, (min_val, max_val), (0, 255))
@@ -288,23 +299,95 @@ def generate_colormap(min_val, max_val, value_points, colors):
     return final_colormap
 
 
-def process_tile(coord, z, geotiff_path, style, values, colors):
+def process_tile(coord, z, geotiff_path, style, values, colors, colormap_params=None):
     x, y = coord
     try:
-        response = get_tile(geotiff_path, z, x, y, style, values, colors)
-        if response and response.status_code == 200:
+        response = get_tile(geotiff_path, z, x, y, style, values, colors, colormap_params=colormap_params)
+        if response:
             tms_y = (1 << z) - 1 - y
-            tile_data = response.body
+            tile_data = response
             return (z, x, tms_y, tile_data)
     except HTTPException:
         return None
 
 
+def create_cog(input_file, output_file, nodata=-9999):
+    # Disable aux.xml metadata (prevents nodata override problems)
+    translate_options = gdal.TranslateOptions(
+        format='COG',
+        creationOptions=[
+            'BIGTIFF=YES',
+            f'COMPRESS=LZW',
+            'PREDICTOR=YES',
+            'BLOCKSIZE=512',
+            'TILING_SCHEME=GoogleMapsCompatible',
+            'ADD_ALPHA=NO',
+            'STATISTICS=YES',
+            'RESAMPLING=NEAREST',
+            'OVERVIEW_RESAMPLING=NEAREST',
+            'NUM_THREADS=ALL_CPUS',
+            'SPARSE_OK=TRUE',
+            'ZOOM_LEVEL_STRATEGY=AUTO',
+            'ALIGNED_LEVELS=2',
+            'OVERVIEWS=IGNORE_EXISTING'
+        ],
+        noData=nodata
+    )
+    gdal.Translate(output_file, input_file, options=translate_options)
+    gdal.Info(output_file, computeMinMax=True, stats=True)
+
+
 def create_mbtiles(layer_name, file_path, geotiff_path, min_zoom, max_zoom, style=None, values=None, colors=None):
-    # Open the dataset to get EPSG:3857 bounds
-    with rasterio.open(geotiff_path) as dataset:
-        bounds = dataset.bounds
+    # Open the dataset to get EPSG:3857 bounds and statistics
+    with Reader(geotiff_path) as cog:
+        bounds = cog.dataset.bounds
+        nodata = cog.dataset.nodata
+        stats = cog.statistics()["b1"]
         gdal.Info(geotiff_path, computeMinMax=True, stats=True)
+
+    min_val = stats.min
+    max_val = stats.max
+
+    colormap_params = None
+    if style in ["custom", "values", "intervals"]:
+        if values and colors:
+            value_points = [float(x) for x in values.split(",")]
+            if "_" in colors:
+                colors_points = [(int(x), int(y), int(z), int(a)) for x, y, z, a in [color.split(",") for color in colors.split("_")]]
+            else:
+                colors_points = [str(x) for x in colors.split(",")]
+
+            # Sort values and colors together
+            sorted_pairs = sorted(zip(value_points, colors_points), key=lambda pair: pair[0])
+            value_points = [pair[0] for pair in sorted_pairs]
+            colors_points = [pair[1] for pair in sorted_pairs]
+
+            processed_colors = []
+            if isinstance(colors_points[0], str):
+                processed_colors = [hex_to_rgb(c) for c in colors_points]
+            else:
+                processed_colors = colors_points
+
+            colormap_params = {
+                "value_points": value_points,
+                "colors_points": colors_points,
+                "processed_colors": processed_colors,
+                "min_val": min_val,
+                "max_val": max_val,
+                "nodata": nodata,
+                "stats": stats
+            }
+
+            if style == "values":
+                unique_vals = sorted(set(value_points))
+                if len(unique_vals) <= 256:
+                    colormap_params["val_to_idx"] = {v: i for i, v in enumerate(unique_vals)}
+                else:
+                    colormap_params["colormap"] = generate_colormap_discrete(min_val, max_val, value_points, colors_points)
+            elif style == "intervals":
+                pass  # Logic still needs to happen per-tile for remapping, but we have processed_colors
+            else:  # custom (interpolation)
+                colormap_params["colormap"] = generate_colormap(min_val, max_val, value_points, colors_points)
 
     transformer = Transformer.from_crs("EPSG:3857", "EPSG:4326", always_xy=True)
     min_lon, min_lat = transformer.transform(bounds.left, bounds.bottom)
@@ -336,7 +419,7 @@ def create_mbtiles(layer_name, file_path, geotiff_path, min_zoom, max_zoom, styl
         min_y = min(tile.y for tile in tiles)
         max_y = max(tile.y for tile in tiles)
         coords = [(x, y) for x in range(min_x, max_x + 1) for y in range(min_y, max_y + 1)]
-        results = Parallel(n_jobs=-1)(delayed(process_tile)(coord, z, geotiff_path, style, values, colors) for coord in tqdm(coords))
+        results = Parallel(n_jobs=-1)(delayed(process_tile)(coord, z, geotiff_path, style, values, colors, colormap_params=colormap_params) for coord in tqdm(coords))
         coords = None
         for result in results:
             z, x, tms_y, tile_data = result
@@ -360,34 +443,38 @@ def save_geotif_tiled_overviews(input_file: str, output_file: str, nodata: int) 
     Returns:
         The path to the saved output GeoTIFF file.
     """
-    if os.path.exists(output_file):
-        return output_file
+    # if os.path.exists(output_file):
+    #     return output_file
     with rasterio.open(input_file) as src:
         target_crs = rasterio.crs.CRS.from_epsg(code=3857)
         tmp_input_file = None
-        if src.crs != target_crs or nodata != src.nodata:
-            transform, width, height = rasterio.warp.calculate_default_transform(src.crs, target_crs, src.width, src.height, *src.bounds)
-            profile = src.profile
-            profile.update(crs=target_crs, transform=transform, width=width, height=height)
-            tmp_input_file = os.path.join("c:/dev/", os.path.basename(input_file).replace(".tif", "_tmp.tif"))
-            with rasterio.open(tmp_input_file, "w", **profile) as dst:
-                for i in range(1, src.count + 1):
-                    rasterio.warp.reproject(
-                        source=rasterio.band(src, i),
-                        destination=rasterio.band(dst, i),
-                        src_transform=src.transform,
-                        src_crs=src.crs,
-                        dst_transform=transform,
-                        dst_crs=target_crs,
-                        resampling=rasterio.enums.Resampling.nearest,
-                        dst_nodata=nodata,
-                    )
-    if tmp_input_file:
-        input_file = tmp_input_file
+        # if src.crs != target_crs or nodata != src.nodata:
+        transform, width, height = rasterio.warp.calculate_default_transform(src.crs, target_crs, src.width, src.height, *src.bounds)
+        profile = src.profile
+        profile.update(driver='GTiff', crs=target_crs, transform=transform, width=width, height=height, nodata=nodata, tiled=True)
+        # tmp_input_file = os.path.join("c:/dev/", os.path.basename(input_file).replace(".tif", "_tmp.tif"))
+        with rasterio.open(output_file, "w", **profile) as dst:
+            for i in range(1, src.count + 1):
+                rasterio.warp.reproject(
+                    source=rasterio.band(src, i),
+                    destination=rasterio.band(dst, i),
+                    src_transform=src.transform,
+                    src_crs=src.crs,
+                    dst_transform=transform,
+                    dst_crs=target_crs,
+                    resampling=rasterio.enums.Resampling.nearest,
+                    dst_nodata=nodata,
+                )
 
-    translate_options = gdal.TranslateOptions(gdal.ParseCommandLine(f"-of COG -co COMPRESS=ZSTD -co BIGTIFF=YES -a_nodata {nodata} -co BLOCKSIZE=256 -co RESAMPLING=NEAREST"))
-    gdal.Translate(output_file, input_file, options=translate_options)
-    gdal.Info(output_file, computeMinMax=True, stats=True)
+    # if tmp_input_file:
+    #     input_file = tmp_input_file
+    # create_cog(input_file, output_file, nodata)
+
+    with rasterio.open(output_file) as ds:
+        if ds.nodata is not None:
+            print(ds.nodata)
+        else:
+            exit("nodata error")
     if tmp_input_file:
         os.remove(tmp_input_file)
     return output_file
@@ -419,139 +506,141 @@ def upload_layer(layer_name, file_path):
     body = {"layerName": layer_name, "label": layer_name, "filePath": file_path, "isRgb": False, "isMbtile": False}
     response = requests.post(url, json=body)
     print(response.status_code, response.text)
+
+
 mapping = [
-    {
-        "layer": "nwv_landgebruik_v3",
-        "sld": "v2/sld/landuse"
-    },
-    {
-        "layer": "nwv_drainage_v2",
-        "sld": "v2/sld/soilMoisture"
-    },
-    {
-        "layer": "nwv_profiel_v2",
-        "sld": "v2/sld/soilStructure"
-    },
-    {
-        "layer": "nwv_textuur_v2",
-        "sld": "v2/sld/soilTexture"
-    },
-    {
-        "layer": "nwv_wrb_v2",
-        "sld": "v2/sld/soilClassification"
-    },
-    {
-        "layer": "nwv_veen_v2",
-        "sld": "v2/sld/peat"
-    },
-    {
-        "layer": "nwv_ghg_v2",
-        "sld": "v2/sld/ghg"
-    },
-    {
-        "layer": "nwv_glg_v2",
-        "sld": "v2/sld/glg"
-    },
-    {
-        "layer": "nwv_helling_v2",
-        "sld": "v2/sld/slopePercentage"
-    },
-    {
-        "layer": "nwv_lsfactor_v2",
-        "sld": "v2/sld/lsFactor"
-    },
-    {
-        "layer": "nwv_ferrarisbos_v2",
-        "sld": "v2/sld/ferrarisPercentage"
-    },
-    {
-        "layer": "nwv_publiek-prive-bos_v2",
-        "sld": "v2/sld/privateWoodPercentage"
-    },
-    {
-        "layer": "nwv_pm10_v2",
-        "sld": "v2/sld/concentrationPM10"
-    },
-    {
-        "layer": "nwv_pm25_v2",
-        "sld": "v2/sld/concentrationPM25"
-    },
-    {
-        "layer": "nwv_rfactor_v2",
-        "sld": "v2/sld/rFactor"
-    },
-    {
-        "layer": "nwv_kfactor_v2",
-        "sld": "v2/sld/kFactor"
-    },
-    {
-        "layer": "nwv_regenval_v2",
-        "sld": "v2/sld/rainfall"
-    },
+    # {
+    #     "layer": "nwv_landgebruik_v3",
+    #     "sld": "v2/sld/landuse"
+    # },
+    # {
+    #     "layer": "nwv_drainage_v2",
+    #     "sld": "v2/sld/soilMoisture"
+    # },
+    # {
+    #     "layer": "nwv_profiel_v2",
+    #     "sld": "v2/sld/soilStructure"
+    # },
+    # {
+    #     "layer": "nwv_textuur_v2",
+    #     "sld": "v2/sld/soilTexture"
+    # },
+    # {
+    #     "layer": "nwv_wrb_v2",
+    #     "sld": "v2/sld/soilClassification"
+    # },
+    # {
+    #     "layer": "nwv_veen_v2",
+    #     "sld": "v2/sld/peat"
+    # },
+    # {
+    #     "layer": "nwv_ghg_v2",
+    #     "sld": "v2/sld/ghg"
+    # },
+    # {
+    #     "layer": "nwv_glg_v2",
+    #     "sld": "v2/sld/glg"
+    # },
+    # {
+    #     "layer": "nwv_helling_v2",
+    #     "sld": "v2/sld/slopePercentage"
+    # },
+    # {
+    #     "layer": "nwv_lsfactor_v2",
+    #     "sld": "v2/sld/lsFactor"
+    # },
+    # {
+    #     "layer": "nwv_ferrarisbos_v2",
+    #     "sld": "v2/sld/ferrarisPercentage"
+    # },
+    # {
+    #     "layer": "nwv_publiek-prive-bos_v2",
+    #     "sld": "v2/sld/privateWoodPercentage"
+    # },
+    # {
+    #     "layer": "nwv_pm10_v2",
+    #     "sld": "v2/sld/concentrationPM10"
+    # },
+    # {
+    #     "layer": "nwv_pm25_v2",
+    #     "sld": "v2/sld/concentrationPM25"
+    # },
+    # {
+    #     "layer": "nwv_rfactor_v2",
+    #     "sld": "v2/sld/rFactor"
+    # },
+    # {
+    #     "layer": "nwv_kfactor_v2",
+    #     "sld": "v2/sld/kFactor"
+    # },
+    # {
+    #     "layer": "nwv_regenval_v2",
+    #     "sld": "v2/sld/rainfall"
+    # },
     {
         "layer": "nwv_street-canyons_v2",
         "sld": "v2/sld/canyon"
     },
-    {
-        "layer": "nwv_bwk_v2",
-        "sld": "v2/sld/biologicalValuation"
-    },
-    {
-        "layer": "nwv_relief-score_v2",
-        "sld": "v2/sld/reliefScore"
-    },
-    {
-        "layer": "nwv_cultuurhistorisch-score_v2",
-        "sld": "v2/sld/culturalHistoricalValueScore"
-    },
-    {
-        "layer": "nwv_horizon-score_v2",
-        "sld": "v2/sld/visualPollutionScore"
-    },
-    {
-        "layer": "nwv_geluid_v2",
-        "sld": "v2/sld/noiseLevelScore"
-    },
-    {
-        "layer": "nwv_padendensiteit_v2",
-        "sld": "v2/sld/pathDensityScore"
-    },
-    {
-        "layer": "nwv_recreatie-wandelaars_v2",
-        "sld": "v2/sld/visitsWalking"
-    },
-    {
-        "layer": "nwv_recreatie-fietsen_v2",
-        "sld": "v2/sld/visitsCycling"
-    },
-    {
-        "layer": "nwv_recreatie-auto_v2",
-        "sld": "v2/sld/visitsCar"
-    },
-    {
-        "layer": "nwv_recreatie-toeristen_v2",
-        "sld": "v2/sld/visitsTourism"
-    },
-    {
-        "layer": "nwv_publiek-prive-bos_v3",
-        "sld": "v2/sld/privateWoodPercentage"
-    },
-    {
-        "layer": "nwv_kfactor_v3",
-        "sld": "v2/sld/kFactor"
-    },
-    {
-        "layer": "nwv_profiel_v3",
-        "sld": "v2/sld/soilStructure"
-    },
-    {
-        "layer": "nwv_drainage_v3",
-        "sld": "v2/sld/soilMoisture"
-    },
-    {
-        "layer": "nwv_textuur_v3",
-        "sld": "v2/sld/soilTexture"
-    },
+    # {
+    #     "layer": "nwv_bwk_v2",
+    #     "sld": "v2/sld/biologicalValuation"
+    # },
+    # {
+    #     "layer": "nwv_relief-score_v2",
+    #     "sld": "v2/sld/reliefScore"
+    # },
+    # {
+    #     "layer": "nwv_cultuurhistorisch-score_v2",
+    #     "sld": "v2/sld/culturalHistoricalValueScore"
+    # },
+    # {
+    #     "layer": "nwv_horizon-score_v2",
+    #     "sld": "v2/sld/visualPollutionScore"
+    # },
+    # {
+    #     "layer": "nwv_geluid_v2",
+    #     "sld": "v2/sld/noiseLevelScore"
+    # },
+    # {
+    #     "layer": "nwv_padendensiteit_v2",
+    #     "sld": "v2/sld/pathDensityScore"
+    # },
+    # {
+    #     "layer": "nwv_recreatie-wandelaars_v2",
+    #     "sld": "v2/sld/visitsWalking"
+    # },
+    # {
+    #     "layer": "nwv_recreatie-fietsen_v2",
+    #     "sld": "v2/sld/visitsCycling"
+    # },
+    # {
+    #     "layer": "nwv_recreatie-auto_v2",
+    #     "sld": "v2/sld/visitsCar"
+    # },
+    # {
+    #     "layer": "nwv_recreatie-toeristen_v2",
+    #     "sld": "v2/sld/visitsTourism"
+    # },
+    # {
+    #     "layer": "nwv_publiek-prive-bos_v3",
+    #     "sld": "v2/sld/privateWoodPercentage"
+    # },
+    # {
+    #     "layer": "nwv_kfactor_v3",
+    #     "sld": "v2/sld/kFactor"
+    # },
+    # {
+    #     "layer": "nwv_profiel_v3",
+    #     "sld": "v2/sld/soilStructure"
+    # },
+    # {
+    #     "layer": "nwv_drainage_v3",
+    #     "sld": "v2/sld/soilMoisture"
+    # },
+    # {
+    #     "layer": "nwv_textuur_v3",
+    #     "sld": "v2/sld/soilTexture"
+    # },
 
 ]
 
@@ -575,7 +664,7 @@ def get_color_values_from_sld(sld_path):
         entries = root.findall(".//sld:ColorMapEntry", namespaces)
 
         if colormap_type == 'intervals':
-            out_values = [-9999] # first boundary
+            out_values = [-9999]  # first boundary
             out_colors = ['FFFFFF']  # first color (nodata start)
 
             for i in range(0, len(entries)):
@@ -597,10 +686,26 @@ def get_color_values_from_sld(sld_path):
         print(f"Error parsing SLD: {e}")
         return None, None, None
 
+
 if __name__ == "__main__":
-    root_folder = r"C:\RMAbuild\Projects\guppy2\server\guppy\content\tifs\nwv"
+    # with rasterio.open("c:/dev/textuur_v3.tif") as ds:
+    #     if ds.nodata is not None:
+    #         print(ds.nodata)
+    #     else:
+    #         exit("nodata error")
+    with Reader("c:/dev/textuur_v3.tif") as reader:
+        stats_by_band = reader.statistics(nodata=reader.dataset.nodata)
+        band_stats = stats_by_band.get("b1") if stats_by_band else None
+        if band_stats is None and stats_by_band:
+            band_stats = next(iter(stats_by_band.values()))
+        if band_stats is not None:
+            min_val = band_stats.min
+            max_val = band_stats.max
+    print(min_val, max_val)
+    exit()
+    root_folder = r"C:\dev\nwv"
     for map_item in mapping:
-        files = glob.glob(rf"{root_folder}/*{map_item['layer'].replace('nwv_','')}*.tif")
+        files = glob.glob(rf"{root_folder}/*{map_item['layer'].replace('nwv_', '')}*.tif")
         if len(files) == 0 or len(files) > 1:
             print(f"Skipping layer {map_item['layer']} found files: {files}")
             continue
@@ -611,7 +716,7 @@ if __name__ == "__main__":
         colors, values, style_type = get_color_values_from_sld(map_item["sld"])
         print(colors, values, style_type)
         # if style_type == "intervals":
-        print(laye_name,style_type)
+        print(laye_name, style_type)
         save_geotif_tiled_overviews(input_file, tif_path, -9999)
         create_mbtiles(laye_name, mbtile_path, tif_path, min_zoom=8, max_zoom=13, style=style_type, values=values, colors=colors)
         send_file_to_guppy(server='natuurwaardeverkenner', file_path=mbtile_path, data_path=None, layer_name=laye_name, layer_label=laye_name, max_zoom=13)

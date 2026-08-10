@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from guppy.config import config as cfg
 from guppy.db.dependencies import get_db
-from guppy.db.schemas import LayerMetadataBody, TileStatisticsSchema, LayerMetadataPostBody
+from guppy.db.schemas import TileStatisticsSchema, LayerMetadataPostBody
 from guppy.endpoints import endpoints_admin, endpoints_upload, endpoints_tiles
 
 router = APIRouter(

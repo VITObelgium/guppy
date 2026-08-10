@@ -13,8 +13,8 @@ router = APIRouter(
 
 
 @router.post("/contours", response_model=list[s.CountourBodyResponse], description="Get countour result for specified models.")
-def get_countour_for_models(body: s.CountourBodyList, db: Session = Depends(get_db)):
-    return endpoints.get_countour_for_models(db=db, body=body)
+def get_countour_for_models(body: s.CountourBodyList, band: int = 1, db: Session = Depends(get_db)):
+    return endpoints.get_countour_for_models(db=db, body=body, band=band)
 
 
 @router.post("/calculate", description="Perform calculation on raster data.")
