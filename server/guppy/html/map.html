@@ -138,6 +138,8 @@
     MapboxDraw.constants.classes.CONTROL_BASE = "maplibregl-ctrl";
     MapboxDraw.constants.classes.CONTROL_PREFIX = "maplibregl-ctrl-";
     MapboxDraw.constants.classes.CONTROL_GROUP = "maplibregl-ctrl-group";
+    const RASTER_MIN_VALUE = 0;
+    const RASTER_MAX_VALUE = 40;
 
     async function fetchLayers() {
         const response = await fetch(`$deploy_path$/layers?limit=1000`);
@@ -441,7 +443,22 @@
                                     id: rasterRenderLayerId,
                                     type: 'raster',
                                     source: layerId,
-                                    paint: {'raster-opacity': 0.6},
+                                    paint: {
+                                        'raster-opacity': 0.6,
+                                        // Fixed-value pseudocolor ramp (Jet-like) for COG rendering in MapLibre.
+                                        'raster-color-range': [RASTER_MIN_VALUE, RASTER_MAX_VALUE],
+                                        'raster-color': [
+                                            'interpolate',
+                                            ['linear'],
+                                            ['raster-value'],
+                                            0, '#00007F',
+                                            5, '#0000FF',
+                                            15, '#00FFFF',
+                                            25, '#FFFF00',
+                                            35, '#FF7F00',
+                                            40, '#FF0000'
+                                        ]
+                                    },
                                 });
                             }
                         } else {
