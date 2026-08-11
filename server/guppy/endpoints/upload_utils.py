@@ -332,7 +332,8 @@ def save_geotif_tiled_overviews(input_file: str, output_file: str, nodata: int) 
             'SPARSE_OK=TRUE',
             'ZOOM_LEVEL_STRATEGY=AUTO',
             'ALIGNED_LEVELS=2',
-            'OVERVIEWS=IGNORE_EXISTING'
+            'OVERVIEWS=IGNORE_EXISTING',
+            'INTERLEAVE=BAND'
         ],
         noData=nodata
     )
