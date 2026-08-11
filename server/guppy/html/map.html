@@ -243,6 +243,10 @@
 
         // Function to populate the raster layer select box
         function populateRasterLayerSelect(layers) {
+            // This page does not always include the optional raster select UI.
+            if (!rasterLayerSelect) {
+                return;
+            }
             rasterLayerSelect.innerHTML = ""; // Clear existing options
             layers
                 .filter(layer => !isVectorLayer(layer))
@@ -444,20 +448,7 @@
                                     type: 'raster',
                                     source: layerId,
                                     paint: {
-                                        'raster-opacity': 0.6,
-                                        // Fixed-value pseudocolor ramp (Jet-like) for COG rendering in MapLibre.
-                                        'raster-color-range': [RASTER_MIN_VALUE, RASTER_MAX_VALUE],
-                                        'raster-color': [
-                                            'interpolate',
-                                            ['linear'],
-                                            ['raster-value'],
-                                            0, '#00007F',
-                                            5, '#0000FF',
-                                            15, '#00FFFF',
-                                            25, '#FFFF00',
-                                            35, '#FF7F00',
-                                            40, '#FF0000'
-                                        ]
+                                        'raster-opacity': 0.6
                                     },
                                 });
                             }
