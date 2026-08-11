@@ -56,18 +56,6 @@
             margin-top: 20px;
         }
 
-        .modal-form label {
-            margin-bottom: 5px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .modal-form input,
-        .modal-form select {
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            margin-bottom: 10px;
-        }
 
         .layer-item {
             display: flex;
@@ -243,10 +231,6 @@
             }
         }
 
-        const layerModal = document.getElementById("layer-modal");
-        const openModalButton = document.getElementById("open-modal");
-        const closeModalButton = document.getElementById("close-modal");
-        const addOperationButton = document.getElementById("add-operation");
         const layerList = document.getElementById("layer-list");
         const rasterLayerSelect = document.getElementById("raster-layer");
         const operationSelect = document.getElementById("operation");
@@ -267,51 +251,6 @@
                     rasterLayerSelect.appendChild(option);
                 });
         }
-
-        // Open the modal when the button is clicked
-        openModalButton.addEventListener("click", () => {
-            layerModal.style.display = "flex"; // Show the modal
-        });
-
-        // Close the modal when the close button is clicked
-        closeModalButton.addEventListener("click", () => {
-            layerModal.style.display = "none"; // Hide the modal
-        });
-
-        // Add the operation to the list
-        addOperationButton.addEventListener("click", () => {
-            const selectedLayer = rasterLayerSelect.value;
-            const selectedOperation = operationSelect.value;
-            const factor = parseFloat(factorInput.value) || 1; // Default to 1 if not a number
-
-            if (selectedLayer && selectedOperation) {
-                const newOperation = {
-                    layer_name: selectedLayer,
-                    operation: selectedOperation,
-                    factor: factor,
-                };
-
-                layerOperations.push(newOperation);
-
-                const layerItem = document.createElement("div");
-                layerItem.className = "layer-item";
-                layerItem.innerHTML = `${selectedLayer}: ${selectedOperation} (Factor: ${factor})`;
-
-                const removeButton = document.createElement("button");
-                removeButton.className = "remove-layer";
-                removeButton.textContent = "Remove";
-                removeButton.addEventListener("click", () => {
-                    const index = layerOperations.indexOf(newOperation);
-                    if (index > -1) {
-                        layerOperations.splice(index, 1); // Remove from array
-                        layerItem.remove(); // Remove from the list
-                    }
-                });
-
-                layerItem.appendChild(removeButton);
-                layerList.appendChild(layerItem);
-            }
-        });
 
 
         function isVectorLayer(layer) {
