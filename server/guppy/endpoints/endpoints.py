@@ -6,6 +6,7 @@ import os
 import sqlite3
 import time
 import gzip
+from functools import lru_cache
 
 import geopandas as gpd
 import numpy as np
@@ -588,12 +589,12 @@ def get_combine_layers(db: Session, body: s.CombineLayersGeometryBody):
     logger.info(f'get_combine_layers 404 {time.time() - t}')
     return Response(status_code=status.HTTP_404_NOT_FOUND)
 
-
-def get_layer_contour(layer, band: int = 1):
-    if layer.is_mbtile:
-        file_path = layer.file_path
+@lru_cache(maxsize=128)
+def _get_layer_contour_cached(layer_name: str, file_path: str, is_mbtile: bool, band: int = 1, file_mtime: float = 0.0):
+    # file_mtime is intentionally part of the key to invalidate stale contours when source data changes.
+    if is_mbtile:
         if not file_path or not os.path.exists(file_path):
-            return {'layerName': layer.layer_name, 'geometry': []}
+            return {'layerName': layer_name, 'geometry': []}
 
         tile_unions = []
         uri = f'file:{file_path}?mode=ro'
@@ -602,7 +603,7 @@ def get_layer_contour(layer, band: int = 1):
                 cursor = conn.cursor()
                 max_zoom_level = cursor.execute("SELECT MAX(zoom_level) FROM tiles").fetchone()[0]
                 if max_zoom_level is None:
-                    return {'layerName': layer.layer_name, 'geometry': []}
+                    return {'layerName': layer_name, 'geometry': []}
                 cursor.execute("SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level=?", (max_zoom_level,))
                 for z, x, y_tms, tile_data in cursor:
                     if not tile_data:
@@ -626,24 +627,32 @@ def get_layer_contour(layer, band: int = 1):
                     if not valid_geoms.empty:
                         tile_unions.append(unary_union(valid_geoms.tolist()))
         except sqlite3.Error:
-            return {'layerName': layer.layer_name, 'geometry': []}
+            return {'layerName': layer_name, 'geometry': []}
 
         if not tile_unions:
-            return {'layerName': layer.layer_name, 'geometry': []}
+            return {'layerName': layer_name, 'geometry': []}
 
         combined_geom = unary_union(tile_unions)
         outline = combined_geom.boundary if not combined_geom.is_empty else combined_geom
         if outline.is_empty:
-            return {'layerName': layer.layer_name, 'geometry': []}
+            return {'layerName': layer_name, 'geometry': []}
 
-        return {'layerName': layer.layer_name, 'geometry': [{'type': 'Feature', 'properties': {}, 'geometry': mapping(outline)}]}
+        return {'layerName': layer_name, 'geometry': [{'type': 'Feature', 'properties': {}, 'geometry': mapping(outline)}]}
 
-    file_path = layer.file_path
+    if not file_path or not os.path.exists(file_path):
+        return {'layerName': layer_name, 'geometry': []}
+
     with rasterio.open(file_path) as src:
         if not _is_valid_band(src, band):
-            return {'layerName': layer.layer_name, 'geometry': []}
+            return {'layerName': layer_name, 'geometry': []}
         contour_geojson = list(dataset_features(src, bidx=band, as_mask=True, precision=1, band=False, geographic=False))
-        return {'layerName': layer.layer_name, 'geometry': contour_geojson}
+        return {'layerName': layer_name, 'geometry': contour_geojson}
+
+
+def get_layer_contour(layer: m.LayerMetadata, band: int = 1):
+    file_path = layer.file_path
+    file_mtime = os.path.getmtime(file_path) if file_path and os.path.exists(file_path) else 0.0
+    return _get_layer_contour_cached(layer.layer_name, file_path, layer.is_mbtile, band, file_mtime)
 
 
 def get_countour_for_models(db: Session, body: s.CountourBodyList, band: int = 1):
