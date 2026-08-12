@@ -3,7 +3,9 @@
 import logging
 import math
 import os
+import sqlite3
 import time
+import gzip
 
 import geopandas as gpd
 import numpy as np
@@ -18,8 +20,8 @@ from rasterio.features import dataset_features
 from rasterio.windows import from_bounds
 from rio_tiler.io import Reader
 from shapely import wkt
-from shapely.geometry import box, MultiLineString
-from shapely.ops import transform
+from shapely.geometry import box, MultiLineString, mapping
+from shapely.ops import transform, unary_union
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -588,7 +590,55 @@ def get_combine_layers(db: Session, body: s.CombineLayersGeometryBody):
 
 
 def get_layer_contour(layer, band: int = 1):
-    file_path = layer.file_path if not layer.is_mbtile else layer.data_path
+    if layer.is_mbtile:
+        file_path = layer.file_path
+        if not file_path or not os.path.exists(file_path):
+            return {'layerName': layer.layer_name, 'geometry': []}
+
+        tile_unions = []
+        uri = f'file:{file_path}?mode=ro'
+        try:
+            with sqlite3.connect(uri, uri=True) as conn:
+                cursor = conn.cursor()
+                max_zoom_level = cursor.execute("SELECT MAX(zoom_level) FROM tiles").fetchone()[0]
+                if max_zoom_level is None:
+                    return {'layerName': layer.layer_name, 'geometry': []}
+                cursor.execute("SELECT zoom_level, tile_column, tile_row, tile_data FROM tiles WHERE zoom_level=?", (max_zoom_level,))
+                for z, x, y_tms, tile_data in cursor:
+                    if not tile_data:
+                        continue
+                    try:
+                        pbf_data = gzip.decompress(bytes(tile_data))
+                    except OSError:
+                        pbf_data = bytes(tile_data)
+
+                    # MBTiles rows are stored in TMS coordinates; convert to XYZ for geometry scaling.
+                    y_xyz = (1 << z) - 1 - y_tms
+                    try:
+                        tile_df = pbf_to_geodataframe(pbf_data, x, y_xyz, z)
+                    except Exception:
+                        # Skip raster or malformed tiles; only vector features can form contours.
+                        continue
+
+                    if tile_df.empty:
+                        continue
+                    valid_geoms = tile_df.geometry[~tile_df.geometry.isna() & ~tile_df.geometry.is_empty]
+                    if not valid_geoms.empty:
+                        tile_unions.append(unary_union(valid_geoms.tolist()))
+        except sqlite3.Error:
+            return {'layerName': layer.layer_name, 'geometry': []}
+
+        if not tile_unions:
+            return {'layerName': layer.layer_name, 'geometry': []}
+
+        combined_geom = unary_union(tile_unions)
+        outline = combined_geom.boundary if not combined_geom.is_empty else combined_geom
+        if outline.is_empty:
+            return {'layerName': layer.layer_name, 'geometry': []}
+
+        return {'layerName': layer.layer_name, 'geometry': [{'type': 'Feature', 'properties': {}, 'geometry': mapping(outline)}]}
+
+    file_path = layer.file_path
     with rasterio.open(file_path) as src:
         if not _is_valid_band(src, band):
             return {'layerName': layer.layer_name, 'geometry': []}
