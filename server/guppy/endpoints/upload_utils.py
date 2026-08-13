@@ -290,6 +290,7 @@ def save_geotif_tiled_overviews(input_file: str, output_file: str, nodata: int) 
     with rasterio.open(input_file) as src:
         target_crs = rasterio.crs.CRS.from_epsg(code=3857)
         tmp_input_file = None
+        band_descriptions = tuple(src.descriptions or ())
         if np.issubdtype(src.dtypes[0], np.floating):
             target_dtype = np.float32
         else:
@@ -312,6 +313,9 @@ def save_geotif_tiled_overviews(input_file: str, output_file: str, nodata: int) 
                         resampling=rasterio.enums.Resampling.nearest,
                         dst_nodata=nodata
                     )
+                    description = band_descriptions[i - 1] if i - 1 < len(band_descriptions) else None
+                    if description:
+                        dst.set_band_description(i, description)
     if tmp_input_file:
         os.remove(input_file)
         input_file = tmp_input_file
@@ -338,6 +342,11 @@ def save_geotif_tiled_overviews(input_file: str, output_file: str, nodata: int) 
         noData=nodata
     )
     gdal.Translate(output_file, input_file, options=translate_options)
+    if any(description for description in band_descriptions):
+        with rasterio.open(output_file, 'r+') as dst:
+            for i, description in enumerate(band_descriptions[:dst.count], start=1):
+                if description:
+                    dst.set_band_description(i, description)
     gdal.Info(output_file, computeMinMax=True, stats=True)
     os.remove(input_file)
     logger.info('Done transforming tif')
