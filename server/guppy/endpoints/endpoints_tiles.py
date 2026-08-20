@@ -126,7 +126,7 @@ def get_tile(layer_name: str, db: Session, z: int, x: int, y: int, request: Requ
     if tile_data:
         etag = f'"{hashlib.sha256(tile_data).hexdigest()}"'
         cache_headers = {
-            "Cache-Control": "public, no-cache",
+            "Cache-Control": "public, max-age=300, must-revalidate",
             "ETag": etag,
         }
         if _if_none_match_matches(request.headers.get("if-none-match"), etag):
@@ -259,7 +259,7 @@ def get_cog_result(layer_name: str, request: Request, db: Session):
 
         etag = _get_cog_etag(file_path, file_size, file_stat.st_mtime_ns, start, end)
         cache_headers = {
-            "Cache-Control": "public, no-cache",
+            "Cache-Control": "public, max-age=300, must-revalidate",
             "ETag": etag,
         }
         if _if_none_match_matches(request.headers.get("if-none-match"), etag):
@@ -291,7 +291,7 @@ def get_cog_result(layer_name: str, request: Request, db: Session):
         start, end = 0, file_size - 1
         etag = _get_cog_etag(file_path, file_size, file_stat.st_mtime_ns, start, end)
         cache_headers = {
-            "Cache-Control": "public, no-cache",
+            "Cache-Control": "public, max-age=300, must-revalidate",
             "ETag": etag,
         }
         if _if_none_match_matches(request.headers.get("if-none-match"), etag):
