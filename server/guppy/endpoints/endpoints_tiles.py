@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import os
 import sqlite3
@@ -5,6 +6,7 @@ import tempfile
 import time
 from functools import lru_cache
 from typing import Optional
+from urllib.parse import quote
 
 import geopandas as gpd
 from fastapi import HTTPException, Response, Request
@@ -22,6 +24,25 @@ from guppy.endpoints.tile_utils import tile2lonlat, add_item_to_request_counter,
 from guppy.error import create_error
 
 logger = logging.getLogger(__name__)
+
+
+def _if_none_match_matches(if_none_match: Optional[str], etag: str) -> bool:
+    """Return whether an If-None-Match value weakly matches the current ETag."""
+    if not if_none_match:
+        return False
+
+    current_tag = etag.removeprefix("W/")
+    return any(
+        candidate == "*" or candidate.removeprefix("W/") == current_tag
+        for candidate in (value.strip() for value in if_none_match.split(","))
+    )
+
+
+def _get_cog_etag(file_path: str, file_size: int, modified_ns: int, start: int, end: int) -> str:
+    """Build an ASCII-safe ETag containing the COG filename and byte range."""
+    filename = quote(os.path.basename(file_path), safe="")
+    file_version = hashlib.sha256(f"{file_size}:{modified_ns}".encode("ascii")).hexdigest()
+    return f'"{filename}-{file_version}-{start}-{end}"'
 
 
 @lru_cache(maxsize=128)
@@ -78,7 +99,7 @@ def clear_tile_cache():
     logger.info("Tile cache cleared")
 
 
-def get_tile(layer_name: str, db: Session, z: int, x: int, y: int):
+def get_tile(layer_name: str, db: Session, z: int, x: int, y: int, request: Request):
     """
     Args:
         layer_name (str): The name of the layer to retrieve the tile from.
@@ -86,6 +107,7 @@ def get_tile(layer_name: str, db: Session, z: int, x: int, y: int):
         z (int): The zoom level of the tile.
         x (int): The x-coordinate of the tile.
         y (int): The y-coordinate of the tile.
+        request (Request): The incoming HTTP request, used for ETag revalidation.
 
     Raises:
         HTTPException: If the layer or MBTiles file is not found, or if an internal server error occurs.
@@ -102,13 +124,20 @@ def get_tile(layer_name: str, db: Session, z: int, x: int, y: int):
     except Exception as e:
         create_error(code=404, message=str(e))
     if tile_data:
+        etag = f'"{hashlib.sha256(tile_data).hexdigest()}"'
+        cache_headers = {
+            "Cache-Control": "public, no-cache",
+            "ETag": etag,
+        }
+        if _if_none_match_matches(request.headers.get("if-none-match"), etag):
+            return Response(status_code=304, headers=cache_headers)
+
         return Response(
             tile_data,
             media_type="application/x-protobuf",
             headers={
                 "Content-Encoding": "gzip",
-                "Cache-Control": "public, max-age=31536000",
-                "ETag": str(hash(tile_data)),
+                **cache_headers,
             },
         )
     else:
@@ -202,7 +231,8 @@ def search_tile(layer_name: str, params: QueryParams, limit: int, offset: int, d
 def get_cog_result(layer_name: str, request: Request, db: Session):
     """
     Serve COG (Cloud Optimized GeoTIFF) files with HTTP range request support.
-    This endpoint supports partial content requests which are essential for COG files.
+    This endpoint supports partial content requests and ETag revalidation, which
+    are essential for efficiently accessing COG files.
     """
     t = time.time()
     file_path = validate_layer_and_get_file_path(db, layer_name, file_type=".tif")
@@ -210,7 +240,8 @@ def get_cog_result(layer_name: str, request: Request, db: Session):
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found")
 
-    file_size = os.path.getsize(file_path)
+    file_stat = os.stat(file_path)
+    file_size = file_stat.st_size
 
     range_header = request.headers.get("range")
 
@@ -225,6 +256,14 @@ def get_cog_result(layer_name: str, request: Request, db: Session):
 
         except (ValueError, IndexError):
             raise HTTPException(status_code=400, detail="Invalid range header")
+
+        etag = _get_cog_etag(file_path, file_size, file_stat.st_mtime_ns, start, end)
+        cache_headers = {
+            "Cache-Control": "public, no-cache",
+            "ETag": etag,
+        }
+        if _if_none_match_matches(request.headers.get("if-none-match"), etag):
+            return Response(status_code=304, headers=cache_headers)
 
         def iterfile():
             with open(file_path, "rb") as file:
@@ -243,13 +282,21 @@ def get_cog_result(layer_name: str, request: Request, db: Session):
             "Accept-Ranges": "bytes",
             "Content-Length": str(end - start + 1),
             "Content-Type": "image/tiff",
-            "Cache-Control": "public, max-age=31536000",
-            "ETag": f'"{str(start)}-{str(end)}"',
+            **cache_headers,
         }
         logger.info(f"Serving COG file {file_path}    {time.time() - t}")
         return StreamingResponse(iterfile(), status_code=206, headers=headers)
 
     else:
+        start, end = 0, file_size - 1
+        etag = _get_cog_etag(file_path, file_size, file_stat.st_mtime_ns, start, end)
+        cache_headers = {
+            "Cache-Control": "public, no-cache",
+            "ETag": etag,
+        }
+        if _if_none_match_matches(request.headers.get("if-none-match"), etag):
+            return Response(status_code=304, headers=cache_headers)
+
         # Return full file
         def iterfile():
             with open(file_path, "rb") as file:
@@ -259,7 +306,8 @@ def get_cog_result(layer_name: str, request: Request, db: Session):
         headers = {
             'Accept-Ranges': 'bytes',
             'Content-Length': str(file_size),
-            'Content-Type': 'image/tiff'
+            'Content-Type': 'image/tiff',
+            **cache_headers,
         }
         logger.info(f"Serving full COG file {file_path}    {time.time() - t}")
         return StreamingResponse(iterfile(), status_code=200, headers=headers)
