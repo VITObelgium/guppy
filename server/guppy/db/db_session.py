@@ -24,7 +24,6 @@ elif config.database.type == "sqlite":
         db_url,
         echo=False,
         connect_args=connect_args,
-        poolclass=StaticPool,
         pool_pre_ping=True,
     )
 else:
