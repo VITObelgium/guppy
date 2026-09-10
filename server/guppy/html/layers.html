@@ -88,6 +88,41 @@
         .deleteButton:hover {
             background-color: #cc0000;
         }
+
+        .controls,
+        .paginationControls {
+            margin-bottom: 12px;
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .controls input[type=text] {
+            width: 260px;
+            margin-bottom: 0;
+            display: inline-block;
+        }
+
+        .controls select {
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            background: #fff;
+        }
+
+        .paginationControls button {
+            margin-right: 0;
+        }
+
+        .pageInfo {
+            color: #333;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -108,6 +143,27 @@
     <br>
     <button type="submit">Add Layer</button>
 </form>
+
+<div class="controls">
+    <label for="nameFilter">Filter name:</label>
+    <input type="text" id="nameFilter" placeholder="Type a layer name">
+    <button type="button" id="applyFilterButton">Apply</button>
+    <button type="button" id="clearFilterButton">Clear</button>
+
+    <label for="pageSize">Rows per page:</label>
+    <select id="pageSize">
+        <option value="10">10</option>
+        <option value="25" selected>25</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+    </select>
+</div>
+
+<div class="paginationControls">
+    <button type="button" id="prevPageButton">Previous</button>
+    <span class="pageInfo" id="pageInfo">Page 1</span>
+    <button type="button" id="nextPageButton">Next</button>
+</div>
 
 <div id="layersList"></div>
 
@@ -138,11 +194,60 @@
         }
     };
 
-    // No change to form submit handler above
+    const listState = {
+        page: 1,
+        pageSize: 25,
+        nameFilter: '',
+        hasNextPage: false,
+        lastLoadedCount: 0,
+    };
+
+    function escapeSqlString(value) {
+        return value.replace(/'/g, "''");
+    }
+
+    function buildLayerQueryUrl() {
+        const params = new URLSearchParams();
+        params.set('limit', String(listState.pageSize));
+        params.set('offset', String((listState.page - 1) * listState.pageSize));
+
+        if (listState.nameFilter) {
+            const escapedFilter = escapeSqlString(listState.nameFilter);
+            params.set('filter', `layer_name LIKE '%${escapedFilter}%'`);
+        }
+
+        return `$deploy_path$/layers?${params.toString()}`;
+    }
+
+    function updatePaginationControls() {
+        const prevButton = document.getElementById('prevPageButton');
+        const nextButton = document.getElementById('nextPageButton');
+        const pageInfo = document.getElementById('pageInfo');
+        const offsetStart = (listState.page - 1) * listState.pageSize + 1;
+
+        if (listState.lastLoadedCount === 0) {
+            pageInfo.textContent = `Page ${listState.page} - no results`;
+        } else {
+            const offsetEnd = offsetStart + listState.lastLoadedCount - 1;
+            pageInfo.textContent = `Page ${listState.page} - showing ${offsetStart}-${offsetEnd}`;
+        }
+
+        prevButton.disabled = listState.page === 1;
+        nextButton.disabled = !listState.hasNextPage;
+    }
 
     async function loadLayers() {
-        const response = await fetch('$deploy_path$/layers?limit=1000');
+        const response = await fetch(buildLayerQueryUrl());
+        if (!response.ok) {
+            console.error('Error loading layers');
+            return;
+        }
+
         const layers = await response.json();
+        listState.lastLoadedCount = layers.length;
+        listState.hasNextPage = layers.length === listState.pageSize;
+        updatePaginationControls();
+
         const container = document.getElementById('layersList');
         container.innerHTML = '';
         const table = document.createElement('table');
@@ -272,7 +377,7 @@
                         method: 'DELETE',
                     });
                     if (response.ok) {
-                        row.remove();
+                        await loadLayers();
                     } else {
                         console.error('Failed to delete the layer');
                     }
@@ -303,6 +408,52 @@
             }
         });
     }
+
+    document.getElementById('applyFilterButton').onclick = async () => {
+        listState.nameFilter = document.getElementById('nameFilter').value.trim();
+        listState.page = 1;
+        await loadLayers();
+    };
+
+    document.getElementById('clearFilterButton').onclick = async () => {
+        document.getElementById('nameFilter').value = '';
+        listState.nameFilter = '';
+        listState.page = 1;
+        await loadLayers();
+    };
+
+    document.getElementById('nameFilter').addEventListener('keydown', async (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            listState.nameFilter = document.getElementById('nameFilter').value.trim();
+            listState.page = 1;
+            await loadLayers();
+        }
+    });
+
+    document.getElementById('pageSize').addEventListener('change', async (event) => {
+        listState.pageSize = parseInt(event.target.value, 10);
+        listState.page = 1;
+        await loadLayers();
+    });
+
+    document.getElementById('prevPageButton').onclick = async () => {
+        if (listState.page > 1) {
+            listState.page -= 1;
+            await loadLayers();
+        }
+    };
+
+    document.getElementById('nextPageButton').onclick = async () => {
+        listState.page += 1;
+        await loadLayers();
+
+        // If we stepped beyond last page (exact limit multiple edge case), bounce back.
+        if (listState.lastLoadedCount === 0 && listState.page > 1) {
+            listState.page -= 1;
+            await loadLayers();
+        }
+    };
 
     loadLayers();
 </script>
