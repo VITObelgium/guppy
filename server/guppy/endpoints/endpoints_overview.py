@@ -8,7 +8,7 @@ import numpy as np
 import rasterio
 from fastapi import HTTPException
 from rasterio.enums import Resampling
-from rio_tiler.utils import render
+from rio_tiler.utils import render, resize_array
 from sqlalchemy.orm import Session
 from starlette.responses import Response
 
@@ -62,6 +62,16 @@ def _render_cog_overview(file_path: str, width: int, height: int) -> bytes:
             grayscale[valid] = scaled.astype(np.uint8)
         else:
             grayscale[valid] = 0
+
+        rows, columns = np.nonzero(valid)
+        grayscale = grayscale[rows[0]:rows[-1] + 1, columns.min():columns.max() + 1]
+        render_width, render_height = _fitted_size(
+            grayscale.shape[1], grayscale.shape[0], width, height
+        )
+        if grayscale.shape != (render_height, render_width):
+            grayscale = resize_array(
+                grayscale, render_height, render_width, resampling_method="bilinear"
+            )
 
     canvas = np.full((3, height, width), 255, dtype=np.uint8)
     x_offset = (width - render_width) // 2
