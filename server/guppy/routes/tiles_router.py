@@ -7,7 +7,7 @@ from starlette.responses import Response
 from guppy.config import config as cfg
 from guppy.db.dependencies import get_db
 from guppy.db.schemas import QueryParams
-from guppy.endpoints import endpoints_rio_tiler, endpoints_tiles
+from guppy.endpoints import endpoints_overview, endpoints_rio_tiler, endpoints_tiles
 
 router = APIRouter(
     prefix=f"{cfg.deploy.path}/tiles",
@@ -29,6 +29,22 @@ async def get_raster_tile(layer_name: str, z: int, x: int, y: int,
                           values: str = None, colors: str = None, band: int = 1,
                           db: Session = Depends(get_db)):
     return endpoints_rio_tiler.get_tile_for_layer(layer_name=layer_name, db=db, z=z, x=x, y=y, style=style, values=values, colors=colors, band=band)
+
+
+@router.get(
+    "/overview/{layer_name}.png",
+    responses={200: {"content": {"image/png": {}}, "description": "Layer overview PNG."}},
+    response_class=Response,
+    description="Generate a grayscale COG overview or zoom-level-8 MBTiles outline overview.",
+)
+async def get_layer_overview(
+        layer_name: str,
+        width: int = Query(..., ge=1, le=4096, description="Output width in pixels."),
+        height: int = Query(..., ge=1, le=4096, description="Output height in pixels."),
+        db: Session = Depends(get_db)):
+    return endpoints_overview.get_layer_overview(
+        layer_name=layer_name, width=width, height=height, db=db
+    )
 
 
 @router.post("/vector/{layer_name}/search", description="Search for a vector tile for a specified layer.")
