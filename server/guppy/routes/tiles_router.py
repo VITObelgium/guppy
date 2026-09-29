@@ -35,7 +35,7 @@ async def get_raster_tile(layer_name: str, z: int, x: int, y: int,
     "/overview/{layer_name}.png",
     responses={200: {"content": {"image/png": {}}, "description": "Layer overview PNG."}},
     response_class=Response,
-    description="Generate a grayscale COG overview or zoom-level-8 MBTiles outline overview.",
+    description="Generate a metadata-styled COG or vector MBTiles overview.",
 )
 async def get_layer_overview(
         layer_name: str,
