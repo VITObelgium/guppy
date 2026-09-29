@@ -8,6 +8,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from guppy.endpoints.endpoint_utils import validate_layer_and_get_file_path
+from guppy.endpoints.endpoints_overview import generate_layer_preview
 from guppy.endpoints.upload_utils import sanitize_input_str, check_layer_exists, create_preprocessed_layer_file, create_location_paths_and_check_if_exists, write_input_file_to_disk, \
     validate_file_input, insert_into_layer_metadata
 from guppy.error import create_error
@@ -50,6 +51,7 @@ def upload_file(layer_name: str, label: str, file: UploadFile, data: UploadFile 
 
     is_mbtile = create_preprocessed_layer_file(ext, file_location, sanitized_layer_name, tmp_file_location, max_zoom, process=process)
 
+    generate_layer_preview(file_location, is_mbtile, str(metadata))
     insert_into_layer_metadata(layer_uuid=sanitized_layer_name, label=label, file_path=file_location, data_path=data_location, db=db, is_rgb=is_rgb, is_mbtile=is_mbtile, metadata=metadata)
     return f"Upload successful: Layer {sanitized_layer_name} uploaded with label {label}."
 

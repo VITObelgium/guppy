@@ -39,12 +39,8 @@ async def get_raster_tile(layer_name: str, z: int, x: int, y: int,
 )
 async def get_layer_overview(
         layer_name: str,
-        width: int = Query(..., ge=1, le=4096, description="Output width in pixels."),
-        height: int = Query(..., ge=1, le=4096, description="Output height in pixels."),
         db: Session = Depends(get_db)):
-    return endpoints_overview.get_layer_overview(
-        layer_name=layer_name, width=width, height=height, db=db
-    )
+    return endpoints_overview.get_layer_overview(layer_name=layer_name, db=db)
 
 
 @router.post("/vector/{layer_name}/search", description="Search for a vector tile for a specified layer.")

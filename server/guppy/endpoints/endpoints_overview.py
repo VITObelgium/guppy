@@ -7,6 +7,8 @@ import math
 import numbers
 import os
 import sqlite3
+import tempfile
+import threading
 import unicodedata
 from contextlib import closing
 
@@ -27,7 +29,10 @@ from guppy.db.models import LayerMetadata
 
 logger = logging.getLogger(__name__)
 MBTILES_TILE_SIZE = 256
-MBTILES_OVERVIEW_LEVEL_OFFSET = 2
+MBTILES_OVERVIEW_LEVEL_OFFSET = 0
+OVERVIEW_WIDTH = 480
+OVERVIEW_HEIGHT = 320
+_PREVIEW_GENERATION_LOCK = threading.Lock()
 
 
 def _get_layer_source(db: Session, layer_name: str) -> tuple[str, bool, str | None]:
@@ -36,9 +41,50 @@ def _get_layer_source(db: Session, layer_name: str) -> tuple[str, bool, str | No
         raise HTTPException(status_code=404, detail=f"Layer not found: {layer_name}")
 
     file_path = layer.file_path
-    if not file_path or not os.path.exists(file_path):
+    if not file_path:
+        raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
+    preview_path = os.path.splitext(file_path)[0] + ".png"
+    if not os.path.isfile(file_path) and not os.path.isfile(preview_path):
         raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
     return file_path, bool(layer.is_mbtile), layer.metadata_str
+
+
+def _preview_path(file_path: str) -> str:
+    return os.path.splitext(file_path)[0] + ".png"
+
+
+def _read_cached_preview(preview_path: str) -> bytes | None:
+    try:
+        with open(preview_path, "rb") as preview:
+            return preview.read()
+    except FileNotFoundError:
+        return None
+    except OSError as exc:
+        raise HTTPException(status_code=500, detail=f"Could not read overview PNG: {exc}") from exc
+
+
+def _save_preview(preview_path: str, content: bytes) -> None:
+    temporary_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+                mode="wb",
+                dir=os.path.dirname(preview_path) or ".",
+                prefix=f".{os.path.basename(preview_path)}.",
+                suffix=".tmp",
+                delete=False,
+        ) as temporary:
+            temporary_path = temporary.name
+            temporary.write(content)
+        os.replace(temporary_path, preview_path)
+        temporary_path = None
+    except OSError as exc:
+        raise HTTPException(status_code=500, detail=f"Could not save overview PNG: {exc}") from exc
+    finally:
+        if temporary_path:
+            try:
+                os.remove(temporary_path)
+            except FileNotFoundError:
+                pass
 
 
 def _fitted_size(source_width: int, source_height: int, width: int, height: int) -> tuple[int, int]:
@@ -519,13 +565,35 @@ def _render_mbtiles_overview(
     return render(canvas, img_format="PNG")
 
 
-def get_layer_overview(layer_name: str, width: int, height: int, db: Session) -> Response:
+def generate_layer_preview(
+        file_path: str, is_mbtile: bool, metadata_str: str | None = None
+) -> bytes:
+    """Generate and cache a fixed-size preview, or return the existing cache."""
+    preview_path = _preview_path(file_path)
+    content = _read_cached_preview(preview_path)
+
+    if content is None:
+        with _PREVIEW_GENERATION_LOCK:
+            content = _read_cached_preview(preview_path)
+            if content is None:
+                if not os.path.isfile(file_path):
+                    raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
+                logger.info("Rendering overview for %s", file_path)
+                if is_mbtile:
+                    content = _render_mbtiles_overview(
+                        file_path, OVERVIEW_WIDTH, OVERVIEW_HEIGHT, metadata_str
+                    )
+                else:
+                    content = _render_cog_overview(
+                        file_path, OVERVIEW_WIDTH, OVERVIEW_HEIGHT, metadata_str
+                    )
+                _save_preview(preview_path, content)
+    return content
+
+
+def get_layer_overview(layer_name: str, db: Session) -> Response:
     file_path, is_mbtile, metadata_str = _get_layer_source(db, layer_name)
-    logger.info(f"Rendering overview for layer {layer_name}")
-    if is_mbtile:
-        content = _render_mbtiles_overview(file_path, width, height, metadata_str)
-    else:
-        content = _render_cog_overview(file_path, width, height, metadata_str)
+    content = generate_layer_preview(file_path, is_mbtile, metadata_str)
 
     return Response(
         content,
