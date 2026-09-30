@@ -250,7 +250,7 @@ def get_cog_result(layer_name: str, request: Request, db: Session):
             range_match = range_header.replace("bytes=", "").split("-")
             start = int(range_match[0]) if range_match[0] else 0
             end = int(range_match[1]) if range_match[1] else file_size - 1
-
+            end = min(end, file_size - 1)  # Ensure end does not exceed file size
             if start >= file_size or end >= file_size or start > end:
                 raise HTTPException(status_code=416, detail="Range not satisfiable")
 
