@@ -56,17 +56,18 @@ def get_stats_for_bbox(db: Session, layer_name: str, bbox_left: float, bbox_bott
     layer_model = db.query(m.LayerMetadata).filter_by(layer_name=layer_name).first()
     if layer_model:
         path = layer_model.file_path if not layer_model.is_mbtile else layer_model.data_path
-        if os.path.exists(path) and bbox_left and bbox_bottom and bbox_right and bbox_top:
+        bbox_values = (bbox_left, bbox_bottom, bbox_right, bbox_top)
+        if os.path.exists(path) and all(value is not None for value in bbox_values):
             with rasterio.open(path) as src:
-                target_srs = src.crs.to_epsg()
-            transformer = Transformer.from_crs("EPSG:4326", f"EPSG:{target_srs}")
-            bbox_bottom, bbox_left = transformer.transform(bbox_bottom, bbox_left)
-            bbox_top, bbox_right = transformer.transform(bbox_top, bbox_right)
-            overview_factor, overview_bin = get_overview_factor((bbox_bottom, bbox_left, bbox_top, bbox_right), native, path)
+                target_crs = src.crs
+            transformer = Transformer.from_crs("EPSG:4326", target_crs, always_xy=True)
+            bbox_left, bbox_bottom, bbox_right, bbox_top = transformer.transform_bounds(
+                bbox_left, bbox_bottom, bbox_right, bbox_top, densify_pts=21)
+            overview_factor, overview_bin = get_overview_factor((bbox_left, bbox_bottom, bbox_right, bbox_top), native, path)
             with rasterio.open(path, overview_level=overview_factor) as src:
                 if not _is_valid_band(src, band):
                     return Response(content=f"invalid band {band}. available range: 1-{src.count}", status_code=status.HTTP_406_NOT_ACCEPTABLE)
-                bb_input = box(bbox_bottom, bbox_left, bbox_top, bbox_right)
+                bb_input = box(bbox_left, bbox_bottom, bbox_right, bbox_top)
                 bb_raster = box(src.bounds[0], src.bounds[1], src.bounds[2], src.bounds[3])
                 intersection = bb_input.intersection(bb_raster)
                 if not intersection.is_empty:
