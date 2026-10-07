@@ -11,6 +11,7 @@ from rasterio.mask import mask, raster_geometry_mask
 from rasterio.transform import rowcol
 from rasterio.windows import from_bounds
 from shapely.geometry import shape
+from shapely.geometry.base import BaseGeometry
 from sqlalchemy.orm import Session
 
 from guppy.db import schemas as s
@@ -55,7 +56,7 @@ def no_nan(input):
     return input
 
 
-def create_stats_response_polygon(path, geom, layer_model, overview_factor: int, layer_name: str = None, band: int = 1):
+def create_stats_response_polygon(path: str, geom: BaseGeometry, layer_model, overview_factor: int | None, layer_name: str | None = None, band: int = 1):
     """
     Create a statistics response based on the polygon method for small raster datasets.
 
@@ -66,10 +67,10 @@ def create_stats_response_polygon(path, geom, layer_model, overview_factor: int,
 
     Args:
         path (str): The file path to the raster dataset.
-        geom (dict): The geometry defining the area of interest, as a GeoJSON-like dict.
+        geom (BaseGeometry): The geometry defining the area of interest.
         layer_model (LayerModel): A model representing the layer's metadata, including
             color information and data properties.
-        overview_factor (int): The level of the overview to use for reading raster data.
+        overview_factor (int, optional): The level of the overview to use for reading raster data.
         layer_name (str, optional): The name of the layer associated with the statistics.
 
     Returns:
@@ -94,19 +95,39 @@ def create_stats_response_polygon(path, geom, layer_model, overview_factor: int,
             nodata = src.nodatavals[band - 1] if src.nodatavals and len(src.nodatavals) >= band and src.nodatavals[band - 1] is not None else src.nodata
             if nodata is None:
                 nodata = -9999
-        crs = src.crs.to_epsg()
-    transform_to_use = crop_transform if crop_transform is not None else src.transform
-    mask = np.where(shape_mask == 0, rst, nodata)
+        crs = src.crs
+        source_transform = src.transform
+    transform_to_use = crop_transform if crop_transform is not None else source_transform
+
+    inside_mask = shape_mask == 0
+    valid_data_mask = np.asarray(inside_mask & np.isfinite(rst), dtype=bool)
+    if not (isinstance(nodata, (float, np.floating)) and np.isnan(nodata)):
+        valid_data_mask &= rst != nodata
+
+    count_total = int(np.sum(inside_mask))
+    count_data = int(np.sum(valid_data_mask))
+    count_no_data = count_total - count_data
+
+    def empty_response() -> s.StatsResponse:
+        response = s.StatsResponse(type="polygon stats",
+                                   count_no_data=count_total,
+                                   count_total=count_total,
+                                   count_data=0)
+        if layer_name:
+            response.layer_name = layer_name
+        return response
+
+    if count_data == 0:
+        return empty_response()
 
     polygon_shapes = []
-    for geom_shape, value in shapes(mask.astype(np.float32), transform=transform_to_use):
-        if value != nodata:
-            poly = shape(geom_shape)
-            polygon_shapes.append({'geometry': poly, 'value': value})
+    for geom_shape, value in shapes(rst.astype(np.float32), mask=valid_data_mask, transform=transform_to_use):
+        poly = shape(geom_shape)
+        polygon_shapes.append({'geometry': poly, 'value': value})
 
     if polygon_shapes:
-        raster_gdf = gpd.GeoDataFrame(polygon_shapes, crs=f"EPSG:{crs}")
-        input_gdf = gpd.GeoDataFrame([{'geometry': geom}], crs=f"EPSG:{crs}")
+        raster_gdf = gpd.GeoDataFrame(polygon_shapes, crs=crs)
+        input_gdf = gpd.GeoDataFrame([{'geometry': geom}], crs=crs)
         intersections = gpd.overlay(raster_gdf, input_gdf, how='intersection', keep_geom_type=False)
         if not intersections.empty:
             intersections['area'] = intersections.geometry.area
@@ -114,7 +135,7 @@ def create_stats_response_polygon(path, geom, layer_model, overview_factor: int,
             values = intersections['value'].values
             areas = intersections['area'].values
 
-            valid_mask = values != nodata
+            valid_mask = np.isfinite(values) & np.isfinite(areas) & (areas > 0)
             values = values[valid_mask]
             areas = areas[valid_mask]
 
@@ -124,17 +145,11 @@ def create_stats_response_polygon(path, geom, layer_model, overview_factor: int,
                 max_val = float(np.max(values))
                 sum_val = float(np.sum(values * areas / pixel_res)) if np.sum(areas) != 0 else np.sum(values)
 
-                pixel_counts = np.maximum(np.round(areas).astype(int), 1)
-                weighted_samples = []
-                for val, count in zip(values, pixel_counts):
-                    weighted_samples.extend([val] * count)
-                weighted_samples = np.array(weighted_samples, dtype=float)
-
-                q2, q5, q95, q98 = np.quantile(weighted_samples, [0.02, 0.05, 0.95, 0.98])
-
-                count_data = np.sum(np.isfinite(rst) & shape_mask == 0)
-                count_total = np.sum(shape_mask == 0)  # Including nodata polygons
-                count_no_data = count_total - count_data
+                order = np.argsort(values)
+                sorted_values = values[order]
+                cumulative_areas = np.cumsum(areas[order])
+                quantile_areas = np.array([0.02, 0.05, 0.95, 0.98]) * cumulative_areas[-1]
+                q2, q5, q95, q98 = np.interp(quantile_areas, cumulative_areas, sorted_values)
 
                 response = s.StatsResponse(type="polygon stats",
                                            min=no_nan(min_val),
@@ -152,6 +167,8 @@ def create_stats_response_polygon(path, geom, layer_model, overview_factor: int,
                 if layer_name:
                     response.layer_name = layer_name
                 return response
+
+    return empty_response()
 
 
 def create_stats_response(rst: np.array, mask_array: np.array, nodata: float, type: str, layer_name: str = None):
