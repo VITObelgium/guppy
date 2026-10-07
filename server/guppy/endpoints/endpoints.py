@@ -85,7 +85,7 @@ def get_stats_for_bbox(db: Session, layer_name: str, bbox_left: float, bbox_bott
                             non_nodata_count = np.count_nonzero(~np.isnan(rst)) if np.issubdtype(rst.dtype, np.floating) else rst.size
                         if non_nodata_count < 50:
                             logger.info("fallback to polygon method for small raster in stats")
-                            response = create_stats_response_polygon(path, bb_input, layer_model, overview_factor, layer_name=layer_model.layer_name, band=band)
+                            response = create_stats_response_polygon(path, bb_input, layer_model, overview_factor=None, layer_name=layer_model.layer_name, band=band)
                         else:
                             response = create_stats_response(rst, np.zeros_like(rst).astype(bool), nodata, f'bbox stats. Overview level: {overview_factor}, {overview_bin} scale',
                                                              layer_name=layer_model.layer_name)
