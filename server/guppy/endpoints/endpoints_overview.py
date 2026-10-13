@@ -368,6 +368,12 @@ def _matches_filter(expression: object, properties: dict) -> bool:
         return operands[0] not in properties
 
     values = [_expression_value(operand, properties) for operand in operands]
+    if (
+        operator in ("==", "!=", ">", ">=", "<", "<=", "in", "!in")
+        and operands
+        and isinstance(operands[0], str)
+    ):
+        values[0] = _expression_value(["get", operands[0]], properties)
     try:
         if operator == "==" and len(values) == 2:
             numeric_values = [_numeric_value(value) for value in values]
