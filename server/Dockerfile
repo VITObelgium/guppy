@@ -33,6 +33,7 @@ USER guppy
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 ENV PATH /opt/guppy/server/.pixi/envs/default/bin:$PATH
+ENV PROJ_DATA=/opt/guppy/server/.pixi/envs/default/share/proj
 
 EXPOSE 8080
 CMD ["fastapi", "run", "guppy/server.py", "--port", "8080" ]
