@@ -20,9 +20,9 @@ from pyproj import Transformer
 from rasterio.features import dataset_features
 from rasterio.windows import from_bounds
 from rio_tiler.io import Reader
-from shapely import wkt
+from shapely import union_all, wkt
 from shapely.geometry import box, MultiLineString, mapping
-from shapely.ops import transform, unary_union
+from shapely.ops import transform
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -601,6 +601,7 @@ def _get_layer_contour_cached(layer_name: str, file_path: str, is_mbtile: bool, 
             return {'layerName': layer_name, 'geometry': []}
 
         tile_unions = []
+        grid_size = 0.00001  # Tile geometries use longitude/latitude degrees.
         uri = f'file:{file_path}?mode=ro'
         try:
             with sqlite3.connect(uri, uri=True) as conn:
@@ -629,14 +630,14 @@ def _get_layer_contour_cached(layer_name: str, file_path: str, is_mbtile: bool, 
                         continue
                     valid_geoms = tile_df.geometry[~tile_df.geometry.isna() & ~tile_df.geometry.is_empty]
                     if not valid_geoms.empty:
-                        tile_unions.append(unary_union(valid_geoms.tolist()))
+                        tile_unions.append(union_all(valid_geoms.tolist(), grid_size=grid_size))
         except sqlite3.Error:
             return {'layerName': layer_name, 'geometry': []}
 
         if not tile_unions:
             return {'layerName': layer_name, 'geometry': []}
 
-        combined_geom = unary_union(tile_unions)
+        combined_geom = union_all(tile_unions, grid_size=grid_size)
         outline = combined_geom.boundary if not combined_geom.is_empty else combined_geom
         if outline.is_empty:
             return {'layerName': layer_name, 'geometry': []}
