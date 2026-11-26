@@ -11,7 +11,7 @@ class LayerMetadata(Base):
     __tablename__ = 'layer_metadata'
     __table_args__ = {'schema': config.database.schema} if config.database.type == 'postgres' else {}
 
-    id = Column(Integer, primary_key=True, server_default=text(f"nextval('{config.database.schema}.layer_metadata_seq'::regclass)") if config.database.type == 'postgres' else None)
+    id = Column(Integer, primary_key=True)
     layer_name = Column(String, nullable=False, unique=True)
     label = Column(String, nullable=False)
     file_path = Column(String, nullable=False)
@@ -25,7 +25,7 @@ class TileStatistics(Base):
     __tablename__ = 'tile_statistics'
     __table_args__ = {'schema': config.database.schema} if config.database.type == 'postgres' else {}
 
-    id = Column(Integer, primary_key=True, server_default=text(f"nextval('{config.database.schema}.tile_statistics_seq'::regclass)") if config.database.type == 'postgres' else None)
+    id = Column(Integer, primary_key=True)
     layer_name = Column(String, nullable=False)
     x = Column(Integer, nullable=False)
     y = Column(Integer, nullable=False)

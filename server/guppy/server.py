@@ -9,8 +9,7 @@ from fastapi.responses import FileResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from guppy.config import config as cfg
-from guppy.db.db_session import Base, engine
-from guppy.db.db_sync import keep_db_tables_in_sync
+from guppy.db.db_sync import initialize_db, keep_db_tables_in_sync
 from guppy.endpoints.tile_utils import save_request_counts, save_request_counts_timer
 from guppy.mcp_server import mcp
 from guppy.routes.admin_router import router as admin_router
@@ -23,7 +22,7 @@ from guppy.routes.tiles_router import router as tiles_router
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-Base.metadata.create_all(bind=engine)
+initialize_db()
 
 keep_db_tables_in_sync()
 

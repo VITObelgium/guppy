@@ -6,7 +6,7 @@ Assuming Docker and docker-compose are installed on your system, you can start t
 
 ```bash
 cd server
-docker-compose up 
+docker-compose up
 ```
 
 Then go access the demo UI https://github.com/VITObelgium/guppy/tree/develop?tab=readme-ov-file#access-the-ui or interact with the API at http://localhost:8080/guppy/docs
@@ -70,6 +70,12 @@ database:
   db: guppy
 ```
 
+For PostgreSQL, the database must already exist. On startup, Guppy creates the
+configured schema (default `guppy`) and missing tables; the database user needs
+permission to create the schema if it does not exist. Set `database.schema` in
+the configuration file or `GUPPY_DATABASE_SCHEMA` in the environment to use a
+different schema.
+
 #### Configuration via environment variables
 
 Alternatively, you can set the configuration via environment variables.
@@ -86,6 +92,7 @@ The following environment variables are available:
 | GUPPY_DATABASE_TYPE         | Database type (sqlite, postgres) default: sqlite                 |
 | GUPPY_DATABASE_HOST         | Database host                                                    |
 | **GUPPY_DATABASE_DB**       | Database name OR path to Sqlite file.                            |
+| GUPPY_DATABASE_SCHEMA       | PostgreSQL schema name (default: guppy)                          |
 | GUPPY_DATABASE_USER         | Database user                                                    |
 | GUPPY_DATABASE_PASSWD       | Database password                                                |
 | GUPPY_DATABASE_PASSWD_FILE  | Path to a file containing the database password                  |
@@ -114,10 +121,10 @@ Run the server with reload option to automatically restart the server when chang
 ```bash
 python -m uvicorn guppy.server:app --reload --port 5000 --host 0.0.0.0
 ```
- 
+
 ## Access the UI
 
-The Guppy API is the core of the application, some UI is implemented on top of the API to illustrate the functionality. 
+The Guppy API is the core of the application, some UI is implemented on top of the API to illustrate the functionality.
 
 The pages already provided as examples are:
 
@@ -132,10 +139,27 @@ The pages already provided as examples are:
 
 
 ## Access the API
-  
+
 Documentation for the API is available at http://127.0.0.1:5000/guppy/docs
 
-Notice deploy_path is defined in the config.yml file. 
+### Layer overview PNG
+
+Generate an overview with `GET {deploy_path}/tiles/overview/{layer_name}.png`. The
+`width` and `height` query parameters are required and accept values from 1 to
+4096 pixels. COG layers are fitted to the requested canvas and rendered in
+grayscale. MBTiles layers show black outlines for all tiles present at zoom 8.
+
+```text
+http://127.0.0.1:5000/guppy/tiles/overview/my_layer.png?width=800&height=600
+```
+
+MBTiles overview fill filters support both legacy Mapbox property syntax
+(`["==", "typegebied", "Brandincident"]`) and expression syntax
+(`["==", ["get", "typegebied"], "Brandincident"]`). The style can be supplied
+directly or nested under `styling`. Delete the layer's cached overview PNG after
+changing its style to regenerate the preview.
+
+Notice deploy_path is defined in the config.yml file.
 The default value is guppy.
 <!-- If you change the deploy path in the config.yml file, you should also change the path in the docker-compose.yml file. -->
 <!-- The path in the docker-compose.yml file should be the same as the path in the config.yml file. -->
