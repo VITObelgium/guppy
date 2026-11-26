@@ -14,6 +14,7 @@ class _Database:
     user: str
     passwd: str
     db: str
+    schema: str = 'guppy'
 
 
 @dataclass(frozen=True)
@@ -77,6 +78,7 @@ def parse_config_file(config_file: str) -> _Config:
             user=yml_data['database']['user'] if 'user' in yml_data['database'] else '',
             passwd=yml_data['database']['passwd'] if 'passwd' in yml_data['database'] else '',
             db=yml_data['database']['db'],
+            schema=yml_data['database']['schema'] if 'schema' in yml_data['database'] else 'guppy',
         ),
         guppy=_Guppy(size_limit=int(float(yml_data['guppy']['size_limit'])) if 'guppy' in yml_data and 'size_limit' in yml_data['guppy'] else 10000),
         geoserver=_Geoserver(username=yml_data['geoserver']['username'] if 'geoserver' in yml_data and 'username' in yml_data['geoserver'] else '',
@@ -120,6 +122,7 @@ if guppy_env_vars:
                     user=guppy_env_vars['GUPPY_DATABASE_USER'] if 'GUPPY_DATABASE_USER' in guppy_env_vars else '',
                     passwd=guppy_env_vars['GUPPY_DATABASE_PASSWD'] if 'GUPPY_DATABASE_PASSWD' in guppy_env_vars else '',
                     db=guppy_env_vars['GUPPY_DATABASE_DB'],
+                    schema=guppy_env_vars['GUPPY_DATABASE_SCHEMA'] if 'GUPPY_DATABASE_SCHEMA' in guppy_env_vars else 'guppy',
                 ),
                 guppy=_Guppy(size_limit=int(float(guppy_env_vars['GUPPY_SIZE_LIMIT'])) if 'GUPPY_SIZE_LIMIT' in guppy_env_vars else 10000),
                 geoserver=_Geoserver(username=guppy_env_vars['GUPPY_GEOSERVER_USER'] if 'GUPPY_GEOSERVER_USER' in guppy_env_vars else '',
